@@ -1,0 +1,17 @@
+{
+  "include": [
+    "index.js",
+    "src/wallet-manager-solana.js",
+    "src/wallet-account-solana.js"
+  ],
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "allowJs": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noResolve": true,
+    "skipLibCheck": true
+  }
+}
