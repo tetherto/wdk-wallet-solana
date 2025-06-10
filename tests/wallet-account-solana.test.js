@@ -10,7 +10,7 @@ const VALID_ADDRESS = '9gT8yrFzG7e23NE4hRGMoPPBuaNjVKnp8pdH7HkjJnY2';
 let VALID_TOKEN = 'DMRZSW4YF53uenPDG3bmhjxksGzkFgunzXVWeb87C6bk';
 
 describe('WalletAccountSolana', () => {
-    let wallet: WalletAccountSolana;
+    let wallet;
 
     beforeAll(async () => {
         const tokenMint = await createTestToken(SEED_PHRASE, VALID_ADDRESS);
@@ -157,8 +157,8 @@ describe('WalletAccountSolana', () => {
     describe('token operations', () => {
         it('should get token balance', async () => {
             const balance = await wallet.getTokenBalance(VALID_TOKEN);
-            expect(typeof balance).toBe('object');
-            expect(balance.formatted).toBeGreaterThanOrEqual(0);
+            expect(typeof balance).toBe('number');
+            expect(balance).toBeGreaterThanOrEqual(0);
         });
 
         it('should throw error when getting token balance without RPC', async () => {

@@ -15,11 +15,9 @@
     "build:types": "rimraf *.d.ts **/*.d.ts; tsc",
     "lint": "standard",
     "lint:fix": "standard --fix",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
-    "test:validator": "node scripts/start-validator.js",
-    "test:setup": "npm run test:validator"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:setup": "node scripts/start-validator.js"
   },
   "dependencies": {
     "@solana-program/memo": "^0.7.0",
@@ -32,9 +30,7 @@
     "micro-ed25519-hdkey": "^0.1.2"
   },
   "devDependencies": {
-    "@jest/globals": "^30.0.0-beta.3",
-    "@swc/jest": "^0.2.36",
-    "@types/jest": "^29.5.14",
+    "cross-env": "^7.0.3",
     "jest": "^29.7.0",
     "rimraf": "^6.0.1",
     "standard": "^17.1.2",

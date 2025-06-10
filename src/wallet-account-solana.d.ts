@@ -78,16 +78,16 @@ export default class WalletAccountSolana {
   /**
    * Returns the account balance for a specific token.
    *
-   * @param {string} tokenAddress - The token mint address.
+   * @param {string} tokenAddress - The smart contract address of the token.
    * @returns {Promise<number>} The token balance.
    */
-  getTokenBalance(tokenAddress: string): Promise<{ raw: number; formatted: number }>;
+  getTokenBalance(tokenAddress: string): Promise<number>;
   /**
    * Sends a token transaction.
    *
    * @param {Object} params - The transaction parameters.
    * @param {string} params.to - The recipient's address.
-   * @param {string} params.tokenMint - The token mint address.
+   * @param {string} params.tokenMint - The smart contract address of the token.
    * @param {number} params.amount - The amount of tokens to send.
    * @returns {Promise<string>} The transaction's hash.
    */

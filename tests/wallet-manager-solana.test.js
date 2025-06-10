@@ -1,7 +1,7 @@
 import WalletManagerSolana from '../src/wallet-manager-solana.js';
 
 describe('WalletManagerSolana', () => {
-    let walletManager: WalletManagerSolana;
+    let walletManager;
     const testSeedPhrase = 'test test test test test test test test test test test junk';
     const testConfig = { rpcUrl: 'http://localhost:8899', wsUrl: 'ws://localhost:8900' };
 

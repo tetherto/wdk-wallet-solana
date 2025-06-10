@@ -33,14 +33,19 @@ async function installSolanaValidator() {
 async function startValidator() {
     try {
         // Kill any existing validator processes
-
-        await execAsync('pkill -f solana-test-validator');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
+        try {
+            await execAsync('pkill -f solana-test-validator');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+            // Ignore errors if no process was found
+        }
 
         // Clean up any existing test-ledger directory
-
-        await execAsync('rm -rf ~/.local/share/solana/test-ledger*');
+        try {
+            await execAsync('rm -rf ~/.local/share/solana/test-ledger*');
+        } catch (error) {
+            // Ignore errors if directory doesn't exist
+        }
 
         validatorProcess = spawn('solana-test-validator', [
             '--reset'

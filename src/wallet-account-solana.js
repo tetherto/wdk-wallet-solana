@@ -45,7 +45,6 @@ import {
   PublicKey,
   Keypair,
   Transaction,
-  sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import {
   getOrCreateAssociatedTokenAccount,
@@ -86,7 +85,7 @@ export default class WalletAccountSolana {
   /**
    * Creates a new solana wallet account.
    *
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {string|Uint8Array} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {SolanaWalletConfig} [config] - The configuration object.
    */
@@ -289,7 +288,7 @@ export default class WalletAccountSolana {
       rpcSubscriptions: this.#rpcSubscriptions,
     });
 
-    await sendAndConfirm(signedTransaction, {
+    sendAndConfirm(signedTransaction, {
       commitment: "confirmed",
     });
 
@@ -371,7 +370,7 @@ export default class WalletAccountSolana {
   /**
    * Returns the account balance for a specific token.
    *
-   * @param {string} tokenAddress - The token mint address.
+   * @param {string} tokenAddress - The smart contract address of the token.
    * @returns {Promise<number>} The token balance.
    */
   async getTokenBalance(tokenAddress) {
@@ -396,11 +395,7 @@ export default class WalletAccountSolana {
     const balance = await connection.getTokenAccountBalance(
       tokenAccounts.value[0].pubkey
     );
-    return {
-      raw: Number(balance.value.amount),
-      formatted: balance.value.uiAmount,
-    };
-
+    return Number(balance.value.amount)
   }
 
   /**
@@ -408,7 +403,7 @@ export default class WalletAccountSolana {
    *
    * @param {Object} params - The transaction parameters.
    * @param {string} params.to - The recipient's address.
-   * @param {string} params.tokenMint - The token mint address.
+   * @param {string} params.tokenMint - The smart contract address of the token.
    * @param {number} params.amount - The amount of tokens to send.
    * @returns {Promise<string>} The transaction's hash.
    */
