@@ -24,23 +24,70 @@ npm install
 
 3. Install Solana CLI tools:
 
-   a. Install Solana CLI:
+   Choose one of the following installation methods:
+
+   ### Method 1: Automatic Installation (Recommended)
    ```bash
+   # This works on macOS, Linux, and Windows (WSL)
    sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
    ```
 
-   b. Add Solana to your PATH:
+   ### Method 2: Manual Installation
+
+   #### For macOS:
    ```bash
-   # For bash users
+   # Download the latest release
+   curl -L https://github.com/solana-labs/solana/releases/latest/download/solana-release-x86_64-apple-darwin.tar.bz2 -o solana-release.tar.bz2
+   
+   # Extract and install
+   tar -xjf solana-release.tar.bz2
+   mkdir -p ~/.local/share/solana/install/active_release/bin
+   cp solana-release/bin/* ~/.local/share/solana/install/active_release/bin/
+   ```
+
+   #### For Linux:
+   ```bash
+   # Download the latest release
+   curl -L https://github.com/solana-labs/solana/releases/latest/download/solana-release-x86_64-unknown-linux-gnu.tar.bz2 -o solana-release.tar.bz2
+   
+   # Extract and install
+   tar -xjf solana-release.tar.bz2
+   mkdir -p ~/.local/share/solana/install/active_release/bin
+   cp solana-release/bin/* ~/.local/share/solana/install/active_release/bin/
+   ```
+
+   #### For Windows (WSL):
+   ```bash
+   # Download the latest release
+   curl -L https://github.com/solana-labs/solana/releases/latest/download/solana-release-x86_64-pc-windows-msvc.tar.bz2 -o solana-release.tar.bz2
+   
+   # Extract and install
+   tar -xjf solana-release.tar.bz2
+   mkdir -p ~/.local/share/solana/install/active_release/bin
+   cp solana-release/bin/* ~/.local/share/solana/install/active_release/bin/
+   ```
+
+   ### Add Solana to your PATH:
+
+   #### For bash users:
+   ```bash
    echo 'export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"' >> ~/.bash_profile
    source ~/.bash_profile
+   ```
 
-   # For zsh users
+   #### For zsh users:
+   ```bash
    echo 'export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"' >> ~/.zshrc
    source ~/.zshrc
    ```
 
-   c. Verify installation:
+   #### For Windows (WSL):
+   ```bash
+   echo 'export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+   ### Verify installation:
    ```bash
    solana --version
    solana-test-validator --version
@@ -71,11 +118,6 @@ npm run test:setup
 
 ### Additional Test Commands
 
-- Run tests in watch mode:
-```bash
-npm run test:watch
-```
-
 - Run tests with coverage:
 ```bash
 npm run test:coverage
@@ -87,9 +129,7 @@ npm run test:coverage
 - `npm run lint` - Run linting checks
 - `npm run lint:fix` - Fix linting issues automatically
 - `npm run test` - Run tests
-- `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Run tests with coverage report
-- `npm run test:validator` - Start the Solana test validator
 - `npm run test:setup` - Start validator and run tests
 
 ## Troubleshooting

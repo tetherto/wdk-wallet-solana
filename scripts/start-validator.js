@@ -7,27 +7,12 @@ let validatorProcess;
 async function checkSolanaValidator() {
     try {
         await execAsync('solana-test-validator --version');
-        console.log('solana-test-validator is already installed');
+        console.log('solana-test-validator is installed');
         return true;
     } catch (error) {
-        console.log('solana-test-validator not found, installing...');
+        console.error('Error: solana-test-validator not found');
         return false;
     }
-}
-
-async function installSolanaValidator() {
-
-    console.log('Installing solana-test-validator...');
-    const { stdout, stderr } = await execAsync('sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"');
-    console.log('Installation output:', stdout);
-    if (stderr) console.error('Installation errors:', stderr);
-
-    const isInstalled = await checkSolanaValidator();
-    if (!isInstalled) {
-        throw new Error('Installation failed');
-    }
-    console.log('solana-test-validator installed successfully');
-
 }
 
 async function startValidator() {
@@ -98,7 +83,11 @@ async function main() {
     try {
         const isInstalled = await checkSolanaValidator();
         if (!isInstalled) {
-            await installSolanaValidator();
+            console.error('\nPlease follow these steps:');
+            console.error('1. Install Solana CLI tools manually following the instructions in README.md');
+            console.error('2. Add Solana to your PATH');
+            console.error('3. Verify installation by running: solana-test-validator --version');
+            process.exit(1);
         }
         await startValidator();
     } catch (error) {
