@@ -16,39 +16,31 @@ async function checkSolanaValidator() {
 }
 
 async function installSolanaValidator() {
-    try {
-        console.log('Installing solana-test-validator...');
-        const { stdout, stderr } = await execAsync('sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"');
-        console.log('Installation output:', stdout);
-        if (stderr) console.error('Installation errors:', stderr);
 
-        const isInstalled = await checkSolanaValidator();
-        if (!isInstalled) {
-            throw new Error('Installation failed');
-        }
-        console.log('solana-test-validator installed successfully');
-    } catch (error) {
-        console.error('Error installing solana-test-validator:', error);
-        throw error;
+    console.log('Installing solana-test-validator...');
+    const { stdout, stderr } = await execAsync('sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"');
+    console.log('Installation output:', stdout);
+    if (stderr) console.error('Installation errors:', stderr);
+
+    const isInstalled = await checkSolanaValidator();
+    if (!isInstalled) {
+        throw new Error('Installation failed');
     }
+    console.log('solana-test-validator installed successfully');
+
 }
 
 async function startValidator() {
     try {
         // Kill any existing validator processes
-        try {
-            await execAsync('pkill -f solana-test-validator');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (error) {
-            // Ignore errors if no process was found
-        }
+
+        await execAsync('pkill -f solana-test-validator');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
 
         // Clean up any existing test-ledger directory
-        try {
-            await execAsync('rm -rf ~/.local/share/solana/test-ledger*');
-        } catch (error) {
-            // Ignore errors if directory doesn't exist
-        }
+
+        await execAsync('rm -rf ~/.local/share/solana/test-ledger*');
 
         validatorProcess = spawn('solana-test-validator', [
             '--reset'

@@ -127,25 +127,23 @@ export default class WalletManagerSolana {
       );
     }
 
-    try {
-      // Get recent prioritization fees
-      const fees = await this.#rpc.getRecentPrioritizationFees().send();
 
-      // Find the highest non-zero fee, or use default
-      const nonZeroFees = fees.filter(fee => fee.prioritizationFee > 0n);
-      const baseFee = nonZeroFees.length > 0
-        ? Number(nonZeroFees.reduce((max, fee) => fee.prioritizationFee > max ? fee.prioritizationFee : max, 0n))
-        : 5000;
+    // Get recent prioritization fees
+    const fees = await this.#rpc.getRecentPrioritizationFees().send();
 
-      const normalFee = Math.round(baseFee * FEE_RATE_NORMAL_MULTIPLIER);
-      const fastFee = Math.round(baseFee * FEE_RATE_FAST_MULTIPLIER);
+    // Find the highest non-zero fee, or use default
+    const nonZeroFees = fees.filter(fee => fee.prioritizationFee > 0n);
+    const baseFee = nonZeroFees.length > 0
+      ? Number(nonZeroFees.reduce((max, fee) => fee.prioritizationFee > max ? fee.prioritizationFee : max, 0n))
+      : 5000;
 
-      return {
-        normal: normalFee,
-        fast: fastFee
-      };
-    } catch (error) {
-      throw error;
-    }
+    const normalFee = Math.round(baseFee * FEE_RATE_NORMAL_MULTIPLIER);
+    const fastFee = Math.round(baseFee * FEE_RATE_FAST_MULTIPLIER);
+
+    return {
+      normal: normalFee,
+      fast: fastFee
+    };
+
   }
 }

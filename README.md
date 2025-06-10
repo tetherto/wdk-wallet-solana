@@ -54,7 +54,7 @@ The test suite uses Jest and requires a local Solana validator to be running. Th
 
 1. Start the Solana validator in a separate terminal:
 ```bash
-npm run validator
+npm run test:validator
 ```
 
 2. In another terminal, run the tests:
@@ -89,7 +89,7 @@ npm run test:coverage
 - `npm run test` - Run tests
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Run tests with coverage report
-- `npm run validator` - Start the Solana test validator
+- `npm run test:validator` - Start the Solana test validator
 - `npm run test:setup` - Start validator and run tests
 
 ## Troubleshooting

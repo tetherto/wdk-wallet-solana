@@ -101,21 +101,19 @@ async function initialize(seedPhrase) {
     const hd = HDKey.fromMasterSeed(seed.toString("hex"));
     const fullPath = `${BIP_44_SOL_DERIVATION_PATH_PREFIX}/0'/0'`;
 
-    try {
-        const child = hd.derive(fullPath);
 
-        const signer = await createKeyPairSignerFromPrivateKeyBytes(
-            new Uint8Array(child.privateKey)
-        );
-        return {
-            privateKey: child.privateKey,
-            publicKey: child.publicKey,
-            path: fullPath,
-            feePayer: signer,
-        };
-    } catch (error) {
-        throw error;
-    }
+    const child = hd.derive(fullPath);
+
+    const signer = await createKeyPairSignerFromPrivateKeyBytes(
+        new Uint8Array(child.privateKey)
+    );
+    return {
+        privateKey: child.privateKey,
+        publicKey: child.publicKey,
+        path: fullPath,
+        feePayer: signer,
+    };
+
 }
 function getKeypairFromPrivateKey(privateKey, publicKey) {
     // Create a 64-byte secret key

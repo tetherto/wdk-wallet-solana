@@ -1,4 +1,4 @@
-import WalletManagerSolana from '../wallet-manager-solana.js';
+import WalletManagerSolana from '../src/wallet-manager-solana.js';
 
 describe('WalletManagerSolana', () => {
     let walletManager: WalletManagerSolana;

@@ -7,12 +7,12 @@ export default {
         '^(\\.{1,2}/.*)\\.js$': '$1',
     },
     testEnvironment: 'node',
-    testMatch: ['<rootDir>/src/__tests__/**/*.test.ts'],
+    testMatch: ['<rootDir>/tests/**/*.test.ts'],
     collectCoverageFrom: [
         'src/**/*.{js,ts}',
         '!src/**/*.d.ts',
         '!src/**/*.test.{js,ts}',
-        '!src/__tests__/**'
+        '!tests/**'
     ],
     coverageDirectory: 'coverage',
     coverageProvider: 'v8',

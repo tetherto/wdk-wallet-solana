@@ -1,6 +1,6 @@
 
 import { createTestToken } from './tokenBasic.js';
-import WalletAccountSolana from '../wallet-account-solana.js';
+import WalletAccountSolana from '../src/wallet-account-solana.js';
 import * as bip39 from "bip39";
 const SEED_PHRASE = 'uncover learn cheese meat fire tired enact melt heart million soda zebra'
 const VALID_SEED = bip39.mnemonicToSeedSync(SEED_PHRASE);
@@ -93,10 +93,9 @@ describe('WalletAccountSolana', () => {
             const isValid = await wallet.verify(message, wrongSignature);
             expect(isValid).toBe(false);
         });
-        it('should return false when no account is found', async () => {
+        it('should throw error when verifying message with uninitialized wallet', async () => {
             const walletWithoutAccount = new WalletAccountSolana(VALID_SEED, 'm/44\'/501\'/0\'/1\'');
-            const isValid = await walletWithoutAccount.verify('Hello, Solana!', '');
-            expect(isValid).toBe(false);
+            await expect(walletWithoutAccount.verify('Hello, Solana!', '')).rejects.toThrow('The wallet must be initialized to verify messages.');
         });
     });
 
