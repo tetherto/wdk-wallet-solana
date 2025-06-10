@@ -97,8 +97,12 @@ export default class WalletAccountSolana {
   }
 
   constructor(seedPhrase, path, config = {}) {
-    if (!bip39.validateMnemonic(seedPhrase)) {
-      throw new Error("The seed phrase is invalid.");
+
+    if (typeof seedPhrase === 'string') {
+      if (!bip39.validateMnemonic(seedPhrase)) {
+        throw new Error('The seed phrase is invalid.')
+      }
+      seedPhrase = bip39.mnemonicToSeedSync(seedPhrase)
     }
 
     this.#seedPhrase = seedPhrase;
@@ -107,8 +111,8 @@ export default class WalletAccountSolana {
   }
 
   async #initialize() {
-    const seed = bip39.mnemonicToSeedSync(this.#seedPhrase);
-    const hd = HDKey.fromMasterSeed(seed.toString("hex"));
+
+    const hd = HDKey.fromMasterSeed(this.#seedPhrase);
     const fullPath = `${BIP_44_SOL_DERIVATION_PATH_PREFIX}/${this.#path}`;
 
     try {
@@ -499,7 +503,7 @@ export default class WalletAccountSolana {
 
       return signature;
     } catch (error) {
-      console.error("Error in sendTokenTransaction:", error.message);
+      console.log("Error in sendTokenTransaction:", error.message);
       throw error;
     }
   }

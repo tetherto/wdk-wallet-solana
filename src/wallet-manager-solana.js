@@ -32,14 +32,16 @@ export default class WalletManagerSolana {
   /**
    * Creates a new wallet manager for solana blockchains.
    *
-   * @param {string} seedPhrase - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {string|Uint8Array} seed - The wallet's seed, either as a [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase or a Uint8Array.
    * @param {SolanaWalletConfig} [config] - The configuration object.
    */
   constructor(seedPhrase, config = {}) {
-    if (!WalletManagerSolana.isValidSeedPhrase(seedPhrase)) {
-      throw new Error("The seed phrase is invalid.");
+    if (typeof seedPhrase === 'string') {
+      if (!WalletManagerSolana.isValidSeedPhrase(seedPhrase)) {
+        throw new Error("The seed phrase is invalid.");
+      }
+      seedPhrase = bip39.mnemonicToSeedSync(seedPhrase);
     }
-
     this.#seedPhrase = seedPhrase;
 
     const { rpcUrl, wsUrl } = config;

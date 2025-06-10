@@ -46,7 +46,7 @@ describe('WalletManagerSolana', () => {
         });
 
         it(' should get the seed phrase from the wallet manager', () => {
-            expect(walletManager.seedPhrase).toBe(testSeedPhrase);
+            expect(walletManager.seedPhrase).toBeInstanceOf(Uint8Array);
         });
 
         it('should throw an error if the seed phrase is invalid', () => {

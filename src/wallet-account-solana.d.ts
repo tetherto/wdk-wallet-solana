@@ -2,20 +2,20 @@ export default class WalletAccountSolana {
   /**
    * Creates a new solana wallet account.
    *
-   * @param {string} seedPhrase - The bip-39 mnemonic.
+   * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {SolanaWalletConfig} [config] - The configuration object.
    */
-  static create(seedPhrase: string, path: string, config?: SolanaWalletConfig): Promise<WalletAccountSolana>;
+  static create(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig): Promise<WalletAccountSolana>;
 
   /**
    * Creates a new solana wallet account.
    *
-   * @param {string} seedPhrase - The bip-39 mnemonic.
+   * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
    * @param {SolanaWalletConfig} [config] - The configuration object.
    */
-  constructor(seedPhrase: string, path: string, config?: SolanaWalletConfig);
+  constructor(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig);
   /**
    * The derivation path's index of this account.
    *

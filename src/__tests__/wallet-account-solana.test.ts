@@ -1,8 +1,9 @@
 
 import { createTestToken } from './tokenBasic.js';
 import WalletAccountSolana from '../wallet-account-solana.js';
-
-const VALID_SEED = 'uncover learn cheese meat fire tired enact melt heart million soda zebra';
+import * as bip39 from "bip39";
+const SEED_PHRASE = 'uncover learn cheese meat fire tired enact melt heart million soda zebra'
+const VALID_SEED = bip39.mnemonicToSeedSync(SEED_PHRASE);
 const VALID_PATH = "0'/0'";
 const VALID_CONFIG = { rpcUrl: 'http://localhost:8899', wsUrl: 'ws://localhost:8900' }; // Use solana-test-validator RPC
 const VALID_ADDRESS = '9gT8yrFzG7e23NE4hRGMoPPBuaNjVKnp8pdH7HkjJnY2';
@@ -12,7 +13,7 @@ describe('WalletAccountSolana', () => {
     let wallet: WalletAccountSolana;
 
     beforeAll(async () => {
-        const tokenMint = await createTestToken(VALID_SEED, VALID_ADDRESS);
+        const tokenMint = await createTestToken(SEED_PHRASE, VALID_ADDRESS);
         if (!tokenMint) {
             throw new Error('Failed to create test token');
         }
@@ -39,6 +40,12 @@ describe('WalletAccountSolana', () => {
             expect(keyPair).toBeDefined();
             expect(keyPair.privateKey).toBeDefined();
             expect(keyPair.publicKey).toBeDefined();
+        });
+
+        it('should initialize with seed phrase', async () => {
+            const validAccount = await WalletAccountSolana.create(SEED_PHRASE, VALID_PATH, VALID_CONFIG)
+            const address = await validAccount.getAddress()
+            expect(address).toBe(VALID_ADDRESS);
         });
 
         it('should throw error for invalid seed phrase', () => {
