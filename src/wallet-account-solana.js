@@ -36,7 +36,6 @@ import {
   sendAndConfirmTransactionFactory
 } from '@solana/kit'
 import { getTransferSolInstruction } from '@solana-program/system'
-import { getAddMemoInstruction } from '@solana-program/memo'
 import * as bip39 from 'bip39'
 import { HDKey } from 'micro-ed25519-hdkey'
 import bs58 from 'bs58'
@@ -62,7 +61,6 @@ import sodium from 'sodium-universal'
  * @typedef {Object} SolanaTransaction
  * @property {string} to - The transaction's recipient.
  * @property {number} value - The amount of SOL to send to the recipient (in lamports).
- * @property {string} [data] - The transaction's data in hex format.
  */
 
 /**
@@ -72,21 +70,59 @@ import sodium from 'sodium-universal'
  * Note: only use this if you want to use a custom ws url.
  */
 
+/**
+ * @typedef {Object} TransferOptions
+ * @property {string} recipient - The recipient's address.
+ * @property {string} token - The token's address.
+ * @property {number} amount - The amount of tokens to send.
+ */
+
 const BIP_44_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
 
 export default class WalletAccountSolana {
+  /**
+   * @private
+   */
   _rpc
+  /**
+   * @private
+   */
   _rpcSubscriptions
+  /**
+   * @private
+   */
   _path
+  /**
+   * @private
+   */
   _config
+  /**
+   * @private
+   */
   _connection
-
+  /**
+   * @private
+   */
   _signer
+  /**
+   * @private
+   */
   _seedBuffer
+  /**
+   * @private
+   */
   _keypair
-
+  /**
+   * @private
+   */
   _secretKeyBuffer
+  /**
+   * @private
+   */
   _publicKeyBuffer
+  /**
+   * @private
+   */
   _privateKeyBuffer
 
   /**
@@ -115,6 +151,11 @@ export default class WalletAccountSolana {
     this._config = config
   }
 
+  /**
+   * Initializes the wallet account.
+   * @private
+   * @returns {Promise<void>}
+   */
   async _initialize () {
     const hd = HDKey.fromMasterSeed(this._seedBuffer)
     const child = hd.derive(this._path)
@@ -240,7 +281,7 @@ export default class WalletAccountSolana {
    * @returns {Promise<Object>} The transaction message and instructions
    */
   async _createTransactionMessage (tx, version = 0) {
-    const { to, value, data } = tx
+    const { to, value } = tx
     const recipient = address(to)
 
     const { value: latestBlockhash } = await this._rpc
@@ -254,9 +295,6 @@ export default class WalletAccountSolana {
     })
 
     const instructions = [transferInstruction]
-    if (data) {
-      instructions.push(getAddMemoInstruction({ memo: data }))
-    }
 
     const transactionMessage = pipe(
       createTransactionMessage({ version }),
@@ -383,7 +421,7 @@ export default class WalletAccountSolana {
 
   /**
    * Creates a transfer transaction.
-   *
+   * @private
    * @param {TransferOptions} params - The transaction parameters.
    * @returns {Promise<Transaction>} The transfer transaction.
    */

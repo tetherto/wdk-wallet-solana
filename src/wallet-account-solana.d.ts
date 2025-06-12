@@ -8,18 +8,56 @@ export default class WalletAccountSolana {
      */
     static create(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig): Promise<WalletAccountSolana>;
     constructor(seed: any, path: any, config?: {});
-    _rpc: any;
-    _rpcSubscriptions: any;
-    _path: string;
-    _config: {};
-    _connection: any;
-    _signer: any;
-    _seedBuffer: any;
-    _keypair: any;
-    _secretKeyBuffer: any;
-    _publicKeyBuffer: any;
-    _privateKeyBuffer: any;
-    _initialize(): Promise<void>;
+    /**
+     * @private
+     */
+    private _rpc;
+    /**
+     * @private
+     */
+    private _rpcSubscriptions;
+    /**
+     * @private
+     */
+    private _path;
+    /**
+     * @private
+     */
+    private _config;
+    /**
+     * @private
+     */
+    private _connection;
+    /**
+     * @private
+     */
+    private _signer;
+    /**
+     * @private
+     */
+    private _seedBuffer;
+    /**
+     * @private
+     */
+    private _keypair;
+    /**
+     * @private
+     */
+    private _secretKeyBuffer;
+    /**
+     * @private
+     */
+    private _publicKeyBuffer;
+    /**
+     * @private
+     */
+    private _privateKeyBuffer;
+    /**
+     * Initializes the wallet account.
+     * @private
+     * @returns {Promise<void>}
+     */
+    private _initialize;
     /**
      * The derivation path's index of this account.
      *
@@ -96,11 +134,11 @@ export default class WalletAccountSolana {
     getTokenBalance(tokenAddress: string): Promise<number>;
     /**
      * Creates a transfer transaction.
-     *
+     * @private
      * @param {TransferOptions} params - The transaction parameters.
      * @returns {Promise<Transaction>} The transfer transaction.
      */
-    _createTransfer({ recipient, token, amount }: TransferOptions): Promise<Transaction>;
+    private _createTransfer;
     /**
      * Quotes a token transfer.
      *
@@ -140,10 +178,6 @@ export type SolanaTransaction = {
      * - The amount of SOL to send to the recipient (in lamports).
      */
     value: number;
-    /**
-     * - The transaction's data in hex format.
-     */
-    data?: string;
 };
 export type SolanaWalletConfig = {
     /**
@@ -155,4 +189,18 @@ export type SolanaWalletConfig = {
      * Note: only use this if you want to use a custom ws url.
      */
     wsUrl?: string;
+};
+export type TransferOptions = {
+    /**
+     * - The recipient's address.
+     */
+    recipient: string;
+    /**
+     * - The token's address.
+     */
+    token: string;
+    /**
+     * - The amount of tokens to send.
+     */
+    amount: number;
 };

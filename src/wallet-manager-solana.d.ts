@@ -20,11 +20,26 @@ export default class WalletManagerSolana {
      * @param {SolanaWalletConfig} [config] - The configuration object.
      */
     constructor(seed: string | Uint8Array, config?: SolanaWalletConfig);
-    _seedBuffer: string | Uint8Array<ArrayBufferLike>;
-    _rpc: any;
-    _rpcUrl: string;
-    _wsUrl: string;
-    _accounts: Set<any>;
+    /**
+     * @private
+     */
+    private _seedBuffer;
+    /**
+     * @private
+     */
+    private _rpc;
+    /**
+     * @private
+     */
+    private _rpcUrl;
+    /**
+     * @private
+     */
+    private _wsUrl;
+    /**
+     * @private
+     */
+    private _accounts;
     /**
      * The seed of the wallet.
      *

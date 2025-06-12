@@ -24,10 +24,25 @@ const FEE_RATE_FAST_MULTIPLIER = 2.0
 /** @typedef {import('./wallet-account-solana.js').SolanaWalletConfig} SolanaWalletConfig */
 
 export default class WalletManagerSolana {
+  /**
+   * @private
+   */
   _seedBuffer
+  /**
+   * @private
+   */
   _rpc
+  /**
+   * @private
+   */
   _rpcUrl
+  /**
+   * @private
+   */
   _wsUrl
+  /**
+   * @private
+   */
   _accounts
 
   /**
