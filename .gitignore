@@ -3,3 +3,4 @@ coverage
 
 test-ledger
 .DS_Store
+test.js

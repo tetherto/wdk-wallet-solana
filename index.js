@@ -15,13 +15,6 @@
 
 /** @typedef {import('./src/wallet-manager-solana.js').SolanaWalletConfig} SolanaWalletConfig */
 
-/** @typedef {import('@wdk/wallet').FeeRates} FeeRates */
-
-/** @typedef {import('@wdk/wallet').KeyPair} KeyPair */
-/** @typedef {import('@wdk/wallet').TransactionResult} TransactionResult */
-/** @typedef {import('@wdk/wallet').TransferOptions} TransferOptions */
-/** @typedef {import('@wdk/wallet').TransferResult} TransferResult */
-
 export { default } from './src/wallet-manager-solana.js'
 
 export { default as WalletAccountSolana } from './src/wallet-account-solana.js'

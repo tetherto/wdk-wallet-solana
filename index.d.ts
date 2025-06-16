@@ -1,8 +1,3 @@
 export { default } from "./src/wallet-manager-solana.js";
 export { default as WalletAccountSolana } from "./src/wallet-account-solana.js";
 export type SolanaWalletConfig = import("./src/wallet-manager-solana.js").SolanaWalletConfig;
-export type FeeRates = import("@wdk/wallet").FeeRates;
-export type KeyPair = import("@wdk/wallet").KeyPair;
-export type TransactionResult = import("@wdk/wallet").TransactionResult;
-export type TransferOptions = import("@wdk/wallet").TransferOptions;
-export type TransferResult = import("@wdk/wallet").TransferResult;

@@ -204,7 +204,7 @@ export default class WalletAccountSolana {
   /**
    * The account's key pair.
    *
-   * @returns {KeyPair}
+   * @type {KeyPair}
    */
   get keyPair () {
     return {
@@ -364,8 +364,8 @@ export default class WalletAccountSolana {
       getBase64Decoder().decode
     )
 
-    const feeInfo = await this._rpc.getInfoForMessage(base64EncodedMessage).send()
-    return { fee: feeInfo.value }
+    const feeInfo = await this._rpc.getFeeForMessage(base64EncodedMessage).send()
+    return { fee: Number(feeInfo.value) }
   }
 
   /**
@@ -437,6 +437,8 @@ export default class WalletAccountSolana {
     // Get associated token accounts
     const fromTokenAccount = await tokenClient.getOrCreateAssociatedAccountInfo(sender)
     const toTokenAccount = await tokenClient.getOrCreateAssociatedAccountInfo(to)
+    console.log(`From: ${fromTokenAccount.address.toBase58()}`)
+    console.log(`To: ${toTokenAccount.address.toBase58()}`)
 
     // Create transfer instruction
     const transaction = new Web3Transaction().add(
@@ -466,10 +468,11 @@ export default class WalletAccountSolana {
    * @returns {Promise<Omit<TransactionResult,'hash'>>} The transaction's quotes.
    */
   async quoteTransfer ({ recipient, token, amount }) {
+    console.log(`Quoting transfer of ${amount} tokens to ${recipient}...`, token)
     const transaction = await this._createTransfer({ recipient, token, amount })
     const message = transaction.compileMessage() // Returns a Message object
     const feeInfo = await this._connection.getFeeForMessage(message)
-    return { fee: feeInfo.value }
+    return { fee: Number(feeInfo.value) }
   }
 
   /**

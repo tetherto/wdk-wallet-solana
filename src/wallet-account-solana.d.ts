@@ -74,7 +74,7 @@ export default class WalletAccountSolana implements IWalletAccount {
     /**
      * The account's key pair.
      *
-     * @returns {KeyPair}
+     * @type {KeyPair}
      */
     get keyPair(): KeyPair;
     /**
