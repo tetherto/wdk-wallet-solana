@@ -16,8 +16,7 @@
     "lint": "standard --env jest",
     "lint:fix": "standard --fix --env jest",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:setup": "node scripts/start-validator.js"
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "dependencies": {
     "@solana-program/system": "0.7.0",
