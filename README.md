@@ -47,3 +47,12 @@ npm run test:coverage
 - `npm run test:coverage` - Run tests with coverage report
 
 
+### Compatibility with the phantom wallet.
+Solana wallet is compatible with Phantom’s derivation path (m/44'/501'/0'/0').
+
+For example, you can retrieve the account using the same derivation path Phantom uses:
+
+```
+const account = await wallet.getAccountByPath("0'/0")
+```
+This ensures seamless interoperability and allows importing or recreating Phantom-compatible accounts easily.
