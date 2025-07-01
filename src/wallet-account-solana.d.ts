@@ -145,6 +145,12 @@ export default class WalletAccountSolana implements IWalletAccount {
      */
     transfer({ recipient, token, amount }: TransferOptions): Promise<TransactionResult>;
     /**
+   * Returns a solana transaction's detail
+   * @param {string} hash - The transaction's hash.
+   * @returns {Promise<SolanaTransactionReceipt | null>} The transaction's hash.
+   */
+    getTransactionReceipt(hash: string): Promise<SolanaTransactionReceipt | null>;
+    /**
      * Disposes of the wallet account.
      * @returns {void}
      */
@@ -161,6 +167,28 @@ export type SolanaTransaction = {
      * - The amount of sols to send to the recipient (in lamports).
      */
     value: number;
+};
+export type SolanaTransactionReceipt = {
+    /**
+     * - The slot in which the transaction was processed.
+     */
+    slot: number;
+    /**
+     * - The transaction signature.
+     */
+    signature: string;
+    /**
+     * - Metadata about the transaction, including logs and status.
+     */
+    meta: any;
+    /**
+     * - The full transaction details.
+     */
+    transaction: any;
+    /**
+     * - The Unix timestamp when the block was processed.
+     */
+    blockTime?: number;
 };
 export type SolanaWalletConfig = {
     /**

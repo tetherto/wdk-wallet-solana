@@ -233,4 +233,22 @@ describe('WalletAccountSolana', () => {
       await expect(account.transfer(params)).rejects.toThrow()
     })
   })
+
+  describe('getTransactionReceipt', () => {
+    test('should get transaction receipt by signature', async () => {
+      const TRANSACTION = { to: TO_ADDRESS, value: 1000000 }
+      const txResult = await account.sendTransaction(TRANSACTION)
+      expect(txResult).toBeDefined()
+      await confirmTestTransaction(txResult.hash)
+      const tx = await account.getTransactionReceipt(txResult.hash)
+      expect(tx.transaction.signatures[0]).toEqual(txResult.hash)
+      expect(tx.transaction.message.instructions.length).toEqual(1)
+    })
+
+    test('should return null if transaction not found', async () => {
+      const signature = '5D517Q8FrU2chRUtmssRmXsrjSZEiyk6HajBKiPqZfakCKkZifGJiJKMTumsrRACnD3N7mVM2Kpk1KFciNB14oEm'
+      const tx = await account.getTransactionReceipt(signature)
+      expect(tx).toEqual(null)
+    })
+  })
 })

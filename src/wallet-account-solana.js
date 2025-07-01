@@ -63,6 +63,15 @@ import nacl from 'tweetnacl'
  */
 
 /**
+ * @typedef {Object} SolanaTransactionReceipt
+ * @property {number} slot - The slot in which the transaction was processed.
+ * @property {string} signature - The transaction signature.
+ * @property {Object} meta - Metadata about the transaction, including logs and status.
+ * @property {Object} transaction - The full transaction details.
+ * @property {number} [blockTime] - The Unix timestamp when the block was processed.
+ */
+
+/**
  * @typedef {Object} SolanaWalletConfig
  * @property {string} [rpcUrl] - The rpc url of the provider.
  * @property {string} [wsUrl] - The ws url of the provider is optional, if not provided, it will be derived from the rpc url.
@@ -459,6 +468,20 @@ export default class WalletAccountSolana {
     )
 
     return { hash: signature, fee: Number(feeInfo.value) }
+  }
+
+  /**
+ * Returns a solana transaction's detail
+ * @param {string} hash - The transaction's hash.
+ * @returns {Promise<SolanaTransactionReceipt | null>} The transaction's hash.
+ */
+  async getTransactionReceipt (hash) {
+    const tx = await this._rpc.getTransaction(hash, {
+      encoding: 'jsonParsed',
+      maxSupportedTransactionVersion: 0,
+      commitment: 'confirmed'
+    }).send()
+    return tx
   }
 
   /**

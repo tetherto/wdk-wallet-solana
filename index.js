@@ -20,7 +20,8 @@
 /** @typedef {import('@wdk/wallet').TransferResult} TransferResult */
 
 /** @typedef {import('./src/wallet-manager-solana.js').SolanaWalletConfig} SolanaWalletConfig */
-/** @typedef {import('./src/wallet-account-solana.js').ExtendedKeyPair} ExtendedKeyPair */
+/** @typedef {import('./src/wallet-account-solana.js').SolanaTransaction} SolanaTransaction */
+/** @typedef {import('./src/wallet-account-solana.js').SolanaTransactionReceipt} SolanaTransactionReceipt */
 
 export { default } from './src/wallet-manager-solana.js'
 

@@ -6,4 +6,5 @@ export type TransactionResult = import("@wdk/wallet").TransactionResult;
 export type TransferOptions = import("@wdk/wallet").TransferOptions;
 export type TransferResult = import("@wdk/wallet").TransferResult;
 export type SolanaWalletConfig = import("./src/wallet-manager-solana.js").SolanaWalletConfig;
-export type ExtendedKeyPair = import("./src/wallet-account-solana.js").ExtendedKeyPair;
+export type SolanaTransaction = import("./src/wallet-account-solana.js").SolanaTransaction;
+export type SolanaTransactionReceipt = import("./src/wallet-account-solana.js").SolanaTransactionReceipt;
