@@ -14,7 +14,7 @@
 
 'use strict'
 
-import { 
+import {
   address, createSolanaRpc, createSolanaRpcSubscriptions,
   createKeyPairSignerFromPrivateKeyBytes, signBytes, verifySignature,
   createTransactionMessage, setTransactionMessageFeePayerSigner, setTransactionMessageLifetimeUsingBlockhash,
@@ -113,7 +113,7 @@ export default class WalletAccountSolana {
     const account = new WalletAccountSolana(seed, path, config)
 
     await account._initialize()
-    
+
     return account
   }
 
@@ -178,8 +178,8 @@ export default class WalletAccountSolana {
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
-    const messageBytes = Buffer.from(message, 'utf8'),
-          signatureBytes = Buffer.from(signature, 'hex')
+    const messageBytes = Buffer.from(message, 'utf8')
+    const signatureBytes = Buffer.from(signature, 'hex')
 
     const isValid = await verifySignature(this._signer.keyPair.publicKey, signatureBytes, messageBytes)
 
@@ -214,9 +214,9 @@ export default class WalletAccountSolana {
       throw new Error('The wallet must be connected to a provider to retrieve token balances.')
     }
 
-    const ownerAddress = new PublicKey(this.keyPair.publicKey),
-          mint = new PublicKey(tokenAddress)
-    
+    const ownerAddress = new PublicKey(this.keyPair.publicKey)
+    const mint = new PublicKey(tokenAddress)
+
     const tokenAccounts = await this._connection.getTokenAccountsByOwner(ownerAddress, { mint })
 
     const account = tokenAccounts.value[0]
@@ -243,8 +243,8 @@ export default class WalletAccountSolana {
 
     const transaction = await this._getTransaction(tx)
 
-    const compiledTransactionMessageEncoder = getCompiledTransactionMessageEncoder(),
-          base64Decoder = getBase64Decoder()
+    const compiledTransactionMessageEncoder = getCompiledTransactionMessageEncoder()
+    const base64Decoder = getBase64Decoder()
 
     const base64EncodedMessage = pipe(
       transaction,
@@ -285,8 +285,8 @@ export default class WalletAccountSolana {
 
     const transaction = await this._getTransaction(tx)
 
-    const compiledTransactionMessageEncoder = getCompiledTransactionMessageEncoder(),
-          base64Decoder = getBase64Decoder()
+    const compiledTransactionMessageEncoder = getCompiledTransactionMessageEncoder()
+    const base64Decoder = getBase64Decoder()
 
     const base64EncodedMessage = pipe(
       transaction,
@@ -357,7 +357,7 @@ export default class WalletAccountSolana {
     if (!this._rpc) {
       throw new Error('The wallet must be connected to a provider to fetch transaction receipts.')
     }
-    
+
     const transaction = await this._rpc.getTransaction(hash, {
       commitment: 'confirmed',
       encoding: 'jsonParsed',
@@ -408,7 +408,7 @@ export default class WalletAccountSolana {
       createTransactionMessage({ version: 0 }),
       (tx) => setTransactionMessageFeePayerSigner(this._signer, tx),
       (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-      (tx) => appendTransactionMessageInstructions([ instruction ], tx)
+      (tx) => appendTransactionMessageInstructions([instruction], tx)
     )
 
     return transaction
@@ -416,18 +416,18 @@ export default class WalletAccountSolana {
 
   /** @private */
   async _getTransfer ({ token, recipient, amount }) {
-    const mint = new PublicKey(token),
-          receiver = new PublicKey(recipient)
+    const mint = new PublicKey(token)
+    const receiver = new PublicKey(recipient)
 
     const signer = Keypair.fromSecretKey(this._keyPair.secretKey)
     const sender = new PublicKey(signer.publicKey)
 
     const client = new Token(this._connection, mint, TOKEN_PROGRAM_ID, signer)
-    
-    const fromTokenAccount = await client.getOrCreateAssociatedAccountInfo(sender),
-          toTokenAccount = await client.getOrCreateAssociatedAccountInfo(receiver)
 
-    const instruction = Token.createTransferInstruction(TOKEN_PROGRAM_ID, fromTokenAccount.address, 
+    const fromTokenAccount = await client.getOrCreateAssociatedAccountInfo(sender)
+    const toTokenAccount = await client.getOrCreateAssociatedAccountInfo(receiver)
+
+    const instruction = Token.createTransferInstruction(TOKEN_PROGRAM_ID, fromTokenAccount.address,
       toTokenAccount.address, sender, [], amount)
 
     const transaction = new Transaction().add(instruction)
