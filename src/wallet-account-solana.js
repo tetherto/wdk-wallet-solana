@@ -34,7 +34,7 @@ import HDKey from 'micro-key-producer/slip10.js'
 import nacl from 'tweetnacl'
 
 import * as bip39 from 'bip39'
-
+// eslint-disable-next-line camelcase
 import { sodium_memzero } from 'sodium-universal'
 
 /** @typedef {ReturnType<import("@solana/rpc-api").SolanaRpcApi['getTransaction']>} SolanaTransactionReceipt */

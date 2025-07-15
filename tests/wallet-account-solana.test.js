@@ -196,9 +196,14 @@ describe('WalletAccountSolana', () => {
   describe('quoteTransfer', () => {
     test('should return fee for token transfer', async () => {
       const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 10 }
-
       const quote = await account.quoteTransfer(TOKEN_TRANSACTION)
       expect(quote.fee).toBe(5000)
+    })
+
+    test('should throw error checking fee without valid RPC url', async () => {
+      const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 10 }
+      const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
+      await expect(walletWithoutRpc.quoteTransfer(TOKEN_TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to quote transfer operations.')
     })
   })
 
@@ -232,6 +237,18 @@ describe('WalletAccountSolana', () => {
       const params = { recipient: 'invalid', token: VALID_TOKEN, amount: 1000000 }
       await expect(account.transfer(params)).rejects.toThrow()
     })
+
+    test('should throw RPC error on token transfer', async () => {
+      const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 100 }
+      const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
+      await expect(walletWithoutRpc.transfer(TOKEN_TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to transfer tokens.')
+    })
+
+    test('should throw  error when fee is more than transferMaxFee ', async () => {
+      const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 100 }
+      const walletWithoutRpc = await WalletAccountSolana.at(VALID_SEED, VALID_PATH, { ...VALID_CONFIG, transferMaxFee: 0 })
+      await expect(walletWithoutRpc.transfer(TOKEN_TRANSACTION)).rejects.toThrow('Exceeded maximum fee cost for transfer operation.')
+    })
   })
 
   describe('getTransactionReceipt', () => {
@@ -249,6 +266,12 @@ describe('WalletAccountSolana', () => {
       const signature = '5D517Q8FrU2chRUtmssRmXsrjSZEiyk6HajBKiPqZfakCKkZifGJiJKMTumsrRACnD3N7mVM2Kpk1KFciNB14oEm'
       const tx = await account.getTransactionReceipt(signature)
       expect(tx).toEqual(null)
+    })
+
+    test('should throw RPC error getting receipt without url', async () => {
+      const signature = '5D517Q8FrU2chRUtmssRmXsrjSZEiyk6HajBKiPqZfakCKkZifGJiJKMTumsrRACnD3N7mVM2Kpk1KFciNB14oEm'
+      const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
+      await expect(walletWithoutRpc.getTransactionReceipt(signature)).rejects.toThrow('The wallet must be connected to a provider to fetch transaction receipts.')
     })
   })
 })

@@ -61,12 +61,5 @@ describe('WalletManagerSolana', () => {
       expect(feeRates.normal).toBe(5500)
       expect(feeRates.fast).toBe(10000)
     })
-
-    test('should throw rpc provider error', async () => {
-      const feeRates = await walletManager.getFeeRates()
-      expect(feeRates).toBeDefined()
-      expect(feeRates.normal).toBe(5500)
-      expect(feeRates.fast).toBe(10000)
-    })
   })
 })
