@@ -14,11 +14,13 @@
 
 'use strict'
 
-import AbstractWalletManager from '@wdk/wallet'
+import WalletManager from '@wdk/wallet'
 
 import { createSolanaRpc } from '@solana/kit'
 
 import WalletAccountSolana from './wallet-account-solana.js'
+
+/** @typedef {ReturnType<import('@solana/rpc').createSolanaRpc>} SolanaRpc */
 
 /** @typedef {import('@wdk/wallet').FeeRates} FeeRates */
 
@@ -30,7 +32,7 @@ const FEE_RATE_FAST_MULTIPLIER = 2.0
 
 const DEFAULT_BASE_FEE = 5_000
 
-export default class WalletManagerSolana extends AbstractWalletManager {
+export default class WalletManagerSolana extends WalletManager {
   /**
    * Creates a new wallet manager for the solana blockchain.
    *
@@ -48,10 +50,20 @@ export default class WalletManagerSolana extends AbstractWalletManager {
     */
     this._config = config
 
-    /** @private */
-    this._accounts = {}
+    /**
+     * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
+     *
+     * @protected
+     * @type {{ [path: string]: WalletAccountSolana }}
+     */
+    this._accounts = { }
 
-    /** @private */
+    /**
+     * The solana rpc client.
+     *
+     * @protected
+     * @type {SolanaRpc}
+     */
     this._rpc = createSolanaRpc(this._config.rpcUrl)
   }
 

@@ -1,4 +1,4 @@
-export default class WalletManagerSolana {
+export default class WalletManagerSolana extends WalletManager {
     /**
      * Creates a new wallet manager for the solana blockchain.
      *
@@ -7,16 +7,21 @@ export default class WalletManagerSolana {
      */
     constructor(seed: string | Uint8Array, config?: SolanaWalletConfig);
     /**
-    * The solana wallet configuration.
-    *
-    * @protected
-    * @type {SolanaWalletConfig}
-    */
-    protected _config: SolanaWalletConfig;
-    /** @private */
-    private _accounts;
-    /** @private */
-    private _rpc;
+     * A map between derivation paths and wallet accounts. It contains all the wallet accounts that have been accessed through the {@link getAccount} and {@link getAccountByPath} methods.
+     *
+     * @protected
+     * @type {{ [path: string]: WalletAccountSolana }}
+     */
+    protected _accounts: {
+        [path: string]: WalletAccountSolana;
+    };
+    /**
+     * The solana rpc client.
+     *
+     * @protected
+     * @type {SolanaRpc}
+     */
+    protected _rpc: SolanaRpc;
     /**
      * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
@@ -48,6 +53,9 @@ export default class WalletManagerSolana {
    */
     dispose(): void;
 }
+export type SolanaRpc = ReturnType<typeof createSolanaRpc>;
 export type FeeRates = import("@wdk/wallet").FeeRates;
 export type SolanaWalletConfig = import("./wallet-account-solana.js").SolanaWalletConfig;
+import WalletManager from '@wdk/wallet';
+import { createSolanaRpc } from '@solana/kit';
 import WalletAccountSolana from './wallet-account-solana.js';

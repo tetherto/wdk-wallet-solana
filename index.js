@@ -13,16 +13,20 @@
 // limitations under the License.
 'use strict'
 
+/** @typedef {ReturnType<import("@solana/rpc-api").SolanaRpcApi['getTransaction']>} SolanaTransactionReceipt */
+
 /** @typedef {import('@wdk/wallet').FeeRates} FeeRates */
+
 /** @typedef {import('@wdk/wallet').KeyPair} KeyPair */
 /** @typedef {import('@wdk/wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@wdk/wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@wdk/wallet').TransferResult} TransferResult */
 
-/** @typedef {import('./src/wallet-manager-solana.js').SolanaWalletConfig} SolanaWalletConfig */
 /** @typedef {import('./src/wallet-account-solana.js').SolanaTransaction} SolanaTransaction */
-/** @typedef {import('./src/wallet-account-solana.js').SolanaTransactionReceipt} SolanaTransactionReceipt */
+/** @typedef {import('./src/wallet-account-solana.js').SolanaWalletConfig} SolanaWalletConfig */
 
 export { default } from './src/wallet-manager-solana.js'
+
+export { default as WalletAccountReadOnlySolana } from './src/wallet-account-read-only-solana.js'
 
 export { default as WalletAccountSolana } from './src/wallet-account-solana.js'
