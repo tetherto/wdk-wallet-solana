@@ -14,7 +14,7 @@
 
 'use strict'
 
-import AbstractWalletManager from '@wdk/wallet'
+import WalletManager from '@wdk/wallet'
 
 import { createSolanaRpc } from '@solana/kit'
 
@@ -32,7 +32,7 @@ const FEE_RATE_FAST_MULTIPLIER = 2.0
 
 const DEFAULT_BASE_FEE = 5_000
 
-export default class WalletManagerSolana extends AbstractWalletManager {
+export default class WalletManagerSolana extends WalletManager {
   /**
    * Creates a new wallet manager for the solana blockchain.
    *

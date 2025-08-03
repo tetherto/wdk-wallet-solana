@@ -14,7 +14,7 @@
 
 'use strict'
 
-import { AbstractWalletAccountReadOnly } from '@wdk/wallet'
+import { WalletAccountReadOnly } from '@wdk/wallet'
 
 import {
   address as _address, createSolanaRpc, createSolanaRpcSubscriptions,
@@ -52,7 +52,7 @@ import { getTransferSolInstruction } from '@solana-program/system'
  * @property {number} [transferMaxFee] - The maximum fee amount for transfer operations.
  */
 
-export default class WalletAccountReadOnlySolana extends AbstractWalletAccountReadOnly {
+export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   /**
    * Creates a new solana read-only wallet account.
    *

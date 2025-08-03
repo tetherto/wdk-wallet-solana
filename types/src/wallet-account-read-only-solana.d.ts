@@ -1,4 +1,4 @@
-export default class WalletAccountReadOnlySolana extends AbstractWalletAccountReadOnly {
+export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     /**
      * Creates a new solana read-only wallet account.
      *
@@ -116,6 +116,6 @@ export type SolanaWalletConfig = {
      */
     transferMaxFee?: number;
 };
-import { AbstractWalletAccountReadOnly } from '@wdk/wallet';
+import { WalletAccountReadOnly } from '@wdk/wallet';
 import { Connection, Transaction } from '@solana/web3.js';
 import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';

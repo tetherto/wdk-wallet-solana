@@ -1,4 +1,4 @@
-export default class WalletManagerSolana extends AbstractWalletManager {
+export default class WalletManagerSolana extends WalletManager {
     /**
      * Creates a new wallet manager for the solana blockchain.
      *
@@ -56,6 +56,6 @@ export default class WalletManagerSolana extends AbstractWalletManager {
 export type SolanaRpc = ReturnType<typeof createSolanaRpc>;
 export type FeeRates = import("@wdk/wallet").FeeRates;
 export type SolanaWalletConfig = import("./wallet-account-solana.js").SolanaWalletConfig;
-import AbstractWalletManager from '@wdk/wallet';
+import WalletManager from '@wdk/wallet';
 import { createSolanaRpc } from '@solana/kit';
 import WalletAccountSolana from './wallet-account-solana.js';
