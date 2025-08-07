@@ -19,6 +19,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     protected _config: SolanaWalletConfig;
     /** @private */
+    private _seed;
+    /** @private */
     private _path;
     /** @private */
     private _keyPair;

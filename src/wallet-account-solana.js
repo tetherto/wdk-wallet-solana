@@ -75,6 +75,9 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     this._config = config
 
     /** @private */
+    this._seed = seed
+
+    /** @private */
     this._path = `${BIP_44_SOL_DERIVATION_PATH_PREFIX}/${path}`
 
     /** @private */
@@ -95,10 +98,10 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   static async at (seed, path, config = {}) {
     const account = new WalletAccountSolana(seed, path, config)
 
-    const hdKey = HDKey.fromMasterSeed(seed)
-
+    const hdKey = HDKey.fromMasterSeed(account._seed)
     const { privateKey } = hdKey.derive(account._path, true)
     account._keyPair = nacl.sign.keyPair.fromSeed(privateKey)
+    
     account._signer = await createKeyPairSignerFromPrivateKeyBytes(privateKey)
 
     sodium_memzero(privateKey)
