@@ -55,7 +55,15 @@ const BIP_44_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
 /** @implements {IWalletAccount} */
 export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /** @private */
-  constructor (_seed, path, config = {}) {
+  constructor (seed, path, config = {}) {
+    if (typeof seed === 'string') {
+      if (!bip39.validateMnemonic(seed)) {
+        throw new Error('The seed phrase is invalid.')
+      }
+
+      seed = bip39.mnemonicToSeedSync(seed)
+    }
+
     super(undefined, config)
 
     /**
@@ -65,6 +73,9 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * @type {SolanaWalletConfig}
      */
     this._config = config
+
+    /** @private */
+    this._seed = seed
 
     /** @private */
     this._path = `${BIP_44_SOL_DERIVATION_PATH_PREFIX}/${path}`
@@ -87,18 +98,10 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   static async at (seed, path, config = {}) {
     const account = new WalletAccountSolana(seed, path, config)
 
-    if (typeof seed === 'string') {
-      if (!bip39.validateMnemonic(seed)) {
-        throw new Error('The seed phrase is invalid.')
-      }
-
-      seed = bip39.mnemonicToSeedSync(seed)
-    }
-
-    const hdKey = HDKey.fromMasterSeed(seed)
-
+    const hdKey = HDKey.fromMasterSeed(account._seed)
     const { privateKey } = hdKey.derive(account._path, true)
     account._keyPair = nacl.sign.keyPair.fromSeed(privateKey)
+    
     account._signer = await createKeyPairSignerFromPrivateKeyBytes(privateKey)
 
     sodium_memzero(privateKey)
