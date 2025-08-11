@@ -126,7 +126,7 @@ which solana
 which solana-test-validator
 ```
 
-If missing, follow [installation instructions](https://docs.solana.com/cli/install-solana-cli-tools) or use:
+If missing, follow [installation instructions](https://docs.anza.xyz/cli/install#use-solanas-install-tool) or use:
 
 ```bash
 sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
