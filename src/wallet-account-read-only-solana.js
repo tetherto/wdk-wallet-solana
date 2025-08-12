@@ -59,7 +59,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @param {string} [address] - The account's address.
    * @param {Omit<SolanaWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
    */
-  constructor (address, config = { }) {
+  constructor (address, config = {}) {
     super(address)
 
     /**

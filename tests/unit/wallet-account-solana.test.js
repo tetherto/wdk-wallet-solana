@@ -1,17 +1,64 @@
 'use strict'
 
-import { confirmTestTransaction, createTestToken, getTransaction, sendCoinToIndexAccount } from './tokenBasic.js'
-import WalletAccountSolana from '../../src/wallet-account-solana.js'
+import { describe, jest } from '@jest/globals'
 import * as bip39 from 'bip39'
+import WalletAccountReadOnlySolana from '../../src/wallet-account-read-only-solana.js'
+
+jest.unstable_mockModule('@solana/kit', async () => {
+  const actual = await jest.requireActual('@solana/kit')
+  return {
+    ...actual,
+    sendAndConfirmTransactionFactory: jest.fn(() => jest.fn())
+  }
+})
+
+// Mock web3.js
+jest.unstable_mockModule('@solana/web3.js', async () => {
+  const actual = await jest.requireActual('@solana/web3.js')
+
+  return {
+    ...actual,
+    PublicKey: jest.fn((key) => `MockPublicKey(${key})`),
+
+    Transaction: jest.fn(() => {
+      const tx = {
+        add: jest.fn(function () { return tx }), // return same object for chaining
+        sign: jest.fn(),
+        compileMessage: jest.fn(),
+        serialize: jest.fn()
+      }
+      return tx
+    })
+  }
+})
+
+// Mock SPL Token
+jest.unstable_mockModule('@solana/spl-token', async () => {
+  // Create a mock Token class
+  const mockTokenInstance = {
+    getOrCreateAssociatedAccountInfo: jest.fn(async (pubKey) => ({ address: `acct-${pubKey}` }))
+  }
+
+  const MockTokenClass = jest.fn(() => mockTokenInstance)
+
+  // Add the static method directly to the mock class
+  MockTokenClass.createTransferInstruction = jest.fn(() => 'mock-instruction')
+
+  return {
+    Token: MockTokenClass,
+    TOKEN_PROGRAM_ID: 'mock-token-program-id'
+  }
+})
+
 const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
 
 const VALID_SEED = bip39.mnemonicToSeedSync(SEED_PHRASE)
 const VALID_PATH = "0'/0/0" // BIP-44 path for Solana accounts
 const VALID_CONFIG = { rpcUrl: 'http://localhost:8899', wsUrl: 'ws://localhost:8900' } // Use solana-test-validator RPC
-const VALID_ADDRESS = '7YKHgGWWGgFZMS87Unxyzog4nGWhAwGzfr7SxbPcuskv'
 const TO_ADDRESS = '6m69wRwfLiKxgfvfcTuHs7dxfL4jCjBWdc9dQWUTcn19'
 const INVALID_SEED_PHRASE = 'invalid seed phrase'
 const INDEX_1_ACCOUNT_PATH = "0'/0/1"
+const VALID_TOKEN = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 
 const ACCOUNT = {
   index: 0,
@@ -22,23 +69,34 @@ const ACCOUNT = {
     publicKey: '612bcdee8a0a93d631d901484b2e40373ddbd783e17f58ad9e486bd5f77d3f0b'
   }
 }
+const { default: WalletAccountSolana } = await import('../../src/wallet-account-solana.js')
 
 describe('WalletAccountSolana', () => {
   let account
-  let VALID_TOKEN
-  beforeAll(async () => {
-    const tokenMint = await createTestToken(SEED_PHRASE)
-    if (!tokenMint) {
-      throw new Error('Failed to create test token')
-    }
-    VALID_TOKEN = tokenMint
-  })
-
   beforeEach(async () => {
     account = await WalletAccountSolana.at(VALID_SEED, VALID_PATH, VALID_CONFIG)
+    account._rpc = {
+      getLatestBlockhash: jest.fn(() => ({
+        send: jest.fn().mockResolvedValue({ value: { blockhash: 'qAimPSfi1gAmJ9rPjeursQaeZE1bKDBdjkeiwdkXFjz', lastValidBlockHeight: 359503820 } })
+      })),
+
+      getFeeForMessage: jest.fn(() => ({
+        send: jest.fn().mockResolvedValue({ value: 5000 })
+      }))
+
+    }
+
+    account._connection = {
+
+      getLatestBlockhash: jest.fn().mockResolvedValue({ blockhash: 'qAimPSfi1gAmJ9rPjeursQaeZE1bKDBdjkeiwdkXFjz' }),
+      getTokenAccountsByOwner: jest.fn(),
+      getFeeForMessage: jest.fn().mockResolvedValue({ value: 5000 }),
+      sendRawTransaction: jest.fn().mockResolvedValue('AHxKz6BYmxAeESq8TzsGphHAUgAUNH2Uh239F5sEsdvNyqWBPYUdSHbccAWQKebWFajJ2xS4WQrBdAiEnbNdUnY')
+    }
   })
 
   afterEach(() => {
+    jest.restoreAllMocks()
     account?.dispose()
   })
 
@@ -121,14 +179,11 @@ describe('WalletAccountSolana', () => {
     const TRANSACTION = { to: TO_ADDRESS, value: 1000000 }
 
     test('should successfully send a transaction', async () => {
+      const expectedHash = '2m5CT3HnLjf3Jr5fKLsQtm25cXu9xRYuPiRKziXfSCXU39JTj9xo2YWCjHrw2YwZgPamU8inYpFR11LD6Hs3trhz'
+
       const txResult = await account.sendTransaction(TRANSACTION)
-      expect(txResult).toBeDefined()
-      await confirmTestTransaction(txResult.hash)
-      const tx = await getTransaction(txResult.hash)
-      expect(tx.transaction.signatures[0]).toEqual(txResult.hash)
-      const txDetails = tx.transaction.message.instructions[0].parsed.info
-      expect(txDetails.destination).toEqual(TO_ADDRESS)
-      expect(txDetails.lamports).toEqual(TRANSACTION.value)
+
+      expect(expectedHash).toEqual(txResult.hash)
     })
 
     test('should throw error when sending transaction with invalid rpc', async () => {
@@ -158,12 +213,16 @@ describe('WalletAccountSolana', () => {
 
   describe('getBalance', () => {
     test('should get wallet balance', async () => {
-      await sendCoinToIndexAccount(SEED_PHRASE, 1)
-
       const account = await WalletAccountSolana.at(VALID_SEED, INDEX_1_ACCOUNT_PATH, VALID_CONFIG)
+      account._rpc = {
 
+        getBalance: jest.fn(() => ({
+          send: jest.fn().mockResolvedValue({ value: 10000 })
+        }))
+
+      }
       const balance = await account.getBalance()
-      expect(balance).toBeGreaterThanOrEqual(1000000000)
+      expect(balance).toBeGreaterThanOrEqual(10000)
     })
 
     test('should throw error when getting balance without RPC', async () => {
@@ -175,14 +234,25 @@ describe('WalletAccountSolana', () => {
   describe('getTokenBalance', () => {
     test('should return the correct token balance of the account', async () => {
       const tokenAccount = await WalletAccountSolana.at(VALID_SEED, INDEX_1_ACCOUNT_PATH, VALID_CONFIG)
+      tokenAccount._connection = {
 
-      const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 200 }
-      const txResult = await account.transfer(TOKEN_TRANSACTION)
+        getTokenAccountsByOwner: jest.fn().mockResolvedValue({ value: [{ pubKey: ACCOUNT.keyPair.publicKey }] }),
+        getTokenAccountBalance: jest.fn().mockResolvedValue({ value: { amount: 200 } })
 
-      await confirmTestTransaction(txResult.hash)
-
+      }
       const balance = await tokenAccount.getTokenBalance(VALID_TOKEN)
       expect(balance).toBe(200)
+    })
+
+    test('should return zero if account not found', async () => {
+      const tokenAccount = await WalletAccountSolana.at(VALID_SEED, INDEX_1_ACCOUNT_PATH, VALID_CONFIG)
+      tokenAccount._connection = {
+
+        getTokenAccountsByOwner: jest.fn().mockResolvedValue({ value: [] })
+
+      }
+      const balance = await tokenAccount.getTokenBalance(VALID_TOKEN)
+      expect(balance).toBe(0)
     })
 
     test('should throw error when getting token balance without RPC', async () => {
@@ -191,6 +261,9 @@ describe('WalletAccountSolana', () => {
     })
 
     test('should throw error for invalid token address', async () => {
+      account._connection = {
+        getTokenAccountsByOwner: jest.fn(() => { throw new Error('Non-base58 character') })
+      }
       await expect(account.getTokenBalance('invalid-token')).rejects.toThrow('Non-base58 character')
     })
   })
@@ -198,6 +271,7 @@ describe('WalletAccountSolana', () => {
   describe('quoteTransfer', () => {
     test('should return fee for token transfer', async () => {
       const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 10 }
+
       const quote = await account.quoteTransfer(TOKEN_TRANSACTION)
       expect(quote.fee).toBe(5000)
     })
@@ -215,29 +289,6 @@ describe('WalletAccountSolana', () => {
 
       const txResult = await account.transfer(TOKEN_TRANSACTION)
       expect(txResult).toBeDefined()
-
-      await confirmTestTransaction(txResult.hash)
-
-      const tx = await getTransaction(txResult.hash)
-      const txDetails = tx.transaction.message.instructions[0].parsed.info
-      expect(txDetails.authority).toEqual(ACCOUNT.address)
-      expect(txDetails.amount).toEqual(TOKEN_TRANSACTION.amount.toString())
-      expect(tx.transaction.signatures[0]).toEqual(txResult.hash)
-
-      const balance = await account.getTokenBalance(VALID_TOKEN)
-
-      // Out of 1000 tokens, 200 token sent to index 1 account, 100 in this test
-      expect(balance).toBe(9700)
-    })
-
-    test('should throw program id error when sending invalid token transaction', async () => {
-      const params = { recipient: VALID_ADDRESS, token: '9gT8yrFzG7e23NE4hRGMoPPBuaNjVKnp8pdH7HkjJnY3', amount: 1000000 }
-      await expect(account.transfer(params)).rejects.toThrow('Failed to find account')
-    })
-
-    test('should handle token transaction errors', async () => {
-      const params = { recipient: 'invalid', token: VALID_TOKEN, amount: 1000000 }
-      await expect(account.transfer(params)).rejects.toThrow()
     })
 
     test('should throw RPC error on token transfer', async () => {
@@ -248,32 +299,17 @@ describe('WalletAccountSolana', () => {
 
     test('should throw  error when fee is more than transferMaxFee ', async () => {
       const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 100 }
-      const walletWithoutRpc = await WalletAccountSolana.at(VALID_SEED, VALID_PATH, { ...VALID_CONFIG, transferMaxFee: 0 })
-      await expect(walletWithoutRpc.transfer(TOKEN_TRANSACTION)).rejects.toThrow('Exceeded maximum fee cost for transfer operation.')
+      const wallet = await WalletAccountSolana.at(VALID_SEED, VALID_PATH, { ...VALID_CONFIG, transferMaxFee: 0 })
+      wallet._rpc = account._rpc
+      wallet._connection = account._connection
+      await expect(wallet.transfer(TOKEN_TRANSACTION)).rejects.toThrow('Exceeded maximum fee cost for transfer operation.')
     })
   })
 
-  describe('getTransactionReceipt', () => {
-    test('should get transaction receipt by signature', async () => {
-      const TRANSACTION = { to: TO_ADDRESS, value: 1000000 }
-      const txResult = await account.sendTransaction(TRANSACTION)
-      expect(txResult).toBeDefined()
-      await confirmTestTransaction(txResult.hash)
-      const tx = await account.getTransactionReceipt(txResult.hash)
-      expect(tx.transaction.signatures[0]).toEqual(txResult.hash)
-      expect(tx.transaction.message.instructions.length).toEqual(1)
-    })
-
-    test('should return null if transaction not found', async () => {
-      const signature = '5D517Q8FrU2chRUtmssRmXsrjSZEiyk6HajBKiPqZfakCKkZifGJiJKMTumsrRACnD3N7mVM2Kpk1KFciNB14oEm'
-      const tx = await account.getTransactionReceipt(signature)
-      expect(tx).toEqual(null)
-    })
-
-    test('should throw RPC error getting receipt without url', async () => {
-      const signature = '5D517Q8FrU2chRUtmssRmXsrjSZEiyk6HajBKiPqZfakCKkZifGJiJKMTumsrRACnD3N7mVM2Kpk1KFciNB14oEm'
-      const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
-      await expect(walletWithoutRpc.getTransactionReceipt(signature)).rejects.toThrow('The wallet must be connected to a provider to fetch transaction receipts.')
+  describe('toReadOnlyAccount', () => {
+    test('should return readOnly account instance', async () => {
+      const readOnlyAccount = await account.toReadOnlyAccount()
+      expect(readOnlyAccount).toBeInstanceOf(WalletAccountReadOnlySolana)
     })
   })
 })

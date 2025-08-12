@@ -56,7 +56,7 @@ export default class WalletManagerSolana extends WalletManager {
      * @protected
      * @type {{ [path: string]: WalletAccountSolana }}
      */
-    this._accounts = { }
+    this._accounts = {}
 
     /**
      * The solana rpc client.
@@ -131,6 +131,6 @@ export default class WalletManagerSolana extends WalletManager {
       account.dispose()
     }
 
-    this._accounts = { }
+    this._accounts = {}
   }
 }

@@ -101,7 +101,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     const hdKey = HDKey.fromMasterSeed(account._seed)
     const { privateKey } = hdKey.derive(account._path, true)
     account._keyPair = nacl.sign.keyPair.fromSeed(privateKey)
-    
+
     account._signer = await createKeyPairSignerFromPrivateKeyBytes(privateKey)
 
     sodium_memzero(privateKey)
