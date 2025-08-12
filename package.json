@@ -9,9 +9,8 @@
     "build:types": "rimraf *.d.ts **/*.d.ts; tsc",
     "lint": "standard --env jest",
     "lint:fix": "standard --fix --env jest",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules SKIP_SETUP=true SKIP_TEARDOWN=true jest tests/unit",
-    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules SKIP_SETUP=true SKIP_TEARDOWN=true jest tests/unit --coverage",
-    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit --coverage"
   },
   "dependencies": {
     "@solana-program/system": "0.7.0",
