@@ -16,6 +16,7 @@
     "@solana/spl-token": "0.1.8",
     "@solana/web3.js": "1.98.2",
     "@wdk/wallet": "https://github.com/tetherto/wdk-wallet.git#develop",
+    "bare-wdk-runtime": "2.0.0",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
     "sodium-universal": "5.0.1",
@@ -25,5 +26,13 @@
     "rimraf": "6.0.1",
     "standard": "17.1.2",
     "typescript": "5.8.3"
+  },
+  "exports": {
+    ".": {
+      "default": "./index.js",
+      "bare": "./bare.js",
+      "types": "./types/index.d.ts"
+    },
+    "./package": "./package.json"
   }
 }
