@@ -206,8 +206,8 @@ describe('WalletAccountSolana', () => {
     })
 
     test('should throw error when quoting transaction with invalid rpc', async () => {
-      const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
-      await expect(walletWithoutRpc.quoteSendTransaction(TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to quote transactions.')
+      const WithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
+      await expect(WithoutRpc.quoteSendTransaction(TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to quote transactions.')
     })
   })
 
@@ -222,12 +222,12 @@ describe('WalletAccountSolana', () => {
 
       }
       const balance = await account.getBalance()
-      expect(balance).toBeGreaterThanOrEqual(10000)
+      expect(balance).toBe(10000)
     })
 
     test('should throw error when getting balance without RPC', async () => {
-      const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
-      await expect(walletWithoutRpc.getBalance()).rejects.toThrow('The wallet must be connected to a provider to retrieve balances.')
+      const WithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
+      await expect(WithoutRpc.getBalance()).rejects.toThrow('The wallet must be connected to a provider to retrieve balances.')
     })
   })
 

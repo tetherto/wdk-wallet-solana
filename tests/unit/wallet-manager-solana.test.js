@@ -5,13 +5,13 @@ import WalletManagerSolana from '../../src/wallet-manager-solana.js'
 
 const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
 
-const testConfig = { rpcUrl: 'http://localhost:8899', wsUrl: 'ws://localhost:8900' }
+const VALID_CONFIG = { rpcUrl: 'http://localhost:8899', wsUrl: 'ws://localhost:8900' }
 
 describe('WalletManagerSolana', () => {
   let walletManager
 
   beforeEach(async () => {
-    walletManager = new WalletManagerSolana(SEED_PHRASE, testConfig)
+    walletManager = new WalletManagerSolana(SEED_PHRASE, VALID_CONFIG)
 
     walletManager._rpc = {
       getRecentPrioritizationFees: jest.fn(() => ({
