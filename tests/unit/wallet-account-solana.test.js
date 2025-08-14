@@ -57,7 +57,6 @@ const VALID_PATH = "0'/0/0" // BIP-44 path for Solana accounts
 const VALID_CONFIG = { rpcUrl: 'http://localhost:8899', wsUrl: 'ws://localhost:8900' } // Use solana-test-validator RPC
 const TO_ADDRESS = '6m69wRwfLiKxgfvfcTuHs7dxfL4jCjBWdc9dQWUTcn19'
 const INVALID_SEED_PHRASE = 'invalid seed phrase'
-const INDEX_1_ACCOUNT_PATH = "0'/0/1"
 const VALID_TOKEN = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 
 const ACCOUNT = {
@@ -189,97 +188,6 @@ describe('WalletAccountSolana', () => {
     test('should throw error when sending transaction with invalid rpc', async () => {
       const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
       await expect(walletWithoutRpc.sendTransaction(TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to send transactions.')
-    })
-  })
-
-  describe('quoteTransaction', () => {
-    const TRANSACTION = { to: TO_ADDRESS, value: 1000000 }
-    const EXPECTED_FEE = 5000
-    test('should successfully quote a transaction', async () => {
-      const quote = await account.quoteSendTransaction(TRANSACTION)
-      expect(quote.fee).toEqual(EXPECTED_FEE)
-    })
-
-    test('should throw error when quoting transaction with invalid address', async () => {
-      const tx = { to: 'invalid', value: 1000000 }
-      await expect(account.quoteSendTransaction(tx)).rejects.toThrow()
-    })
-
-    test('should throw error when quoting transaction with invalid rpc', async () => {
-      const WithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
-      await expect(WithoutRpc.quoteSendTransaction(TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to quote transactions.')
-    })
-  })
-
-  describe('getBalance', () => {
-    test('should get wallet balance', async () => {
-      const account = await WalletAccountSolana.at(VALID_SEED, INDEX_1_ACCOUNT_PATH, VALID_CONFIG)
-      account._rpc = {
-
-        getBalance: jest.fn(() => ({
-          send: jest.fn().mockResolvedValue({ value: 10000 })
-        }))
-
-      }
-      const balance = await account.getBalance()
-      expect(balance).toBe(10000)
-    })
-
-    test('should throw error when getting balance without RPC', async () => {
-      const WithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
-      await expect(WithoutRpc.getBalance()).rejects.toThrow('The wallet must be connected to a provider to retrieve balances.')
-    })
-  })
-
-  describe('getTokenBalance', () => {
-    test('should return the correct token balance of the account', async () => {
-      const tokenAccount = await WalletAccountSolana.at(VALID_SEED, INDEX_1_ACCOUNT_PATH, VALID_CONFIG)
-      tokenAccount._connection = {
-
-        getTokenAccountsByOwner: jest.fn().mockResolvedValue({ value: [{ pubKey: ACCOUNT.keyPair.publicKey }] }),
-        getTokenAccountBalance: jest.fn().mockResolvedValue({ value: { amount: 200 } })
-
-      }
-      const balance = await tokenAccount.getTokenBalance(VALID_TOKEN)
-      expect(balance).toBe(200)
-    })
-
-    test('should return zero if account not found', async () => {
-      const tokenAccount = await WalletAccountSolana.at(VALID_SEED, INDEX_1_ACCOUNT_PATH, VALID_CONFIG)
-      tokenAccount._connection = {
-
-        getTokenAccountsByOwner: jest.fn().mockResolvedValue({ value: [] })
-
-      }
-      const balance = await tokenAccount.getTokenBalance(VALID_TOKEN)
-      expect(balance).toBe(0)
-    })
-
-    test('should throw error when getting token balance without RPC', async () => {
-      const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
-      await expect(walletWithoutRpc.getTokenBalance(VALID_TOKEN)).rejects.toThrow('The wallet must be connected to a provider to retrieve token balances.')
-    })
-
-    test('should throw error for invalid token address', async () => {
-      account._connection = {
-        getTokenAccountsByOwner: jest.fn(() => { throw new Error('Non-base58 character') })
-      }
-      await expect(account.getTokenBalance('invalid-token')).rejects.toThrow('Non-base58 character')
-    })
-  })
-
-  describe('quoteTransfer', () => {
-    test('should return fee for token transfer', async () => {
-      const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 10 }
-
-      const quote = await account.quoteTransfer(TOKEN_TRANSACTION)
-      expect(quote.fee).toBe(5000)
-    })
-
-    test('should throw error checking fee without valid RPC url', async () => {
-      const TOKEN_TRANSACTION = { recipient: TO_ADDRESS, token: VALID_TOKEN, amount: 10 }
-      const walletWithoutRpc = new WalletAccountSolana(VALID_SEED, VALID_PATH)
-      await expect(walletWithoutRpc.quoteTransfer(TOKEN_TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to quote transfer operations.')
     })
   })
 

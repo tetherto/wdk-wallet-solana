@@ -137,6 +137,7 @@ describe('WalletManagerSolana', () => {
   })
 
   describe('quoteSendTransaction', () => {
+    const TRANSACTION = { to: '62u3ZcUSriL8ce4xifs81eUPXHhRiB4KnePT1KmCfV1x', value: 10 }
     test('should return valid transaction fee', async () => {
       account._rpc = {
         getLatestBlockhash: jest.fn(() => ({
@@ -146,12 +147,18 @@ describe('WalletManagerSolana', () => {
           send: jest.fn().mockResolvedValue({ value: 5000 })
         }))
       }
-      const transaction = await account.quoteSendTransaction({ to: '62u3ZcUSriL8ce4xifs81eUPXHhRiB4KnePT1KmCfV1x', value: 10 })
+      const transaction = await account.quoteSendTransaction(TRANSACTION)
       expect(transaction.fee).toBe(5000)
+    })
+
+    test('should throw error when quoting transaction with invalid rpc', async () => {
+      const withoutRpc = new WalletAccountReadOnlySolana(ADDRESS)
+      await expect(withoutRpc.quoteSendTransaction(TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to quote transactions.')
     })
   })
 
   describe('quoteTransfer', () => {
+    const TOKEN_TRANSACTION = { token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', recipient: '62u3ZcUSriL8ce4xifs81eUPXHhRiB4KnePT1KmCfV1x', amount: 10 }
     test('should return valid transfer fee', async () => {
       account._connection = {
         getLatestBlockhash: jest.fn(() => ({
@@ -159,8 +166,13 @@ describe('WalletManagerSolana', () => {
         })),
         getFeeForMessage: jest.fn().mockResolvedValue({ value: 5000 })
       }
-      const transaction = await account.quoteTransfer({ token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', recipient: '62u3ZcUSriL8ce4xifs81eUPXHhRiB4KnePT1KmCfV1x', amount: 10 })
+      const transaction = await account.quoteTransfer(TOKEN_TRANSACTION)
       expect(transaction.fee).toBe(5000)
+    })
+
+    test('should throw error checking fee without valid RPC url', async () => {
+      const accountWithoutRpc = new WalletAccountReadOnlySolana(ADDRESS)
+      await expect(accountWithoutRpc.quoteTransfer(TOKEN_TRANSACTION)).rejects.toThrow('The wallet must be connected to a provider to quote transfer operations.')
     })
   })
 })
