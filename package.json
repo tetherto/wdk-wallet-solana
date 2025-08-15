@@ -33,10 +33,12 @@
   },
   "exports": {
     ".": {
-      "default": "./index.js",
+      "types": "./types/index.d.ts",
       "bare": "./bare.js",
-      "types": "./types/index.d.ts"
+      "default": "./index.js"
     },
-    "./package": "./package.json"
+    "./package": {
+      "default": "./package.json"
+    }
   }
 }
