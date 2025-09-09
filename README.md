@@ -1,5 +1,7 @@
 # @wdk/wallet-solana
 
+**Note**: This package is currently in beta. Please test thoroughly in development environments before using in production.
+
 A simple and secure package to manage BIP-44 wallets for the Solana blockchain. This package provides a clean API for creating, managing, and interacting with Solana wallets using BIP-39 seed phrases and Solana-specific derivation paths.
 
 ## 🔍 About WDK
@@ -10,47 +12,19 @@ For detailed documentation about the complete WDK ecosystem, visit [docs.wallet.
 
 ## 🌟 Features
 
-- **BIP-39 Seed Phrase Support**: Generate and validate BIP-39 mnemonic seed phrases
 - **Solana Derivation Paths**: Support for BIP-44 standard derivation paths for Solana (m/44'/501')
 - **Multi-Account Management**: Create and manage multiple accounts from a single seed phrase
-- **Solana Address Support**: Generate and manage Solana public keys and addresses
-- **Message Signing**: Sign and verify messages using Ed25519 cryptography
-- **Transaction Management**: Send transactions and get fee estimates
-- **SPL Token Support**: Query native SOL and SPL token balances
-- **TypeScript Support**: Full TypeScript definitions included
-- **Memory Safety**: Secure private key management with memory-safe implementation
-- **Provider Flexibility**: Support for custom Solana RPC endpoints
-- **Fee Estimation**: Dynamic fee calculation with recent blockhash
-- **Program Interaction**: Support for interacting with Solana programs
+- **Transaction Management**: Send transactions and get fee estimates with recent blockhash
+- **SPL Token Support**: Query native SOL and SPL token balances using program interactions
 
 ## ⬇️ Installation
 
 To install the `@wdk/wallet-solana` package, follow these instructions:
 
-### Public Release
-
-Once the package is publicly available, you can install it using npm:
+You can install it using npm:
 
 ```bash
 npm install @wdk/wallet-solana
-```
-
-### Private Access
-
-If you have access to the private repository, install the package from the develop branch on GitHub:
-
-```bash
-npm install git+https://github.com/tetherto/wdk-wallet-solana.git#develop
-```
-
-After installation, ensure your package.json includes the dependency correctly:
-
-```json
-"dependencies": {
-  // ... other dependencies ...
-  "@wdk/wallet-solana": "git+ssh://git@github.com:tetherto/wdk-wallet-solana.git#develop"
-  // ... other dependencies ...
-}
 ```
 
 ## 🚀 Quick Start
@@ -70,7 +44,7 @@ import WalletManagerSolana, {
 } from '@wdk/wallet-solana'
 
 // Use a BIP-39 seed phrase (replace with your own secure phrase)
-const seedPhrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+const seedPhrase = 'test only example nut use this real life secret phrase must random'
 
 // Create wallet manager with Solana RPC provider
 const wallet = new WalletManagerSolana(seedPhrase, {
@@ -125,7 +99,7 @@ const balance = await account.getBalance()
 console.log('Native balance:', balance, 'lamports') // 1 SOL = 1000000000 lamports
 
 // Get SPL token balance
-const tokenMint = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // USDC mint address
+const tokenMint = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'; // USDT mint address
 const tokenBalance = await account.getTokenBalance(tokenMint);
 console.log('Token balance:', tokenBalance);
 
@@ -189,7 +163,7 @@ Transfer SPL tokens and estimate fees using `WalletAccountSolana`. Uses Token Pr
 ```javascript
 // Transfer SPL tokens
 const transferResult = await account.transfer({
-  token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Token mint address
+  token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // Token mint address
   recipient: 'publicKey',  // Recipient's base58-encoded public key
   amount: 1000000n     // Amount in token's base units (use BigInt for large numbers)
 }, {
@@ -200,7 +174,7 @@ console.log('Transfer fee:', transferResult.fee, 'lamports');
 
 // Quote token transfer fee
 const transferQuote = await account.quoteTransfer({
-  token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Token mint address
+  token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // Token mint address
   recipient: 'publicKey',  // Recipient's base58-encoded public key
   amount: 1000000n     // Amount in token's base units
 })
@@ -290,34 +264,69 @@ const wallet = new WalletManagerSolana(seedPhrase, {
 |--------|-------------|---------|
 | `getAccount(index)` | Returns a wallet account at the specified index | `Promise<WalletAccountSolana>` |
 | `getAccountByPath(path)` | Returns a wallet account at the specified BIP-44 derivation path | `Promise<WalletAccountSolana>` |
-| `getFeeRates()` | Returns current fee rates for transactions | `Promise<{normal: number, fast: number}>` |
+| `getFeeRates()` | Returns current fee rates for transactions | `Promise<{normal: bigint, fast: bigint}>` |
 | `dispose()` | Disposes all wallet accounts, clearing private keys from memory | `void` |
 
 ##### `getAccount(index)`
-Returns a wallet account at the specified index.
+Returns a Solana wallet account at the specified index using BIP-44 derivation path m/44'/501'.
 
 **Parameters:**
 - `index` (number, optional): The index of the account to get (default: 0)
 
-**Returns:** `Promise<WalletAccountSolana>` - The wallet account
+**Returns:** `Promise<WalletAccountSolana>` - The Solana wallet account
+
+**Example:**
+```javascript
+const account = await wallet.getAccount(0)
+const address = await account.getAddress()
+console.log('Solana account address:', address)
+```
 
 ##### `getAccountByPath(path)`
-Returns a wallet account at the specified BIP-44 derivation path.
+Returns a Solana wallet account at the specified BIP-44 derivation path.
 
 **Parameters:**
-- `path` (string): The derivation path (e.g., "0'/0/0")
+- `path` (string): The derivation path (e.g., "0'/0/0", "1'/0/5")
 
-**Returns:** `Promise<WalletAccountSolana>` - The wallet account
+**Returns:** `Promise<WalletAccountSolana>` - The Solana wallet account
+
+**Example:**
+```javascript
+const account = await wallet.getAccountByPath("0'/0/1")
+const address = await account.getAddress()
+console.log('Custom path address:', address)
+```
 
 ##### `getFeeRates()`
-Returns current fee rates based on recent blockhash and compute unit prices.
+Returns current fee rates for Solana transactions from the network.
 
-**Returns:** `Promise<{normal: number, fast: number}>` - Object containing normal and fast fee rates in lamports
+**Returns:** `Promise<{normal: bigint, fast: bigint}>` - Object containing fee rates in lamports
+- `normal`: Standard compute unit price for normal confirmation speed
+- `fast`: Priority compute unit price for faster confirmation
+
+**Example:**
+```javascript
+const feeRates = await wallet.getFeeRates()
+console.log('Normal fee rate:', feeRates.normal, 'lamports')
+console.log('Fast fee rate:', feeRates.fast, 'lamports')
+
+// Use in transaction
+const result = await account.sendTransaction({
+  recipient: '11111111111111111111111111111112',
+  value: 1000000000n // 1 SOL in lamports
+})
+```
 
 ##### `dispose()`
-Disposes all wallet accounts, clearing private keys from memory.
+Disposes all Solana wallet accounts and clears sensitive data from memory.
 
 **Returns:** `void`
+
+**Example:**
+```javascript
+wallet.dispose()
+// All accounts and private keys are now securely wiped from memory
+```
 
 ### WalletAccountSolana
 
@@ -344,59 +353,181 @@ new WalletAccountSolana(seed, path, config)
 | `getAddress()` | Returns the account's public key | `Promise<string>` |
 | `sign(message)` | Signs a message using the account's private key | `Promise<string>` |
 | `verify(message, signature)` | Verifies a message signature | `Promise<boolean>` |
-| `sendTransaction(tx)` | Sends a Solana transaction | `Promise<{signature: string, fee: number}>` |
-| `quoteSendTransaction(tx)` | Estimates the fee for a transaction | `Promise<{fee: number}>` |
-| `transfer(options)` | Transfers SPL tokens to another address | `Promise<{signature: string, fee: number}>` |
-| `quoteTransfer(options)` | Estimates the fee for an SPL token transfer | `Promise<{fee: number}>` |
-| `getBalance()` | Returns the native SOL balance (in lamports) | `Promise<number>` |
-| `getTokenBalance(tokenMint)` | Returns the balance of a specific SPL token | `Promise<number>` |
+| `sendTransaction(tx)` | Sends a Solana transaction | `Promise<{signature: string, fee: bigint}>` |
+| `quoteSendTransaction(tx)` | Estimates the fee for a transaction | `Promise<{fee: bigint}>` |
+| `transfer(options)` | Transfers SPL tokens to another address | `Promise<{signature: string, fee: bigint}>` |
+| `quoteTransfer(options)` | Estimates the fee for an SPL token transfer | `Promise<{fee: bigint}>` |
+| `getBalance()` | Returns the native SOL balance (in lamports) | `Promise<bigint>` |
+| `getTokenBalance(tokenMint)` | Returns the balance of a specific SPL token | `Promise<bigint>` |
 | `dispose()` | Disposes the wallet account, clearing private keys from memory | `void` |
 
+##### `getAddress()`
+Returns the account's Solana public key (base58-encoded).
+
+**Returns:** `Promise<string>` - The account's public key
+
+**Example:**
+```javascript
+const address = await account.getAddress()
+console.log('Solana address:', address) // Base58 public key
+```
+
+##### `sign(message)`
+Signs a message using the account's Ed25519 private key.
+
+**Parameters:**
+- `message` (string): Message to sign
+
+**Returns:** `Promise<string>` - Signature as base58 string
+
+**Example:**
+```javascript
+const signature = await account.sign('Hello Solana!')
+console.log('Signature:', signature)
+```
+
+##### `verify(message, signature)`
+Verifies a message signature using the account's Ed25519 public key.
+
+**Parameters:**
+- `message` (string): Original message
+- `signature` (string): Signature as base58 string
+
+**Returns:** `Promise<boolean>` - True if signature is valid
+
+**Example:**
+```javascript
+const isValid = await account.verify('Hello Solana!', signature)
+console.log('Signature valid:', isValid)
+```
+
 ##### `sendTransaction(tx)`
-Sends a Solana transaction.
+Sends a Solana transaction and broadcasts it to the network.
 
 **Parameters:**
 - `tx` (object): The transaction object
   - `recipient` (string): Recipient's public key (base58-encoded)
-  - `value` (number): Amount in lamports
-  - `commitment` (string, optional): Commitment level
+  - `value` (number | bigint): Amount in lamports
+  - `commitment` (string, optional): Commitment level ('processed', 'confirmed', 'finalized')
 
-**Returns:** `Promise<{signature: string, fee: number}>` - Object containing signature and fee (in lamports)
+**Returns:** `Promise<{signature: string, fee: bigint}>` - Object containing signature and fee (in lamports)
+
+**Example:**
+```javascript
+const result = await account.sendTransaction({
+  recipient: '11111111111111111111111111111112',
+  value: 1000000000n, // 1 SOL in lamports
+  commitment: 'confirmed'
+})
+console.log('Transaction signature:', result.signature)
+console.log('Fee paid:', result.fee, 'lamports')
+```
 
 ##### `quoteSendTransaction(tx)`
-Estimates the fee for a Solana transaction.
+Estimates the fee for a Solana transaction without broadcasting it.
 
 **Parameters:**
-- `tx` (object): The transaction object (same as sendTransaction)
+- `tx` (object): Same as sendTransaction parameters
   - `recipient` (string): Recipient's public key (base58-encoded)
-  - `value` (number): Amount in lamports
+  - `value` (number | bigint): Amount in lamports
   - `commitment` (string, optional): Commitment level
 
-**Returns:** `Promise<{fee: number}>` - Object containing fee estimate (in lamports)
+**Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in lamports)
+
+**Example:**
+```javascript
+const quote = await account.quoteSendTransaction({
+  recipient: '11111111111111111111111111111112',
+  value: 1000000000n // 1 SOL in lamports
+})
+console.log('Estimated fee:', quote.fee, 'lamports')
+console.log('Estimated fee in SOL:', Number(quote.fee) / 1e9)
+```
 
 ##### `transfer(options)`
-Transfers SPL tokens to another address.
+Transfers SPL tokens to another address and broadcasts the transaction.
 
 **Parameters:**
 - `options` (object): Transfer options
   - `token` (string): Token mint address (base58-encoded)
   - `recipient` (string): Recipient's public key (base58-encoded)
-  - `amount` (number): Amount in token's base units
+  - `amount` (number | bigint): Amount in token's smallest unit
   - `commitment` (string, optional): Commitment level
 
-**Returns:** `Promise<{signature: string, fee: number}>` - Object containing signature and fee (in lamports)
+**Returns:** `Promise<{signature: string, fee: bigint}>` - Object containing signature and fee (in lamports)
+
+**Example:**
+```javascript
+const result = await account.transfer({
+  token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+  recipient: '11111111111111111111111111111112',
+  amount: 1000000n, // 1 USDT (6 decimals)
+  commitment: 'confirmed'
+})
+console.log('Transfer signature:', result.signature)
+console.log('Gas fee:', result.fee, 'lamports')
+```
 
 ##### `quoteTransfer(options)`
-Estimates the fee for an SPL token transfer.
+Estimates the fee for an SPL token transfer without broadcasting it.
 
 **Parameters:**
-- `options` (object): Transfer options (same as transfer)
+- `options` (object): Same as transfer parameters
   - `token` (string): Token mint address (base58-encoded)
   - `recipient` (string): Recipient's public key (base58-encoded)
-  - `amount` (number): Amount in token's base units
+  - `amount` (number | bigint): Amount in token's smallest unit
   - `commitment` (string, optional): Commitment level
 
-**Returns:** `Promise<{fee: number}>` - Object containing fee estimate (in lamports)
+**Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in lamports)
+
+**Example:**
+```javascript
+const quote = await account.quoteTransfer({
+  token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+  recipient: '11111111111111111111111111111112',
+  amount: 1000000n // 1 USDT (6 decimals)
+})
+console.log('Estimated transfer fee:', quote.fee, 'lamports')
+```
+
+##### `getBalance()`
+Returns the account's native SOL balance in lamports.
+
+**Returns:** `Promise<bigint>` - Balance in lamports
+
+**Example:**
+```javascript
+const balance = await account.getBalance()
+console.log('SOL balance:', balance, 'lamports')
+console.log('Balance in SOL:', Number(balance) / 1e9)
+```
+
+##### `getTokenBalance(tokenMint)`
+Returns the balance of a specific SPL token.
+
+**Parameters:**
+- `tokenMint` (string): The SPL token mint address (base58-encoded)
+
+**Returns:** `Promise<bigint>` - Token balance in token's smallest unit
+
+**Example:**
+```javascript
+// Get USDT balance (6 decimals)
+const usdtBalance = await account.getTokenBalance('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB')
+console.log('USDT balance:', Number(usdtBalance) / 1e6)
+```
+
+##### `dispose()`
+Disposes the wallet account, securely erasing the private key from memory.
+
+**Returns:** `void`
+
+**Example:**
+```javascript
+account.dispose()
+// Private key is now securely wiped from memory
+```
+
 
 #### Properties
 
@@ -428,46 +559,83 @@ new WalletAccountReadOnlySolana(publicKey, config)
 
 | Method | Description | Returns |
 |--------|-------------|---------|
-| `getBalance()` | Returns the native SOL balance (in lamports) | `Promise<number>` |
-| `getTokenBalance(tokenMint)` | Returns the balance of a specific SPL token | `Promise<number>` |
-| `quoteSendTransaction(tx)` | Estimates the fee for a transaction | `Promise<{fee: number}>` |
-| `quoteTransfer(options)` | Estimates the fee for an SPL token transfer | `Promise<{fee: number}>` |
+| `getBalance()` | Returns the native SOL balance (in lamports) | `Promise<bigint>` |
+| `getTokenBalance(tokenMint)` | Returns the balance of a specific SPL token | `Promise<bigint>` |
+| `quoteSendTransaction(tx)` | Estimates the fee for a transaction | `Promise<{fee: bigint}>` |
+| `quoteTransfer(options)` | Estimates the fee for an SPL token transfer | `Promise<{fee: bigint}>` |
 
 ##### `getBalance()`
-Returns the native SOL balance.
+Returns the account's native SOL balance in lamports.
 
-**Returns:** `Promise<number>` - Balance in lamports
+**Returns:** `Promise<bigint>` - Balance in lamports
+
+**Example:**
+```javascript
+const balance = await readOnlyAccount.getBalance()
+console.log('SOL balance:', balance, 'lamports')
+console.log('Balance in SOL:', Number(balance) / 1e9)
+```
 
 ##### `getTokenBalance(tokenMint)`
 Returns the balance of a specific SPL token.
 
 **Parameters:**
-- `tokenMint` (string): Token mint address (base58-encoded)
+- `tokenMint` (string): The SPL token mint address (base58-encoded)
 
-**Returns:** `Promise<number>` - Token balance in base units
+**Returns:** `Promise<bigint>` - Token balance in token's smallest unit
+
+**Example:**
+```javascript
+// Get USDT balance (6 decimals)
+const usdtBalance = await readOnlyAccount.getTokenBalance('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB')
+console.log('USDT balance:', Number(usdtBalance) / 1e6)
+```
 
 ##### `quoteSendTransaction(tx)`
-Estimates the fee for a transaction.
+Estimates the fee for a Solana transaction without broadcasting it.
 
 **Parameters:**
 - `tx` (object): The transaction object
   - `recipient` (string): Recipient's public key (base58-encoded)
-  - `value` (number): Amount in lamports
+  - `value` (number | bigint): Amount in lamports
   - `commitment` (string, optional): Commitment level
 
-**Returns:** `Promise<{fee: number}>` - Object containing fee estimate (in lamports)
+**Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in lamports)
+
+**Example:**
+```javascript
+const quote = await readOnlyAccount.quoteSendTransaction({
+  recipient: '11111111111111111111111111111112',
+  value: 1000000000n, // 1 SOL in lamports
+  commitment: 'confirmed'
+})
+console.log('Estimated fee:', quote.fee, 'lamports')
+console.log('Estimated fee in SOL:', Number(quote.fee) / 1e9)
+```
 
 ##### `quoteTransfer(options)`
-Estimates the fee for an SPL token transfer.
+Estimates the fee for an SPL token transfer without broadcasting it.
 
 **Parameters:**
 - `options` (object): Transfer options
   - `token` (string): Token mint address (base58-encoded)
   - `recipient` (string): Recipient's public key (base58-encoded)
-  - `amount` (number): Amount in token's base units
+  - `amount` (number | bigint): Amount in token's smallest unit
   - `commitment` (string, optional): Commitment level
 
-**Returns:** `Promise<{fee: number}>` - Object containing fee estimate (in lamports)
+**Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in lamports)
+
+**Example:**
+```javascript
+const quote = await readOnlyAccount.quoteTransfer({
+  token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+  recipient: '11111111111111111111111111111112',
+  amount: 1000000n, // 1 USDT (6 decimals)
+  commitment: 'confirmed'
+})
+console.log('Estimated transfer fee:', quote.fee, 'lamports')
+console.log('Estimated fee in SOL:', Number(quote.fee) / 1e9)
+```
 
 ## 🌐 Supported Networks
 
@@ -536,58 +704,6 @@ npm test
 npm run test:coverage
 ```
 
-## 💡 Examples
-
-### Complete Wallet Setup
-
-```javascript
-import WalletManagerSolana from '@wdk/wallet-solana'
-
-async function setupWallet() {
-  // Use a BIP-39 seed phrase (replace with your own secure phrase)
-  const seedPhrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
-  
-  // Create wallet manager
-  const wallet = new WalletManagerSolana(seedPhrase, {
-    provider: 'https://api.mainnet-beta.solana.com',
-    commitment: 'confirmed'
-  })
-  
-  // Get first account
-  const account = await wallet.getAccount(0)
-  const address = await account.getAddress()
-  console.log('Wallet address:', address)
-  
-  // Check balance
-  const balance = await account.getBalance()
-  console.log('Balance:', balance, 'lamports')
-  
-  return { wallet, account, address, balance }
-}
-```
-
-### Multi-Account Management
-
-```javascript
-async function manageMultipleAccounts(wallet) {
-  const accounts = []
-  
-  // Create 5 accounts
-  for (let i = 0; i < 5; i++) {
-    const account = await wallet.getAccount(i)
-    const address = await account.getAddress()
-    const balance = await account.getBalance()
-    
-    accounts.push({
-      index: i,
-      address,
-      balance
-    })
-  }
-  
-  return accounts
-}
-```
 
 ## 📜 License
 
@@ -602,5 +718,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 For support, please open an issue on the GitHub repository.
 
 ---
-
-**Note**: This package is currently in beta. Please test thoroughly in development environments before using in production.
