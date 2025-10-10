@@ -28,7 +28,7 @@
     "@solana/spl-token": "0.1.8",
     "@solana/web3.js": "1.98.2",
     "@tetherto/wdk-wallet": "^1.0.0-beta.1",
-    "bare-node-runtime": "1.0.3",
+    "bare-node-runtime": "1.1.1",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
     "sodium-universal": "5.0.1",
