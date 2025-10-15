@@ -15,17 +15,13 @@
 'use strict'
 
 import {
-  address as _address, createKeyPairSignerFromPrivateKeyBytes, signBytes,
-  verifySignature, createTransactionMessage, setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash, compileTransactionMessage, getCompiledTransactionMessageEncoder,
-  getBase64Decoder, pipe, appendTransactionMessageInstructions,
-  lamports, signTransactionMessageWithSigners, getSignatureFromTransaction,
-  sendAndConfirmTransactionFactory
+  createKeyPairSignerFromPrivateKeyBytes, signBytes,
+  verifySignature
 } from '@solana/kit'
 
-import { PublicKey, Keypair, Transaction } from '@solana/web3.js'
+import { PublicKey, Keypair, Transaction, VersionedTransaction } from '@solana/web3.js'
 
-import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { Token, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token'
 
 import { getTransferSolInstruction } from '@solana-program/system'
 
@@ -174,7 +170,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   }
 
   /**
-   * Sends a transaction.
+   * Sends a transaction. Accepts simple transactions { to, value },
+   * legacy Solana Transaction objects, or VersionedTransaction objects.
    *
    * @param {SolanaTransaction} tx - The transaction.
    * @returns {Promise<TransactionResult>} The transaction's result.
@@ -184,34 +181,89 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       throw new Error('The wallet must be connected to a provider to send transactions.')
     }
 
-    const transaction = await this._getTransaction(tx)
+    let signedTransaction
+    let feeValue
+    if (tx instanceof VersionedTransaction) {
+      signedTransaction = await this._signVersionedTransaction(tx)
+      const { value } = await this._connection.getFeeForMessage(signedTransaction.message)
+      feeValue = value
+    } else if (tx instanceof Transaction) {
+      signedTransaction = await this._signLegacyTransaction(tx)
+      const { value } = await this._connection.getFeeForMessage(signedTransaction.compileMessage())
+      feeValue = value
+    } else {
+      throw new Error('Unsupported transaction type. Solana transaction must be a VersionedTransaction, a legacy Transaction object.')
+    }
 
-    const compiledTransactionMessageEncoder = getCompiledTransactionMessageEncoder()
-    const base64Decoder = getBase64Decoder()
+    const signature = await this._connection.sendRawTransaction(signedTransaction.serialize())
+    const { lastValidBlockHeight, blockhash } = await this._connection.getLatestBlockhash()
 
-    const base64EncodedMessage = pipe(
-      transaction,
-      compileTransactionMessage,
-      compiledTransactionMessageEncoder.encode,
-      base64Decoder.decode
+    await this._connection.confirmTransaction(
+      {
+        blockhash,
+        lastValidBlockHeight,
+        signature
+      },
+      'confirmed'
     )
 
-    const fee = await this._rpc.getFeeForMessage(base64EncodedMessage).send()
+    return { hash: signature, fee: BigInt(feeValue) }
+  }
 
-    const signedTransaction = await signTransactionMessageWithSigners(transaction)
+  /**
+ * Signs a legacy Solana Transaction object.
+ *
+ * @private
+ * @param {Transaction} transaction - The legacy transaction.
+ * @returns {Promise<Transaction>} The signed transaction.
+ */
+  async _signLegacyTransaction (transaction) {
+    const address = await this.getAddress()
+    const publicKey = new PublicKey(address)
 
-    const sendAndConfirm = sendAndConfirmTransactionFactory({
-      rpc: this._rpc,
-      rpcSubscriptions: this._rpcSubscriptions
-    })
+    if (transaction.feePayer) {
+      if (!transaction.feePayer.equals(publicKey)) {
+        throw new Error('Transaction fee payer must match wallet address.')
+      }
+    } else {
+      transaction.feePayer = publicKey
+    }
 
-    await sendAndConfirm(signedTransaction, {
-      commitment: 'processed'
-    })
+    if (!transaction.recentBlockhash) {
+      const { blockhash } = await this._connection.getLatestBlockhash()
+      transaction.recentBlockhash = blockhash
+    }
 
-    const hash = getSignatureFromTransaction(signedTransaction)
+    const keypair = Keypair.fromSecretKey(this._keyPair.secretKey)
+    transaction.sign(keypair)
 
-    return { hash, fee: Number(fee.value) }
+    return transaction
+  }
+
+  /**
+   * Signs a VersionedTransaction object.
+   *
+   * @private
+   * @param {VersionedTransaction} transaction - The versioned transaction.
+   * @returns {Promise<VersionedTransaction>} The signed transaction.
+   */
+  async _signVersionedTransaction (transaction) {
+    const address = await this.getAddress()
+    const publicKey = new PublicKey(address)
+
+    const feePayer = transaction.message.staticAccountKeys[0]
+    if (!feePayer.equals(publicKey)) {
+      throw new Error('Transaction fee payer must match wallet address.')
+    }
+
+    if (!transaction.message.recentBlockhash) {
+      throw new Error('VersionedTransaction must have a recentBlockhash set.')
+    }
+
+    const keypair = Keypair.fromSecretKey(this._keyPair.secretKey)
+    transaction.sign([keypair])
+
+    return transaction
   }
 
   /**
@@ -219,27 +271,78 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    *
    * @param {TransferOptions} options - The transfer's options.
    * @returns {Promise<TransferResult>} The transfer's result.
+   * TODO: support native SOL transfer
    */
   async transfer (options) {
     if (!this._rpc) {
       throw new Error('The wallet must be connected to a provider to transfer tokens.')
     }
 
-    const transfer = await this._getTransfer(options)
-    const message = transfer.compileMessage()
-    const { value } = await this._connection.getFeeForMessage(message)
+    const { token, recipient, amount } = options
 
-    const fee = Number(value)
+    const address = await this.getAddress()
+    const ownerPublicKey = new PublicKey(address)
+    const tokenMint = new PublicKey(token)
+    const recipientPublicKey = new PublicKey(recipient)
 
-    // eslint-disable-next-line eqeqeq
-    if (this._config.transferMaxFee != undefined && fee >= this._config.transferMaxFee) {
-      throw new Error('Exceeded maximum fee cost for transfer operation.')
+    const fromATA = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      tokenMint,
+      ownerPublicKey
+    )
+
+    const toATA = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      tokenMint,
+      recipientPublicKey
+    )
+
+    const tx = new Transaction()
+
+    const recipientATAInfo = await this._connection.getAccountInfo(toATA)
+    // If recipient's ATA doesn't exist, add creation instruction
+    if (!recipientATAInfo) {
+      const createATAInstruction = Token.createAssociatedTokenAccountInstruction(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        tokenMint,
+        toATA,
+        recipientPublicKey,
+        ownerPublicKey // Fee payer
+      )
+      tx.add(createATAInstruction)
     }
 
-    const transaction = transfer.serialize()
-    const hash = await this._connection.sendRawTransaction(transaction)
+    // Add transfer instruction
+    const transferInstruction = Token.createTransferInstruction(
+      TOKEN_PROGRAM_ID,
+      fromATA,
+      toATA,
+      ownerPublicKey,
+      [],
+      amount
+    )
+    tx.add(transferInstruction)
 
-    return { hash, fee }
+    // Set blockhash and fee payer
+    const { blockhash } = await this._connection.getLatestBlockhash()
+    tx.recentBlockhash = blockhash
+    tx.feePayer = ownerPublicKey
+
+    if (this._config.transferMaxFee !== undefined) {
+      const message = tx.compileMessage()
+      const { value: feeValue } = await this._connection.getFeeForMessage(message)
+
+      if (feeValue >= this._config.transferMaxFee) {
+        throw new Error('Exceeded maximum fee cost for transfer operation.')
+      }
+    }
+
+    const result = await this.sendTransaction(tx)
+
+    return result
   }
 
   /**
@@ -264,53 +367,5 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     this._keyPair.secretKey = undefined
 
     this._signer = undefined
-  }
-
-  async _getTransaction ({ to, value }) {
-    const { value: latestBlockhash } = await this._rpc.getLatestBlockhash()
-      .send()
-
-    const instruction = getTransferSolInstruction({
-      source: this._signer,
-      destination: _address(to),
-      amount: lamports(BigInt(value))
-    })
-
-    const transaction = pipe(
-      createTransactionMessage({ version: 0 }),
-      (tx) => setTransactionMessageFeePayerSigner(this._signer, tx),
-      (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-      (tx) => appendTransactionMessageInstructions([instruction], tx)
-    )
-
-    return transaction
-  }
-
-  async _getTransfer ({ token, recipient, amount }) {
-    const address = await this.getAddress()
-
-    const _address = new PublicKey(address)
-    const _token = new PublicKey(token)
-    const _recipient = new PublicKey(recipient)
-
-    const signer = Keypair.fromSecretKey(this._keyPair.secretKey)
-
-    const client = new Token(this._connection, _token, TOKEN_PROGRAM_ID, signer)
-
-    const fromTokenAccount = await client.getOrCreateAssociatedAccountInfo(_address)
-    const toTokenAccount = await client.getOrCreateAssociatedAccountInfo(_recipient)
-
-    const instruction = Token.createTransferInstruction(TOKEN_PROGRAM_ID, fromTokenAccount.address,
-      toTokenAccount.address, _address, [], amount)
-
-    const transaction = new Transaction().add(instruction)
-
-    const { blockhash } = await this._connection.getLatestBlockhash()
-    transaction.recentBlockhash = blockhash
-    transaction.feePayer = _address
-
-    transaction.sign(signer)
-
-    return transaction
   }
 }
