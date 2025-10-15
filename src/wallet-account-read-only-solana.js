@@ -70,7 +70,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     this._config = config
 
-    const { rpcUrl, wsUrl } = config
+    const { rpcUrl, wsUrl, commitment = 'processed' } = config
 
     if (rpcUrl) {
       /**
@@ -87,7 +87,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
        * @protected
        * @type {Connection}
        */
-      this._connection = new Connection(rpcUrl, 'processed')
+      this._connection = new Connection(rpcUrl, commitment)
 
       /**
        * The solana rpc subscriptions websocket client.

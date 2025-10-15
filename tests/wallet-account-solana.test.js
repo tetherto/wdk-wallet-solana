@@ -32,7 +32,7 @@ describe('WalletAccountSolana', () => {
   beforeAll(async () => {
     wallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
       rpcUrl: TEST_RPC_URL,
-      commitment: 'confirmed'
+      commitment: 'processed'
     })
 
     account = await wallet.getAccount(0)
