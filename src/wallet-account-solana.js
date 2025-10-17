@@ -14,11 +14,6 @@
 
 'use strict'
 
-import {
-  createKeyPairSignerFromPrivateKeyBytes, signBytes,
-  verifySignature
-} from '@solana/kit'
-
 import { PublicKey, Keypair, Transaction, VersionedTransaction } from '@solana/web3.js'
 
 import HDKey from 'micro-key-producer/slip10.js'
@@ -89,7 +84,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     const hdKey = HDKey.fromMasterSeed(account._seed)
     const { privateKey } = hdKey.derive(account._path, true)
-    account._keyPair = Keypair.fromSeed(Buffer.from(privateKey, "hex"));
+    account._keyPair = Keypair.fromSeed(Buffer.from(privateKey, 'hex'))
 
     sodium_memzero(privateKey)
 
@@ -115,19 +110,30 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   }
 
   /**
-   * The account's key pair.
-   *
-   * @type {KeyPair}
-   */
+ * The account's key pair.
+ *
+ * Returns the raw key pair bytes in standard Solana format.
+ * - privateKey: 64-byte Ed25519 secret key (Uint8Array)
+ * - publicKey: 32-byte Ed25519 public key (Uint8Array)
+ *
+ * @type {KeyPair}
+ */
   get keyPair () {
+    if (!this._keyPair) {
+      return {
+        privateKey: undefined,
+        publicKey: undefined
+      }
+    }
+
     return {
-      privateKey: this._keyPair?.secretKey || undefined,
-      publicKey: this._keyPair?.publicKey || undefined
+      privateKey: this._keyPair.secretKey,
+      publicKey: this._keyPair.publicKey.toBytes()
     }
   }
 
   async getAddress () {
-    return this._keyPair.publicKey.toBase58();
+    return this._keyPair.publicKey.toBase58()
   }
 
   /**
@@ -139,12 +145,12 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   async sign (message) {
     const messageBytes = Buffer.from(message, 'utf8')
     // Sign the message using native ed25519 signature
-      const signature = nacl.sign.detached(
-        messageBytes,
-        this._keyPair.secretKey,
-      );
+    const signature = nacl.sign.detached(
+      messageBytes,
+      this._keyPair.secretKey
+    )
 
-    return signature
+    return Buffer.from(signature).toString('hex')
   }
 
   /**
@@ -158,9 +164,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     const messageBytes = Buffer.from(message, 'utf8')
     const signatureBytes = Buffer.from(signature, 'hex')
 
-    const isValid = await verifySignature(this._keyPair.publicKey, signatureBytes, messageBytes)
-
-    return isValid
+    return nacl.sign.detached.verify(messageBytes, signatureBytes, this._keyPair.publicKey.toBytes())
   }
 
   /**
@@ -179,14 +183,22 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     let feeValue
     if (tx instanceof VersionedTransaction) {
       signedTransaction = await this._signVersionedTransaction(tx)
-      const { value } = await this._connection.getFeeForMessage(signedTransaction.message)
-      feeValue = value
+      const { value: fee } = await this._connection.getFeeForMessage(signedTransaction.message)
+      feeValue = fee
     } else if (tx instanceof Transaction) {
       signedTransaction = await this._signLegacyTransaction(tx)
-      const { value } = await this._connection.getFeeForMessage(signedTransaction.compileMessage())
-      feeValue = value
+      const { value: fee } = await this._connection.getFeeForMessage(signedTransaction.compileMessage())
+      feeValue = fee
     } else {
-      throw new Error('Unsupported transaction type. Solana transaction must be a VersionedTransaction, a legacy Transaction object.')
+      // Handle TransferNativeTransaction { to, value }
+      if (tx?.to === undefined || tx?.value === undefined) {
+        throw new Error('Invalid transaction object. Must be { to, value }, Transaction, or VersionedTransaction.')
+      }
+      const { to, value } = tx
+      const transferNativeTx = await this._buildNativeTransferTransaction(to, value)
+      signedTransaction = await this._signLegacyTransaction(transferNativeTx)
+      const { value: fee } = await this._connection.getFeeForMessage(signedTransaction.compileMessage())
+      feeValue = fee
     }
 
     const signature = await this._connection.sendRawTransaction(signedTransaction.serialize())
@@ -271,8 +283,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     if (!this._connection) {
       throw new Error('The wallet must be connected to a provider to transfer tokens.')
     }
-
-    const tx = await this._buildSPLTransferTransaction(options)
+    const { token, recipient, amount } = options
+    const tx = await this._buildSPLTransferTransaction(token, recipient, amount)
 
     if (this._config.transferMaxFee !== undefined) {
       const message = tx.compileMessage()
@@ -311,6 +323,4 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     this._seed = undefined
   }
-
-  
 }

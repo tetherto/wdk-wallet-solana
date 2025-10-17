@@ -16,7 +16,9 @@
 
 import WalletManager from '@tetherto/wdk-wallet'
 
-import { createSolanaRpc } from '@solana/kit'
+import {
+  Connection
+} from '@solana/web3.js'
 
 import WalletAccountSolana from './wallet-account-solana.js'
 
@@ -49,14 +51,16 @@ export default class WalletManagerSolana extends WalletManager {
     * @type {SolanaWalletConfig}
     */
     this._config = config
-
-    /**
-     * The solana rpc client.
-     *
-     * @protected
-     * @type {SolanaRpc}
-     */
-    this._rpc = createSolanaRpc(this._config.rpcUrl)
+    const { rpcUrl, commitment = 'confirmed' } = config
+    if (rpcUrl) {
+      /**
+       * A connection to a full node json rpc endpoint.
+       *
+       * @protected
+       * @type {Connection}
+       */
+      this._connection = new Connection(rpcUrl, commitment)
+    }
   }
 
   /**
@@ -92,21 +96,23 @@ export default class WalletManagerSolana extends WalletManager {
   }
 
   /**
-   * Returns the current fee rates.
-   *
-   * @returns {Promise<FeeRates>} The fee rates (in lamports).
-   */
+ * Returns the current fee rates.
+ *
+ * @returns {Promise<FeeRates>} The fee rates (in lamports).
+ */
   async getFeeRates () {
-    if (!this._rpc) {
+    if (!this._connection) {
       throw new Error('The wallet must be connected to a provider to get fee rates.')
     }
 
-    const fees = await this._rpc.getRecentPrioritizationFees().send()
+    const fees = await this._connection.getRecentPrioritizationFees()
 
-    const nonZeroFees = fees.filter(fee => fee.prioritizationFee > 0n)
+    const nonZeroFees = fees
+      .filter(fee => fee.prioritizationFee > 0)
+      .map(fee => BigInt(fee.prioritizationFee))
 
     const fee = nonZeroFees.length > 0
-      ? nonZeroFees.reduce((max, fee) => fee.prioritizationFee > max ? fee.prioritizationFee : max, 0n)
+      ? nonZeroFees.reduce((max, fee) => fee > max ? fee : max, 0n)
       : DEFAULT_BASE_FEE
 
     return {

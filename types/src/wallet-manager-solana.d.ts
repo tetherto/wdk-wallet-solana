@@ -7,12 +7,12 @@ export default class WalletManagerSolana extends WalletManager {
      */
     constructor(seed: string | Uint8Array, config?: SolanaWalletConfig);
     /**
-     * The solana rpc client.
+     * A connection to a full node json rpc endpoint.
      *
      * @protected
-     * @type {SolanaRpc}
+     * @type {Connection}
      */
-    protected _rpc: SolanaRpc;
+    protected _connection: Connection;
     /**
      * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
      *
@@ -33,16 +33,10 @@ export default class WalletManagerSolana extends WalletManager {
      * @returns {Promise<WalletAccountSolana>} The account.
      */
     getAccountByPath(path: string): Promise<WalletAccountSolana>;
-    /**
-     * Returns the current fee rates.
-     *
-     * @returns {Promise<FeeRates>} The fee rates (in lamports).
-     */
-    getFeeRates(): Promise<FeeRates>;
 }
-export type SolanaRpc = ReturnType<typeof createSolanaRpc>;
+export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
 export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
 export type SolanaWalletConfig = import("./wallet-account-solana.js").SolanaWalletConfig;
 import WalletManager from '@tetherto/wdk-wallet';
-import { createSolanaRpc } from '@solana/kit';
+import { Connection } from '@solana/web3.js';
 import WalletAccountSolana from './wallet-account-solana.js';

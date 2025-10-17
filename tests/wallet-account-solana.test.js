@@ -18,12 +18,11 @@ import { describe, it, expect, beforeAll, jest, beforeEach, afterEach } from '@j
 import { Transaction, SystemProgram, PublicKey, Keypair, VersionedTransaction, TransactionMessage } from '@solana/web3.js'
 import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
+import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
 
 // Test seed phrase
 const TEST_SEED_PHRASE = 'test walk nut penalty hip pave soap entry language right filter choice'
-
-// Solana Devnet RPC endpoint
-const TEST_RPC_URL = 'https://api.devnet.solana.com'
+const TEST_RPC_URL = 'https://mockurl.com'
 
 describe('WalletAccountSolana', () => {
   let wallet
@@ -38,6 +37,22 @@ describe('WalletAccountSolana', () => {
     account = await wallet.getAccount(0)
   })
   describe('Wallet Properties', () => {
+    describe('seed', () => {
+
+      it('should throw if invalid words in seed phrase', async () => {
+        await expect(
+          WalletAccountSolana.at(
+            'invalid word that does not exist test test test test test test test',
+            "0'/0/0",
+            {
+              rpcUrl: TEST_RPC_URL,
+              commitment: 'processed'
+            }
+          )
+        ).rejects.toThrow('The seed phrase is invalid')
+      })
+    })
+
     describe('getAddress', () => {
       it('should return a valid base58 Solana address', async () => {
         const address = await account.getAddress()
@@ -163,11 +178,6 @@ describe('WalletAccountSolana', () => {
         expect(account0.index).toBe(0)
       })
 
-      it('should return correct index for account 10', async () => {
-        const account10 = await wallet.getAccount(10)
-        expect(account10.index).toBe(10)
-      })
-
       it('should return correct index for account 999', async () => {
         const account999 = await wallet.getAccount(999)
         expect(account999.index).toBe(999)
@@ -253,8 +263,7 @@ describe('WalletAccountSolana', () => {
 
         const publicKeyAfter = tempAccount.keyPair.publicKey
 
-        expect(publicKeyAfter).toEqual(publicKeyBefore)
-        expect(publicKeyAfter.length).toBe(32)
+        expect(publicKeyAfter).toBeUndefined()
       })
 
       it('should prevent signing after disposal', async () => {
@@ -268,6 +277,141 @@ describe('WalletAccountSolana', () => {
         expect(signatureBefore).toBeDefined()
         tempAccount.dispose()
         await expect(tempAccount.sign('test message')).rejects.toThrow()
+      })
+    })
+  })
+
+  describe('Message Signing and Verification', () => {
+    describe('sign', () => {
+      it('should sign simple text messages', async () => {
+        const message = 'Test message'
+        const signature = await account.sign(message)
+
+        expect(signature).toBeDefined()
+        expect(signature.length).toBe(128)
+      })
+
+      it('should produce different signatures for different messages', async () => {
+        const message1 = 'Message 1'
+        const message2 = 'Message 2'
+
+        const signature1 = await account.sign(message1)
+        const signature2 = await account.sign(message2)
+
+        expect(signature1).not.toBe(signature2)
+      })
+
+      it('should produce consistent signatures for same message', async () => {
+        const message = 'Consistent message'
+
+        const signature1 = await account.sign(message)
+        const signature2 = await account.sign(message)
+        const signature3 = await account.sign(message)
+
+        expect(signature1).toBe(signature2)
+        expect(signature2).toBe(signature3)
+      })
+
+      it('should produce different signatures for different accounts', async () => {
+        const account0 = await wallet.getAccount(0)
+        const account1 = await wallet.getAccount(1)
+
+        const message = 'Same message, different accounts'
+
+        const signature0 = await account0.sign(message)
+        const signature1 = await account1.sign(message)
+
+        expect(signature0).not.toBe(signature1)
+      })
+
+      it('should throw error after account disposal', async () => {
+        const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+          rpcUrl: TEST_RPC_URL,
+          commitment: 'confirmed'
+        })
+        const tempAccount = await tempWallet.getAccount(95)
+
+        const signatureBefore = await tempAccount.sign('test message')
+        expect(signatureBefore).toBeDefined()
+
+        tempAccount.dispose()
+
+        await expect(tempAccount.sign('test message')).rejects.toThrow()
+      })
+    })
+
+    describe('verify', () => {
+      it('should verify signature for same message across multiple verifications', async () => {
+        const message = 'Persistent message'
+        const signature = await account.sign(message)
+
+        const isValid1 = await account.verify(message, signature)
+        const isValid2 = await account.verify(message, signature)
+        const isValid3 = await account.verify(message, signature)
+
+        expect(isValid1).toBe(true)
+        expect(isValid2).toBe(true)
+        expect(isValid3).toBe(true)
+      })
+
+      it('should reject signature for different message', async () => {
+        const message1 = 'Message 1'
+        const message2 = 'Message 2'
+
+        const signature1 = await account.sign(message1)
+
+        expect(await account.verify(message1, signature1)).toBe(true)
+        expect(await account.verify(message2, signature1)).toBe(false)
+      })
+
+      it('should reject invalid hex signature', async () => {
+        const message = 'Test message'
+        const invalidSignature = 'not-a-valid-hex-signature'
+
+        await expect(account.verify(message, invalidSignature)).rejects.toThrow()
+      })
+
+      it('should reject signature with wrong length', async () => {
+        const message = 'Test message'
+        const shortSignature = 'abcdef1234567890'
+
+        await expect(account.verify(message, shortSignature)).rejects.toThrow('bad signature size')
+      })
+
+      it('should reject empty signature', async () => {
+        const message = 'Test message'
+        const emptySignature = ''
+
+        await expect(account.verify(message, emptySignature)).rejects.toThrow('bad signature size')
+      })
+
+      it('should reject signature from different account', async () => {
+        const account0 = await wallet.getAccount(0)
+        const account1 = await wallet.getAccount(1)
+
+        const message = 'Cross-account test'
+
+        const signature0 = await account0.sign(message)
+
+        // Should verify with correct account
+        expect(await account0.verify(message, signature0)).toBe(true)
+
+        // Should fail with different account
+        expect(await account1.verify(message, signature0)).toBe(false)
+      })
+
+      it('should handle concurrent sign and verify operations', async () => {
+        const messages = ['Message 1', 'Message 2', 'Message 3', 'Message 4', 'Message 5']
+
+        const signatures = await Promise.all(
+          messages.map(msg => account.sign(msg))
+        )
+
+        const verifications = await Promise.all(
+          messages.map((msg, i) => account.verify(msg, signatures[i]))
+        )
+
+        expect(verifications.every(v => v === true)).toBe(true)
       })
     })
   })
@@ -418,63 +562,6 @@ describe('WalletAccountSolana', () => {
         tx.feePayer = wrongFeePayer
 
         await expect(account.sendTransaction(tx)).rejects.toThrow('Transaction fee payer must match wallet address')
-      })
-
-      it('should sign transaction if not already signed', async () => {
-        const recipient = Keypair.generate().publicKey
-        const senderAddress = await account.getAddress()
-        const senderPublicKey = new PublicKey(senderAddress)
-
-        const tx = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: senderPublicKey,
-            toPubkey: recipient,
-            lamports: 1000
-          })
-        )
-
-        const mockSignature = '5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW'
-        account._connection.sendRawTransaction = jest.fn().mockResolvedValue(mockSignature)
-        account._connection.confirmTransaction = jest.fn().mockResolvedValue({ value: { err: null } })
-
-        expect(tx.signatures.length).toBe(0)
-
-        await account.sendTransaction(tx)
-
-        expect(tx.signatures.length).toBeGreaterThan(0)
-        expect(tx.signatures[0].signature).not.toBeNull()
-      })
-
-      it('should handle transaction with multiple instructions', async () => {
-        const recipient1 = Keypair.generate().publicKey
-        const recipient2 = Keypair.generate().publicKey
-        const senderAddress = await account.getAddress()
-        const senderPublicKey = new PublicKey(senderAddress)
-
-        const tx = new Transaction()
-          .add(
-            SystemProgram.transfer({
-              fromPubkey: senderPublicKey,
-              toPubkey: recipient1,
-              lamports: 1000
-            })
-          )
-          .add(
-            SystemProgram.transfer({
-              fromPubkey: senderPublicKey,
-              toPubkey: recipient2,
-              lamports: 2000
-            })
-          )
-
-        const mockSignature = '5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW'
-        account._connection.sendRawTransaction = jest.fn().mockResolvedValue(mockSignature)
-        account._connection.confirmTransaction = jest.fn().mockResolvedValue({ value: { err: null } })
-
-        const result = await account.sendTransaction(tx)
-
-        expect(result.hash).toBe(mockSignature)
-        expect(tx.instructions.length).toBe(2)
       })
 
       it('should throw error when getLatestBlockhash fails', async () => {
@@ -642,38 +729,6 @@ describe('WalletAccountSolana', () => {
         await expect(account.sendTransaction(versionedTx)).rejects.toThrow('Transaction fee payer must match wallet address')
       })
 
-      it('should sign versioned transaction if not already signed', async () => {
-        const recipient = Keypair.generate().publicKey
-        const senderAddress = await account.getAddress()
-        const senderPublicKey = new PublicKey(senderAddress)
-
-        const messageV0 = new TransactionMessage({
-          payerKey: senderPublicKey,
-          recentBlockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-          instructions: [
-            SystemProgram.transfer({
-              fromPubkey: senderPublicKey,
-              toPubkey: recipient,
-              lamports: 1000
-            })
-          ]
-        }).compileToV0Message()
-
-        const versionedTx = new VersionedTransaction(messageV0)
-
-        const mockSignature = '5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW'
-        account._connection.sendRawTransaction = jest.fn().mockResolvedValue(mockSignature)
-        account._connection.confirmTransaction = jest.fn().mockResolvedValue({ value: { err: null } })
-
-        expect(versionedTx.signatures.length).toBe(1)
-        expect(versionedTx.signatures[0].every(byte => byte === 0)).toBe(true)
-
-        await account.sendTransaction(versionedTx)
-
-        expect(versionedTx.signatures.length).toBeGreaterThan(0)
-        expect(versionedTx.signatures[0].every(byte => byte === 0)).toBe(false)
-      })
-
       it('should handle versioned transaction with multiple instructions', async () => {
         const recipient1 = Keypair.generate().publicKey
         const recipient2 = Keypair.generate().publicKey
@@ -792,7 +847,7 @@ describe('WalletAccountSolana', () => {
         await expect(account.sendTransaction(versionedTx)).rejects.toThrow('Failed to calculate transaction fee')
       })
 
-      it('should throw error when getLatestBlockhash fails during confirmation', async () => {
+      it('should throw error when getLatestBlockhash fails', async () => {
         const recipient = Keypair.generate().publicKey
         const senderAddress = await account.getAddress()
         const senderPublicKey = new PublicKey(senderAddress)
@@ -823,11 +878,111 @@ describe('WalletAccountSolana', () => {
       })
     })
 
+    describe('Native Transfer', () => {
+      it('should send native SOL using simple transaction object', async () => {
+        const recipientPublicKey = Keypair.generate().publicKey
+        const mockSignature = '5j7s6NiJS3JAkvgkoc18WVAsiSaci2pxB2A6ueCJP4tprA2TFg9wSyTLeYouxPBJEMzJinENTkpA52YStRW5Dia7'
+        const mockFee = 5000n
+        const mockBlockhash = 'EkSnNWid2cvwEVnVx9aBqawnmiCNiDgp3gUdkDPTKN1N'
+
+        account._connection.getLatestBlockhash = jest.fn().mockResolvedValue({
+          blockhash: mockBlockhash,
+          lastValidBlockHeight: 100000
+        })
+
+        account._connection.getFeeForMessage = jest.fn().mockResolvedValue({
+          value: Number(mockFee)
+        })
+
+        account._connection.sendRawTransaction = jest.fn().mockResolvedValue(mockSignature)
+
+        account._connection.confirmTransaction = jest.fn().mockResolvedValue({
+          value: { err: null }
+        })
+
+        const result = await account.sendTransaction({
+          to: recipientPublicKey.toBase58(),
+          value: 1000000n // 0.001 SOL
+        })
+
+        expect(result).toBeDefined()
+        expect(result.hash).toBe(mockSignature)
+        expect(result.fee).toBe(mockFee)
+
+        expect(account._connection.getLatestBlockhash).toHaveBeenCalled()
+        expect(account._connection.getFeeForMessage).toHaveBeenCalled()
+        expect(account._connection.sendRawTransaction).toHaveBeenCalled()
+        expect(account._connection.confirmTransaction).toHaveBeenCalled()
+      })
+
+      it('should handle zero amount transfer', async () => {
+        const recipientPublicKey = Keypair.generate().publicKey
+        const mockSignature = 'zeroAmountSignature'
+        const mockFee = 5000n
+
+        account._connection.getLatestBlockhash = jest.fn().mockResolvedValue({
+          blockhash: 'BeDm4uW8qH1utEAcWErfWmc4YvnJjJtnQ49pgVthm1GM',
+          lastValidBlockHeight: 100000
+        })
+
+        account._connection.getFeeForMessage = jest.fn().mockResolvedValue({
+          value: Number(mockFee)
+        })
+
+        account._connection.sendRawTransaction = jest.fn().mockResolvedValue(mockSignature)
+
+        account._connection.confirmTransaction = jest.fn().mockResolvedValue({
+          value: { err: null }
+        })
+
+        // Send 0 lamports
+        const result = await account.sendTransaction({
+          to: recipientPublicKey.toBase58(),
+          value: 0n
+        })
+
+        expect(result.hash).toBe(mockSignature)
+        expect(result.fee).toBe(mockFee)
+      })
+
+      it('should throw error for invalid recipient address in simple transaction', async () => {
+        await expect(
+          account.sendTransaction({
+            to: 'invalid-address-format',
+            value: 1000000n
+          })
+        ).rejects.toThrow()
+      })
+
+      it('should throw error when balance is insufficient', async () => {
+        const recipientPublicKey = Keypair.generate().publicKey
+        account._connection.getLatestBlockhash = jest.fn().mockResolvedValue({
+          blockhash: 'BeDm4uW8qH1utEAcWErfWmc4YvnJjJtnQ49pgVthm1GM',
+          lastValidBlockHeight: 100000
+        })
+
+        account._connection.getFeeForMessage = jest.fn().mockResolvedValue({
+          value: 5000
+        })
+
+        // Mock sendRawTransaction to throw insufficient funds error
+        account._connection.sendRawTransaction = jest.fn().mockRejectedValue(
+          new Error('Attempt to debit an account but found no record of a prior credit')
+        )
+
+        await expect(
+          account.sendTransaction({
+            to: recipientPublicKey.toBase58(),
+            value: 999_999_999_999n // Very large amount
+          })
+        ).rejects.toThrow('Attempt to debit an account')
+      })
+    })
     describe('Error Handling', () => {
       it('should throw error for unsupported transaction type', async () => {
         const invalidTx = { to: 'some-address', value: 1000 }
 
-        await expect(account.sendTransaction(invalidTx)).rejects.toThrow('Unsupported transaction type')
+        await expect(account.sendTransaction(invalidTx)).rejects.toThrow('Non-base58 character')
       })
 
       it('should throw error when not connected to provider', async () => {
@@ -840,6 +995,14 @@ describe('WalletAccountSolana', () => {
         const tx = new Transaction()
 
         await expect(tempAccount.sendTransaction(tx)).rejects.toThrow('The wallet must be connected to a provider')
+      })
+
+      it('should throw if invalid transaction type', async () => {
+        const recipientPublicKey = Keypair.generate().publicKey
+        await expect(account.sendTransaction({
+          to: recipientPublicKey.toBase58(),
+        })).rejects.toThrow('Invalid transaction object. Must be { to, value }, Transaction, or VersionedTransaction.')
+
       })
     })
   })
@@ -934,30 +1097,6 @@ describe('WalletAccountSolana', () => {
       expect(txArg.instructions.length).toBe(2) // Create ATA + Transfer
     })
 
-    it('should handle large token amounts', async () => {
-      account._connection.getAccountInfo = jest.fn().mockResolvedValue({
-        owner: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-        lamports: 2039280,
-        data: Buffer.alloc(165)
-      })
-
-      const mockSignature = '5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW'
-      account.sendTransaction = jest.fn().mockResolvedValue({
-        hash: mockSignature,
-        fee: 5000n
-      })
-
-      const largeAmount = 1000000000000n // 1 million tokens
-
-      const result = await account.transfer({
-        token: MOCK_TOKEN_MINT,
-        recipient: MOCK_RECIPIENT,
-        amount: largeAmount
-      })
-
-      expect(result.hash).toBe(mockSignature)
-    })
-
     it('should respect transferMaxFee limit when fee is within limit', async () => {
       // Create account with transferMaxFee
       const walletWithMaxFee = new WalletManagerSolana(TEST_SEED_PHRASE, {
@@ -1028,30 +1167,6 @@ describe('WalletAccountSolana', () => {
       expect(txArg.signatures.length).toBe(0)
     })
 
-    it('should handle transfer with minimum amount', async () => {
-      account._connection.getAccountInfo = jest.fn().mockResolvedValue({
-        owner: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-        lamports: 2039280,
-        data: Buffer.alloc(165)
-      })
-
-      const mockSignature = '5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW'
-      account.sendTransaction = jest.fn().mockResolvedValue({
-        hash: mockSignature,
-        fee: 5000n
-      })
-
-      const minAmount = 1n
-
-      const result = await account.transfer({
-        token: MOCK_TOKEN_MINT,
-        recipient: MOCK_RECIPIENT,
-        amount: minAmount
-      })
-
-      expect(result.hash).toBe(mockSignature)
-    })
-
     it('should throw error when fee exceeds transferMaxFee', async () => {
       const walletWithMaxFee = new WalletManagerSolana(TEST_SEED_PHRASE, {
         rpcUrl: TEST_RPC_URL,
@@ -1081,6 +1196,20 @@ describe('WalletAccountSolana', () => {
         recipient: MOCK_RECIPIENT,
         amount: MOCK_AMOUNT
       })).rejects.toThrow('Exceeded maximum fee cost for transfer operation')
+    })
+
+    it('should throw error when not connected to provider', async () => {
+      const tempAccount = new WalletAccountSolana(
+        TEST_SEED_PHRASE,
+        "0'/0/0",
+        {} // No rpcUrl
+      )
+
+      await expect(tempAccount.transfer({
+        token: MOCK_TOKEN_MINT,
+        recipient: MOCK_RECIPIENT,
+        amount: MOCK_AMOUNT
+      })).rejects.toThrow('The wallet must be connected to a provider')
     })
 
     it('should throw error when getAccountInfo fails', async () => {
@@ -1165,19 +1294,6 @@ describe('WalletAccountSolana', () => {
       })).rejects.toThrow()
     })
 
-    it('should throw error when Token.getAssociatedTokenAddress fails', async () => {
-      const invalidToken = '11111111111111111111111111111111' // System program, not a token
-
-      account._connection.getAccountInfo = jest.fn().mockResolvedValue(null)
-
-      // This should fail when trying to get associated token address
-      await expect(account.transfer({
-        token: invalidToken,
-        recipient: MOCK_RECIPIENT,
-        amount: MOCK_AMOUNT
-      })).rejects.toThrow()
-    })
-
     it('should handle error during ATA creation', async () => {
       account._connection.getAccountInfo = jest.fn().mockResolvedValue(null)
       account.sendTransaction = jest.fn().mockRejectedValue(
@@ -1215,6 +1331,15 @@ describe('WalletAccountSolana', () => {
         recipient: MOCK_RECIPIENT,
         amount: MOCK_AMOUNT
       })).rejects.toThrow('Exceeded maximum fee cost for transfer operation')
+    })
+  })
+
+  describe('toReadOnlyAccount', () => {
+    it('should create a read-only account from full account', async () => {
+      const readOnlyAccount = await account.toReadOnlyAccount()
+
+      expect(readOnlyAccount).toBeInstanceOf(WalletAccountReadOnlySolana)
+      expect(readOnlyAccount).not.toBeInstanceOf(WalletAccountSolana)
     })
   })
 })

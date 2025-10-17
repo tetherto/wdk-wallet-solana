@@ -10,22 +10,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     static at(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig): Promise<WalletAccountSolana>;
     /** @package */
-    constructor(seed, path, config);
-    /**
-     * The wallet account configuration.
-     *
-     * @protected
-     * @type {SolanaWalletConfig}
-     */
-    protected _config: SolanaWalletConfig;
+    constructor(seed: any, path: any, config?: {});
     /** @private */
     private _seed;
     /** @private */
     private _path;
     /** @private */
     private _keyPair;
-    /** @private */
-    private _signer;
     /**
      * The derivation path's index of this account.
      *
@@ -39,11 +30,16 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     get path(): string;
     /**
-     * The account's key pair.
-     *
-     * @type {KeyPair}
-     */
+   * The account's key pair.
+   *
+   * Returns the raw key pair bytes in standard Solana format.
+   * - privateKey: 64-byte Ed25519 secret key (Uint8Array)
+   * - publicKey: 32-byte Ed25519 public key (Uint8Array)
+   *
+   * @type {KeyPair}
+   */
     get keyPair(): KeyPair;
+    getAddress(): Promise<any>;
     /**
      * Signs a message.
      *
@@ -60,17 +56,35 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     verify(message: string, signature: string): Promise<boolean>;
     /**
-     * Sends a transaction.
+     * Sends a transaction. Accepts simple transactions { to, value },
+     * legacy Solana Transaction objects, or VersionedTransaction objects.
      *
      * @param {SolanaTransaction} tx - The transaction.
      * @returns {Promise<TransactionResult>} The transaction's result.
      */
     sendTransaction(tx: SolanaTransaction): Promise<TransactionResult>;
     /**
+   * Signs a legacy Solana Transaction object.
+   *
+   * @private
+   * @param {Transaction} transaction - The legacy transaction.
+   * @returns {Promise<Transaction>} The signed transaction.
+   */
+    private _signLegacyTransaction;
+    /**
+     * Signs a VersionedTransaction object.
+     *
+     * @private
+     * @param {VersionedTransaction} transaction - The versioned transaction.
+     * @returns {Promise<VersionedTransaction>} The signed transaction.
+     */
+    private _signVersionedTransaction;
+    /**
      * Transfers a token to another address.
      *
      * @param {TransferOptions} options - The transfer's options.
      * @returns {Promise<TransferResult>} The transfer's result.
+     * @note only SPL tokens - won't work for native SOL
      */
     transfer(options: TransferOptions): Promise<TransferResult>;
     /**
