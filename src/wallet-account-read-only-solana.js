@@ -47,7 +47,7 @@ import { getTransferSolInstruction } from '@solana-program/system'
 
 /**
  * @typedef {Object} SolanaWalletConfig
- * @property {string} [rpcUrl] - The provider's rpc url.
+ * @property {string} [provider] - The provider's rpc url.
  * @property {string} [wsUrl] - The provider's websocket url. If not set, the rpc url will also be used for the websocket connection.
  * @property {number | bigint} [transferMaxFee] - The maximum fee amount for transfer operations.
  */
@@ -70,16 +70,16 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     this._config = config
 
-    const { rpcUrl, wsUrl } = config
+    const { provider, wsUrl } = config;
 
-    if (rpcUrl) {
+    if (provider) {
       /**
        * The solana rpc client.
        *
        * @protected
        * @type {SolanaRpc}
        */
-      this._rpc = createSolanaRpc(rpcUrl)
+      this._rpc = createSolanaRpc(provider);
 
       /**
        * A connection to a full node json rpc endpoint.
@@ -87,7 +87,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
        * @protected
        * @type {Connection}
        */
-      this._connection = new Connection(rpcUrl, 'processed')
+      this._connection = new Connection(provider, "processed");
 
       /**
        * The solana rpc subscriptions websocket client.
@@ -95,7 +95,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
        * @protected
        * @type {SolanaRpcSubscriptions}
        */
-      this._rpcSubscriptions = createSolanaRpcSubscriptions(wsUrl || rpcUrl.replace('http', 'ws'))
+      this._rpcSubscriptions = createSolanaRpcSubscriptions(
+        wsUrl || provider.replace("http", "ws")
+      );
     }
   }
 

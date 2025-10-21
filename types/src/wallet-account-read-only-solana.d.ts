@@ -103,18 +103,18 @@ export type SolanaTransaction = {
     value: number | bigint;
 };
 export type SolanaWalletConfig = {
-    /**
-     * - The provider's rpc url.
-     */
-    rpcUrl?: string;
-    /**
-     * - The provider's websocket url. If not set, the rpc url will also be used for the websocket connection.
-     */
-    wsUrl?: string;
-    /**
-     * - The maximum fee amount for transfer operations.
-     */
-    transferMaxFee?: number | bigint;
+  /**
+   * - The provider's rpc url.
+   */
+  provider?: string;
+  /**
+   * - The provider's websocket url. If not set, the rpc url will also be used for the websocket connection.
+   */
+  wsUrl?: string;
+  /**
+   * - The maximum fee amount for transfer operations.
+   */
+  transferMaxFee?: number | bigint;
 };
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet';
 import { Connection, Transaction } from '@solana/web3.js';
