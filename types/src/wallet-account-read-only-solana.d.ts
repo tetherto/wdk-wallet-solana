@@ -1,9 +1,7 @@
-/** @typedef {ReturnType<import("@solana/rpc").createSolanaRpc>} SolanaRpc */
-/** @typedef {ReturnType<import("@solana/rpc-api").SolanaRpcApi['getTransaction']>} SolanaTransactionReceipt */
-/** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
+/** @typedef {import('@solana/kit').TransactionMessage} TransactionMessage */
 /**
  * @typedef {Object} TransferNativeTransaction
  * @property {string} to - The transaction's recipient address.
@@ -13,8 +11,8 @@
  * for consistency across different blockchain implementations.
  */
 /**
- * Union type that accepts TransferNativeTransaction, legacy Solana transactions, or versioned transactions.
- * @typedef {TransferNativeTransaction | Transaction | VersionedTransaction} SolanaTransaction
+ * Union type that accepts TransferNativeTransaction or TransactionMessage.
+ * @typedef {TransferNativeTransaction | TransactionMessage} SolanaTransaction
  */
 /**
  * @typedef {Object} SolanaWalletConfig
@@ -29,7 +27,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * @param {string} address - The account's address.
      * @param {Omit<SolanaWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
      */
-    constructor(address: string, config?: Omit<SolanaWalletConfig, "transferMaxFee">);
+    constructor(addr: any, config?: Omit<SolanaWalletConfig, "transferMaxFee">);
     /**
      * The read-only wallet account configuration.
      *
@@ -38,18 +36,25 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     protected _config: Omit<SolanaWalletConfig, "transferMaxFee">;
     /**
-     * A connection to a full node json rpc endpoint.
+     * A Solana RPC client for HTTP requests.
      *
      * @protected
-     * @type {Connection}
+     * @type {import('@solana/kit').Rpc}
      */
-    protected _connection: Connection;
+    protected _rpc: any;
     /**
-     * Quotes the costs of a send transaction operation.
+     * The commitment level for transactions.
      *
-     * @param {SolanaTransaction} tx - The transaction.
-     * @returns {Promise<{fee: bigint}>} Object containing the estimated transaction fee in lamports.
+     * @protected
+     * @type {string}
      */
+    protected _commitment: string;
+    /**
+   * Quotes the costs of a send transaction operation.
+   *
+   * @param {SolanaTransaction} tx - The transaction (TransferNativeTransaction or TransactionMessage).
+   * @returns {Promise<{fee: bigint}>} Object containing the estimated transaction fee in lamports.
+   */
     quoteSendTransaction(tx: SolanaTransaction): Promise<{
         fee: bigint;
     }>;
@@ -57,39 +62,37 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * Returns a transaction's receipt.
      *
      * @param {string} hash - The transaction's hash.
-     * @returns {Promise<SolanaTransactionReceipt>} – The receipt, or null if the transaction has not been included in a block yet.
+     * @returns {Promise<any>} — The receipt, or null if the transaction has not been included in a block yet.
      */
-    getTransactionReceipt(hash: string): Promise<SolanaTransactionReceipt>;
+    getTransactionReceipt(hash: string): Promise<any>;
     /**
-     * Builds a transaction for SPL token transfer.
+     * Builds a transaction message for SPL token transfer.
      * Creates instructions for ATA creation (if needed) and token transfer.
      *
      * @private
      * @param {string} token - The SPL token mint address (base58-encoded public key).
      * @param {string} recipient - The recipient's wallet address (base58-encoded public key).
      * @param {number | bigint} amount - The amount to transfer in token's base units (must be ≤ 2^64-1).
-     * @returns {Promise<Transaction>} The constructed transaction ready for signing or fee calculation.
+     * @returns {Promise<import('@solana/kit').TransactionMessage>} The constructed transaction message.
      * @todo Support Token-2022 (Token Extensions Program).
      * @todo Support transfer with memo for tokens that require it.
      */
-    private _buildSPLTransferTransaction;
+    private _buildSPLTransferTransactionMessage;
     /**
-   * Builds a transaction for native SOL transfer.
-   * Creates a transfer instruction for sending SOL.
-   *
-   * @private
-   * @param {string} to - The recipient's address.
-   * @param {number | bigint} value - The amount of SOL to send (in lamports).
-   * @returns {Promise<Transaction>} The constructed transaction ready for signing or fee calculation.
-   */
-    private _buildNativeTransferTransaction;
+     * Builds a transaction message for native SOL transfer.
+     * Creates a transfer instruction for sending SOL.
+     *
+     * @private
+     * @param {string} to - The recipient's address.
+     * @param {number | bigint} value - The amount of SOL to send (in lamports).
+     * @returns {Promise<import('@solana/kit').TransactionMessage>} The constructed transaction message.
+     */
+    private _buildNativeTransferTransactionMessage;
 }
-export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
-export type SolanaTransactionReceipt = ReturnType<import("@solana/rpc-api").SolanaRpcApi["getTransaction"]>;
-export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
+export type TransactionMessage = import("@solana/kit").TransactionMessage;
 export type TransferNativeTransaction = {
     /**
      * - The transaction's recipient address.
@@ -103,9 +106,9 @@ export type TransferNativeTransaction = {
     value: number | bigint;
 };
 /**
- * Union type that accepts TransferNativeTransaction, legacy Solana transactions, or versioned transactions.
+ * Union type that accepts TransferNativeTransaction or TransactionMessage.
  */
-export type SolanaTransaction = TransferNativeTransaction | Transaction | VersionedTransaction;
+export type SolanaTransaction = TransferNativeTransaction | TransactionMessage;
 export type SolanaWalletConfig = {
     /**
      * - The provider's rpc url.
@@ -121,6 +124,3 @@ export type SolanaWalletConfig = {
     transferMaxFee?: number | bigint;
 };
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet';
-import { Connection } from '@solana/web3.js';
-import { Transaction } from '@solana/web3.js';
-import { VersionedTransaction } from '@solana/web3.js';

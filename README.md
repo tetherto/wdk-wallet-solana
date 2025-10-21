@@ -152,38 +152,32 @@ const quote = await account.quoteSendTransaction({
 console.log('Estimated fee:', quote.fee, 'lamports')
 ```
 
-- Send Solana Transaction Types
+- Send Solana Transaction Message
 
 ```javascript
-import { Transaction, SystemProgram, PublicKey, VersionedTransaction, TransactionMessage } from '@solana/web3.js'
+import { 
+  createTransactionMessage, 
+  pipe, 
+  appendTransactionMessageInstruction 
+} from '@solana/kit'
+import { getTransferSolInstruction } from '@solana-program/system'
 
-// 1. Using legacy Transaction object
-const transaction = new Transaction()
-transaction.add(
-  SystemProgram.transfer({
-    fromPubkey: new PublicKey(await account.getAddress()),
-    toPubkey: new PublicKey('recipientPublicKey'),
-    lamports: 1000000n
-  })
+// Build a TransactionMessage with custom instructions
+const fromAddress = await account.getAddress()
+
+const transferInstruction = getTransferSolInstruction({
+  source: { address: fromAddress },
+  destination: 'DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK',
+  amount: 1000000n
+})
+
+const txMessage = pipe(
+  createTransactionMessage({ version: 0 }),
+  tx => appendTransactionMessageInstruction(transferInstruction, tx)
 )
-const result = await account.sendTransaction(transaction)
 
-// 2. Using VersionedTransaction (V0)
-const { blockhash } = await connection.getLatestBlockhash()
-const message = new TransactionMessage({
-  payerKey: new PublicKey(await account.getAddress()),
-  recentBlockhash: blockhash,
-  instructions: [
-    SystemProgram.transfer({
-      fromPubkey: new PublicKey(await account.getAddress()),
-      toPubkey: new PublicKey('recipientPublicKey'),
-      lamports: 1000000n
-    })
-  ]
-}).compileToV0Message()
-
-const versionedTx = new VersionedTransaction(message)
-const result = await account.sendTransaction(versionedTx)
+const result = await account.sendTransaction(txMessage)
+console.log('Transaction hash:', result.hash)
 ```
 
 ### Token Transfers

@@ -16,7 +16,10 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
     /** @private */
     private _path;
     /** @private */
-    private _keyPair;
+    private _signer;
+    /** @private */
+    private _rawPublicKey;
+    _rawPrivateKey: any;
     /**
      * The derivation path's index of this account.
      *
@@ -56,29 +59,12 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     verify(message: string, signature: string): Promise<boolean>;
     /**
-     * Sends a transaction. Accepts simple transactions { to, value },
-     * legacy Solana Transaction objects, or VersionedTransaction objects.
+     * Sends a transaction. Accepts TransferNativeTransaction or TransactionMessage.
      *
      * @param {SolanaTransaction} tx - The transaction.
      * @returns {Promise<TransactionResult>} The transaction's result.
      */
     sendTransaction(tx: SolanaTransaction): Promise<TransactionResult>;
-    /**
-   * Signs a legacy Solana Transaction object.
-   *
-   * @private
-   * @param {Transaction} transaction - The legacy transaction.
-   * @returns {Promise<Transaction>} The signed transaction.
-   */
-    private _signLegacyTransaction;
-    /**
-     * Signs a VersionedTransaction object.
-     *
-     * @private
-     * @param {VersionedTransaction} transaction - The versioned transaction.
-     * @returns {Promise<VersionedTransaction>} The signed transaction.
-     */
-    private _signVersionedTransaction;
     /**
      * Transfers a token to another address.
      *

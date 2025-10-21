@@ -35,7 +35,7 @@ describe('WalletManagerSolana', () => {
   describe('Constructor', () => {
     it('should create wallet manager with valid config', () => {
       expect(wallet).toBeInstanceOf(WalletManagerSolana)
-      expect(wallet._connection).toBeDefined()
+      expect(wallet._rpc).toBeDefined()
     })
 
     it('should create wallet manager with string seed phrase', () => {
@@ -90,68 +90,157 @@ describe('WalletManagerSolana', () => {
   })
 
   describe('getFeeRates', () => {
-    let originalGetRecentPrioritizationFees
+    let mockRpc
+    let originalRpc
 
     beforeEach(() => {
-      originalGetRecentPrioritizationFees = wallet._connection.getRecentPrioritizationFees
-    })
+      // Save original RPC
+      originalRpc = wallet._rpc
 
-    afterEach(() => {
-      if (originalGetRecentPrioritizationFees) {
-        wallet._connection.getRecentPrioritizationFees = originalGetRecentPrioritizationFees
+      // Create mock RPC object
+      mockRpc = {
+        getRecentPrioritizationFees: jest.fn()
       }
     })
 
+    afterEach(() => {
+      // Restore original RPC
+      wallet._rpc = originalRpc
+    })
+
     it('should return fee rates with normal and fast', async () => {
-      wallet._connection.getRecentPrioritizationFees = jest.fn().mockResolvedValue([
-        { slot: 1, prioritizationFee: 1000 },
-        { slot: 2, prioritizationFee: 2000 },
-        { slot: 3, prioritizationFee: 3000 }
-      ])
+      mockRpc.getRecentPrioritizationFees.mockReturnValue({
+        send: jest.fn().mockResolvedValue([
+          { slot: 1, prioritizationFee: 1000 },
+          { slot: 2, prioritizationFee: 2000 },
+          { slot: 3, prioritizationFee: 3000 }
+        ])
+      })
 
-      const rates = await wallet.getFeeRates()
+      wallet._rpc = mockRpc
 
-      expect(rates).toBeDefined()
-      expect(rates.normal).toBeDefined()
-      expect(rates.fast).toBeDefined()
+      const feeRates = await wallet.getFeeRates()
+
+      expect(feeRates).toBeDefined()
+      expect(feeRates.normal).toBeDefined()
+      expect(feeRates.fast).toBeDefined()
+      expect(typeof feeRates.normal).toBe('bigint')
+      expect(typeof feeRates.fast).toBe('bigint')
     })
 
     it('should calculate normal rate as 110% of max fee', async () => {
-      wallet._connection.getRecentPrioritizationFees = jest.fn().mockResolvedValue([
-        { slot: 1, prioritizationFee: 1000 }
-      ])
+      mockRpc.getRecentPrioritizationFees.mockReturnValue({
+        send: jest.fn().mockResolvedValue([
+          { slot: 1, prioritizationFee: 1000 }
+        ])
+      })
 
-      const rates = await wallet.getFeeRates()
+      wallet._rpc = mockRpc
 
-      // 1000 * 110 / 100 = 1100
-      expect(rates.normal).toBe(1100n)
+      const feeRates = await wallet.getFeeRates()
+
+      // Normal should be 1000 * 110 / 100 = 1100
+      expect(feeRates.normal).toBe(1100n)
     })
 
     it('should calculate fast rate as 200% of max fee', async () => {
-      wallet._connection.getRecentPrioritizationFees = jest.fn().mockResolvedValue([
-        { slot: 1, prioritizationFee: 1000 }
-      ])
+      mockRpc.getRecentPrioritizationFees.mockReturnValue({
+        send: jest.fn().mockResolvedValue([
+          { slot: 1, prioritizationFee: 1000 }
+        ])
+      })
 
-      const rates = await wallet.getFeeRates()
+      wallet._rpc = mockRpc
 
-      // 1000 * 200 / 100 = 2000
-      expect(rates.fast).toBe(2000n)
+      const feeRates = await wallet.getFeeRates()
+
+      // Fast should be 1000 * 200 / 100 = 2000
+      expect(feeRates.fast).toBe(2000n)
     })
 
-    it('should throw error when no connection', async () => {
-      const walletNoConnection = new WalletManagerSolana(TEST_SEED_PHRASE, {})
+    it('should use highest prioritization fee when multiple fees returned', async () => {
+      mockRpc.getRecentPrioritizationFees.mockReturnValue({
+        send: jest.fn().mockResolvedValue([
+          { slot: 1, prioritizationFee: 1000 },
+          { slot: 2, prioritizationFee: 5000 }, // Highest
+          { slot: 3, prioritizationFee: 3000 }
+        ])
+      })
 
-      await expect(walletNoConnection.getFeeRates()).rejects.toThrow(
-        'The wallet must be connected to a provider to get fee rates.'
+      wallet._rpc = mockRpc
+
+      const feeRates = await wallet.getFeeRates()
+
+      // Should use 5000 as base
+      expect(feeRates.normal).toBe(5500n) // 5000 * 1.1
+      expect(feeRates.fast).toBe(10000n)  // 5000 * 2.0
+    })
+
+    it('should filter out zero fees', async () => {
+      mockRpc.getRecentPrioritizationFees.mockReturnValue({
+        send: jest.fn().mockResolvedValue([
+          { slot: 1, prioritizationFee: 0 },
+          { slot: 2, prioritizationFee: 0 },
+          { slot: 3, prioritizationFee: 2000 }
+        ])
+      })
+
+      wallet._rpc = mockRpc
+
+      const feeRates = await wallet.getFeeRates()
+
+      // Should use 2000, not 0
+      expect(feeRates.normal).toBe(2200n)
+      expect(feeRates.fast).toBe(4000n)
+    })
+
+    it('should use default fee when all fees are zero', async () => {
+      mockRpc.getRecentPrioritizationFees.mockReturnValue({
+        send: jest.fn().mockResolvedValue([
+          { slot: 1, prioritizationFee: 0 },
+          { slot: 2, prioritizationFee: 0 }
+        ])
+      })
+
+      wallet._rpc = mockRpc
+
+      const feeRates = await wallet.getFeeRates()
+
+      // Should use default fee of 5000
+      expect(feeRates.normal).toBe(5500n) // 5000 * 1.1
+      expect(feeRates.fast).toBe(10000n)  // 5000 * 2.0
+    })
+
+    it('should use default fee when no fees returned', async () => {
+      mockRpc.getRecentPrioritizationFees.mockReturnValue({
+        send: jest.fn().mockResolvedValue([])
+      })
+
+      wallet._rpc = mockRpc
+
+      const feeRates = await wallet.getFeeRates()
+
+      // Should use default fee of 5000
+      expect(feeRates.normal).toBe(5500n)
+      expect(feeRates.fast).toBe(10000n)
+    })
+
+    it('should throw error when no RPC connection', async () => {
+      const noRpcWallet = new WalletManagerSolana(TEST_SEED_PHRASE)
+
+      await expect(noRpcWallet.getFeeRates()).rejects.toThrow(
+        'The wallet must be connected to a provider to get fee rates'
       )
     })
 
-    it('should handle RPC errors', async () => {
-      wallet._connection.getRecentPrioritizationFees = jest.fn().mockRejectedValue(
-        new Error('RPC error')
-      )
+    it('should handle RPC errors gracefully', async () => {
+      mockRpc.getRecentPrioritizationFees.mockReturnValue({
+        send: jest.fn().mockRejectedValue(new Error('RPC connection failed'))
+      })
 
-      await expect(wallet.getFeeRates()).rejects.toThrow('RPC error')
+      wallet._rpc = mockRpc
+
+      await expect(wallet.getFeeRates()).rejects.toThrow('RPC connection failed')
     })
   })
 })

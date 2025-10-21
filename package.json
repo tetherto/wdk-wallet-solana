@@ -26,8 +26,9 @@
     "test:coverage:html": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --coverageReporters=html text"
   },
   "dependencies": {
-    "@solana/spl-token": "0.1.8",
-    "@solana/web3.js": "1.98.2",
+    "@solana/kit": "3.0.3",
+    "@solana-program/token": "0.6.0",
+    "@solana-program/system": "0.6.0",
     "@tetherto/wdk-wallet": "^1.0.0-beta.1",
     "bare-node-runtime": "1.1.1",
     "bip39": "3.1.0",
