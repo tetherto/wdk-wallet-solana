@@ -108,6 +108,10 @@ export type SolanaWalletConfig = {
    */
   provider?: string;
   /**
+   * @deprecated Use 'provider' instead. The provider's rpc url.
+   */
+  rpcUrl?: string;
+  /**
    * - The provider's websocket url. If not set, the rpc url will also be used for the websocket connection.
    */
   wsUrl?: string;

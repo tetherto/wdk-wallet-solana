@@ -56,7 +56,8 @@ export default class WalletManagerSolana extends WalletManager {
      * @protected
      * @type {SolanaRpc}
      */
-    this._rpc = createSolanaRpc(this._config.provider);
+    const rpcProvider = this._config.provider ?? this._config.rpcUrl;
+    this._rpc = createSolanaRpc(rpcProvider);
   }
 
   /**
