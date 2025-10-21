@@ -16,18 +16,19 @@
 
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
+import { address } from '@solana/addresses'
+import { createSolanaRpc } from '@solana/rpc'
+import { pipe } from '@solana/functional'
 import {
-  address,
-  createSolanaRpc,
   createTransactionMessage,
-  pipe,
   setTransactionMessageLifetimeUsingBlockhash,
   appendTransactionMessageInstruction,
   appendTransactionMessageInstructions,
   getCompiledTransactionMessageEncoder,
-  getBase64Decoder, compileTransactionMessage,
-  setTransactionMessageFeePayer
-} from '@solana/kit'
+  setTransactionMessageFeePayer,
+  compileTransactionMessage
+} from '@solana/transaction-messages'
+import { getBase64Decoder } from '@solana/codecs'
 
 import {
   getTransferSolInstruction
@@ -43,8 +44,8 @@ import {
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
-/** @typedef {import('@solana/kit').TransactionMessage} TransactionMessage */
-/** @typedef {import('@solana/kit').Rpc} SolanaRpc */
+/** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
+/** @typedef {import('@solana/rpc').Rpc} SolanaRpc */
 
 /**
  * @typedef {Object} TransferNativeTransaction

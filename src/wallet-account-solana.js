@@ -13,11 +13,15 @@
 // limitations under the License.
 
 'use strict'
+
 import {
-  createKeyPairSignerFromPrivateKeyBytes, signBytes, signTransactionMessageWithSigners,
-  getBase64EncodedWireTransaction, verifySignature, setTransactionMessageFeePayerSigner,
-  setTransactionMessageLifetimeUsingBlockhash
-} from '@solana/kit'
+  createKeyPairSignerFromPrivateKeyBytes,
+  signTransactionMessageWithSigners,
+  setTransactionMessageFeePayerSigner
+} from '@solana/signers'
+import { getBase64EncodedWireTransaction } from '@solana/transactions'
+import { verifySignature, signBytes } from '@solana/keys'
+import { setTransactionMessageLifetimeUsingBlockhash } from '@solana/transaction-messages'
 
 import HDKey from 'micro-key-producer/slip10.js'
 
@@ -75,7 +79,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * The Ed25519 key pair signer for signing transactions.
      *
      * @private
-     * @type {import('@solana/kit').KeyPairSigner | undefined}
+     * @type {import('@solana/keys').KeyPairSigner | undefined}
      */
     this._signer = undefined
 
@@ -140,7 +144,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
  * The account's key pair.
  *
  * Returns the raw key pair bytes in standard Solana format.
- * - privateKey: 64-byte Ed25519 secret key (Uint8Array)
+ * - privateKey: 32-byte Ed25519 secret key (Uint8Array)
  * - publicKey: 32-byte Ed25519 public key (Uint8Array)
  *
  * @type {KeyPair}
