@@ -21,9 +21,9 @@
     "build:types": "tsc",
     "lint": "standard --env jest",
     "lint:fix": "standard --fix --env jest",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:coverage:html": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --coverageReporters=html text"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:coverage:html": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage --coverageReporters=html text"
   },
   "dependencies": {
     "@solana-program/system": "0.6.0",
@@ -47,6 +47,7 @@
   "devDependencies": {
     "jest": "^30.2.0",
     "standard": "17.1.2",
+    "cross-env": "7.0.3",
     "typescript": "5.8.3"
   },
   "exports": {
