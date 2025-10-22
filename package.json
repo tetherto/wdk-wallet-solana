@@ -31,6 +31,7 @@
     "bare-node-runtime": "1.1.1",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
+    "punycode": "2.3.1",
     "sodium-universal": "5.0.1",
     "tweetnacl": "1.0.3"
   },
