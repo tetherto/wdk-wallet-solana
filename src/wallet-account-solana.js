@@ -250,7 +250,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     const signedtransaction = await signTransactionMessageWithSigners(transactionMessage)
 
     const encodedTransaction = getBase64EncodedWireTransaction(signedtransaction)
-    const signature = await this._rpc.sendTransaction(encodedTransaction, { preflightCommitment: 'confirmed', encoding: 'base64' }).send()
+    const signature = await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
 
     return {
       hash: signature,
@@ -309,6 +309,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    */
   dispose () {
     sodium_memzero(this._rawPrivateKey)
+    this._rawPrivateKey = undefined
     this._signer = undefined
     this._seed = undefined
   }
