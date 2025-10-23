@@ -52,11 +52,6 @@ import {
  * @typedef {Object} SimpleSolanaTransaction
  * @property {string} to - The recipient's Solana address.
  * @property {number | bigint} value - The amount of SOL to send in lamports (1 SOL = 1,000,000,000 lamports).
- *
- * @description
- * Note: This type is defined to match the interface from @tetherto/wdk-wallet.
- * Simplified transaction format for native SOL transfers. This type provides a convenient
- * interface for basic transfers without requiring knowledge of Solana's TransactionMessage structure.
  */
 
 /**
