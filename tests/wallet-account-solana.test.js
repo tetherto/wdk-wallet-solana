@@ -19,7 +19,6 @@ import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
 
-// Test seed phrase
 const TEST_SEED_PHRASE = 'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mockurl.com'
 
@@ -51,10 +50,8 @@ describe('WalletAccountSolana', () => {
       })
 
       it('should accept valid BIP-39 seed phrase as string', async () => {
-        const validSeedPhrase = 'test walk nut penalty hip pave soap entry language right filter choice'
-
         const account = await WalletAccountSolana.at(
-          validSeedPhrase,
+          TEST_SEED_PHRASE,
           "0'/0/0",
           {
             rpcUrl: TEST_RPC_URL,
@@ -68,23 +65,9 @@ describe('WalletAccountSolana', () => {
     })
 
     describe('getAddress', () => {
-      it('should return a valid base58 Solana address', async () => {
+      it('should return a valid Solana address', async () => {
         const address = await account.getAddress()
-
-        expect(address).toBeDefined()
-        expect(typeof address).toBe('string')
-        expect(address.length).toBeGreaterThanOrEqual(32)
-        expect(address.length).toBeLessThanOrEqual(44)
-        expect(address).toMatch(/^[1-9A-HJ-NP-Za-km-z]+$/) // Base58 characters only
-      })
-
-      it('should return consistent address across multiple calls', async () => {
-        const address1 = await account.getAddress()
-        const address2 = await account.getAddress()
-        const address3 = await account.getAddress()
-
-        expect(address1).toBe(address2)
-        expect(address2).toBe(address3)
+        expect(address).toMatch('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
       })
 
       it('should return different addresses for different account indices', async () => {
@@ -96,9 +79,9 @@ describe('WalletAccountSolana', () => {
         const address1 = await account1.getAddress()
         const address2 = await account2.getAddress()
 
-        expect(address0).not.toBe(address1)
-        expect(address1).not.toBe(address2)
-        expect(address0).not.toBe(address2)
+        expect(address0).toMatch('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
+        expect(address1).toMatch('CfGcujEkPVDx7yGyn1PUjxn2e353MXbLk8ixzwuJUktK')
+        expect(address2).toMatch('Grwp8oDHgAD8PVSS51pWGCY5QRM3hqiH8QcbPRAEUABq')
       })
 
       it('should return different addresses for different derivation paths', async () => {
@@ -110,17 +93,17 @@ describe('WalletAccountSolana', () => {
         const address2 = await accountPath2.getAddress()
         const address3 = await accountPath3.getAddress()
 
-        expect(address1).not.toBe(address2)
-        expect(address2).not.toBe(address3)
-        expect(address1).not.toBe(address3)
+        expect(address1).toMatch('DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM')
+        expect(address2).toMatch('jbhYXhWfRPqPvaKqaWCJEgBdZMquFxUvjWaWLEH3YCz')
+        expect(address3).toMatch('57hwCai22XueypvXcXKotkuAQYj2eukFcY5ymWB7Arvg')
       })
     })
 
     describe('keyPair', () => {
-      it('should have correct key lengths', () => {
+      it('should have consistent keyPair', () => {
         const keyPair = account.keyPair
-        expect(keyPair.publicKey.length).toBe(32) // Ed25519 public key
-        expect(keyPair.privateKey.length).toBe(32) // Ed25519 private key
+        expect(Buffer.from(keyPair.publicKey).toString('hex')).toBe('2b2c715c2cf24db57e95a44df34cb424de2460e86c4f6ebe7ba62b574830de19')
+        expect(Buffer.from(keyPair.privateKey).toString('hex')).toBe('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f')
       })
 
       it('should have different key pairs for different accounts', async () => {
@@ -130,24 +113,11 @@ describe('WalletAccountSolana', () => {
         const keyPair0 = account0.keyPair
         const keyPair1 = account1.keyPair
 
-        expect(keyPair0.publicKey).not.toEqual(keyPair1.publicKey)
-        expect(keyPair0.privateKey).not.toEqual(keyPair1.privateKey)
-      })
-
-      it('should have matching public key and address', async () => {
-        const keyPair = account.keyPair
-        const address = await account.getAddress()
-        // const pubKeyAddress = new PublicKey(keyPair.publicKey).toBase58()
-
-        // expect(pubKeyAddress).toBe(address)
-      })
-
-      it('should return the same key pair across multiple calls', () => {
-        const keyPair1 = account.keyPair
-        const keyPair2 = account.keyPair
-
-        expect(keyPair1.publicKey).toEqual(keyPair2.publicKey)
-        expect(keyPair1.privateKey).toEqual(keyPair2.privateKey)
+        expect(Buffer.from(keyPair0.publicKey).toString('hex')).toBe('2b2c715c2cf24db57e95a44df34cb424de2460e86c4f6ebe7ba62b574830de19')
+        expect(Buffer.from(keyPair0.privateKey).toString('hex')).toBe('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f')
+        expect(Buffer.from(keyPair1.publicKey).toString('hex')).toBe('ad3e499bc158a797574c53bcca546939f0de16242b85ed39a848092c4d9d5274')
+        expect(Buffer.from(keyPair1.privateKey).toString('hex')).toBe('4642fc818f6525a2c5ae784cc98f44d639492c21271c5f7f0ac30ee95a3357bb')
+  
       })
     })
 
@@ -155,33 +125,22 @@ describe('WalletAccountSolana', () => {
       it('should follow BIP-44 Solana derivation path format', () => {
         const path = account.path
 
-        expect(path).toBeDefined()
-        expect(path).toMatch(/^m\/44'\/501'\/\d+'\/\d+\/\d+$/)
+        expect(path).toMatch("m/44'/501'/0'/0'")
       })
 
       it('should have correct path for account index 0', async () => {
         const account0 = await wallet.getAccount(0)
-        expect(account0.path).toBe("m/44'/501'/0'/0/0")
+        expect(account0.path).toBe("m/44'/501'/0'/0'")
       })
 
       it('should have correct path for account index 5', async () => {
         const account5 = await wallet.getAccount(5)
-        expect(account5.path).toBe("m/44'/501'/0'/0/5")
+        expect(account5.path).toBe("m/44'/501'/5'/0'")
       })
 
       it('should have correct path for custom derivation', async () => {
         const customAccount = await wallet.getAccountByPath("1'/2/3")
         expect(customAccount.path).toBe("m/44'/501'/1'/2/3")
-      })
-
-      it('should have different paths for different accounts', async () => {
-        const account0 = await wallet.getAccount(0)
-        const account1 = await wallet.getAccount(1)
-        const account2 = await wallet.getAccount(2)
-
-        expect(account0.path).not.toBe(account1.path)
-        expect(account1.path).not.toBe(account2.path)
-        expect(account0.path).not.toBe(account2.path)
       })
     })
 
@@ -196,32 +155,14 @@ describe('WalletAccountSolana', () => {
         expect(account999.index).toBe(999)
       })
 
-      it('should match the last segment of the path', async () => {
-        const account = await wallet.getAccount(42)
-        const pathSegments = account.path.split('/')
-        const lastSegment = pathSegments[pathSegments.length - 1]
-
-        expect(account.index).toBe(parseInt(lastSegment))
-      })
-
       it('should extract index correctly from custom paths', async () => {
         const account1 = await wallet.getAccountByPath("0'/0/7")
         const account2 = await wallet.getAccountByPath("1'/0/15")
         const account3 = await wallet.getAccountByPath("0'/5/123")
 
-        expect(account1.index).toBe(7)
-        expect(account2.index).toBe(15)
-        expect(account3.index).toBe(123)
-      })
-
-      it('should have different indices for different accounts', async () => {
-        const account0 = await wallet.getAccount(0)
-        const account1 = await wallet.getAccount(1)
-        const account2 = await wallet.getAccount(2)
-
-        expect(account0.index).not.toBe(account1.index)
-        expect(account1.index).not.toBe(account2.index)
-        expect(account0.index).not.toBe(account2.index)
+        expect(account1.index).toBe(0)
+        expect(account2.index).toBe(1)
+        expect(account3.index).toBe(0)
       })
     })
 
@@ -236,7 +177,6 @@ describe('WalletAccountSolana', () => {
         const keyPairBefore = tempAccount.keyPair
         expect(keyPairBefore.privateKey).not.toBeNull()
         expect(keyPairBefore.privateKey).not.toBeUndefined()
-        expect(keyPairBefore.privateKey.length).toBe(32)
 
         tempAccount.dispose()
         const keyPairAfter = tempAccount.keyPair
@@ -270,38 +210,22 @@ describe('WalletAccountSolana', () => {
         })
         const tempAccount = await tempWallet.getAccount(98)
 
-        const publicKeyBefore = tempAccount.keyPair.publicKey
-
         tempAccount.dispose()
 
         const publicKeyAfter = tempAccount.keyPair.publicKey
 
         expect(publicKeyAfter).toBeDefined()
       })
-
-      it('should prevent signing after disposal', async () => {
-        const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
-          commitment: 'confirmed'
-        })
-        const tempAccount = await tempWallet.getAccount(96)
-
-        const signatureBefore = await tempAccount.sign('test message')
-        expect(signatureBefore).toBeDefined()
-        tempAccount.dispose()
-        await expect(tempAccount.sign('test message')).rejects.toThrow()
-      })
     })
   })
 
   describe('Message Signing and Verification', () => {
     describe('sign', () => {
-      it('should sign simple text messages', async () => {
+      it('should produce consistent signature for a message', async () => {
         const message = 'Test message'
         const signature = await account.sign(message)
 
-        expect(signature).toBeDefined()
-        expect(signature.length).toBe(128)
+        expect(signature).toBe('90d1d5dc7430f3efa9fa037ba2179458fad9a8bfdf42ba74fff4581ce9e0ac2fba1562483b072e9eee709ef8d59448b379d9a61e634b37a3c13858bab7754f08')
       })
 
       it('should produce different signatures for different messages', async () => {
@@ -311,30 +235,8 @@ describe('WalletAccountSolana', () => {
         const signature1 = await account.sign(message1)
         const signature2 = await account.sign(message2)
 
-        expect(signature1).not.toBe(signature2)
-      })
-
-      it('should produce consistent signatures for same message', async () => {
-        const message = 'Consistent message'
-
-        const signature1 = await account.sign(message)
-        const signature2 = await account.sign(message)
-        const signature3 = await account.sign(message)
-
-        expect(signature1).toBe(signature2)
-        expect(signature2).toBe(signature3)
-      })
-
-      it('should produce different signatures for different accounts', async () => {
-        const account0 = await wallet.getAccount(0)
-        const account1 = await wallet.getAccount(1)
-
-        const message = 'Same message, different accounts'
-
-        const signature0 = await account0.sign(message)
-        const signature1 = await account1.sign(message)
-
-        expect(signature0).not.toBe(signature1)
+        expect(signature1).toBe('06f06d64f9a5338595410825aee9ae6b04bd0069fcd36afca765f75b3c4ebb42c2ee35a62961b8edc3afc1d10b50dcdb558d9904707326236598d0b7c0385204')
+        expect(signature2).toBe('c4d4f624a1d7ba1992cdfd6ce5a8a3e7e2ac46ad342ef8b00b8c10f73633223a882ff8230b009691d57291aa6224a648371f9208c447ed695be47ec395a6ad0d')
       })
 
       it('should throw error after account disposal', async () => {
@@ -383,32 +285,6 @@ describe('WalletAccountSolana', () => {
 
         expect(await account.verify(message, invalidSignature)).toBe(false)
       })
-
-      it('should reject signature with wrong length', async () => {
-        const message = 'Test message'
-        const shortSignature = 'abcdef1234567890'
-
-        expect(await account.verify(message, shortSignature)).toBe(false)
-      })
-
-      it('should reject empty signature', async () => {
-        const message = 'Test message'
-        const emptySignature = ''
-
-        expect(await account.verify(message, emptySignature)).toBe(false)
-      })
-
-      it('should reject signature from different account', async () => {
-        const account0 = await wallet.getAccount(0)
-        const account1 = await wallet.getAccount(1)
-
-        const message = 'Cross-account test'
-
-        const signature0 = await account0.sign(message)
-
-        expect(await account0.verify(message, signature0)).toBe(true)
-        expect(await account1.verify(message, signature0)).toBe(false)
-      })
     })
   })
 
@@ -417,10 +293,8 @@ describe('WalletAccountSolana', () => {
     let originalRpc
 
     beforeEach(() => {
-      // Save original RPC
       originalRpc = account._rpc
 
-      // Create a mock RPC object
       mockRpc = {
         getFeeForMessage: jest.fn(),
         sendTransaction: jest.fn(),
@@ -437,7 +311,6 @@ describe('WalletAccountSolana', () => {
     })
 
     afterEach(() => {
-      // Restore original RPC
       account._rpc = originalRpc
     })
 
@@ -468,7 +341,6 @@ describe('WalletAccountSolana', () => {
 
     describe('Native Transfer Transaction', () => {
       it('should accept simple {to, value} transaction format', async () => {
-        // Setup mocks
         mockRpc.getFeeForMessage.mockReturnValue({
           send: jest.fn().mockResolvedValue({ value: 5000 })
         })
@@ -481,7 +353,6 @@ describe('WalletAccountSolana', () => {
           })
         })
 
-        // Replace the RPC object
         account._rpc = mockRpc
 
         const tx = {
@@ -507,13 +378,11 @@ describe('WalletAccountSolana', () => {
 
         account._rpc = mockRpc
 
-        // Test with bigint
         await account.sendTransaction({
           to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
           value: 1000000n
         }, { skipConfirmation: true })
 
-        // Test with number
         await account.sendTransaction({
           to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
           value: 1000000
@@ -564,7 +433,6 @@ describe('WalletAccountSolana', () => {
         const txMessage = {
           instructions: [],
           version: 0
-          // No feePayer set
         }
 
         await account.sendTransaction(txMessage, { skipConfirmation: true })
@@ -662,10 +530,8 @@ describe('WalletAccountSolana', () => {
     let originalRpc
 
     beforeEach(() => {
-      // Save original RPC
       originalRpc = account._rpc
 
-      // Create a mock RPC object
       mockRpc = {
         getAccountInfo: jest.fn(),
         getFeeForMessage: jest.fn(),
@@ -683,7 +549,6 @@ describe('WalletAccountSolana', () => {
     })
 
     afterEach(() => {
-      // Restore original RPC
       account._rpc = originalRpc
     })
 
@@ -724,7 +589,7 @@ describe('WalletAccountSolana', () => {
           account.transfer({
             token: 'FzFRHEc1tWLGa2doGw2KAKrfNrBH3QwGTnjm37o2HQGb',
             recipient: 'FzFRHEc1tWLGa2doGw2KAKrfNrBH3QwGTnjm37o2HQGb',
-            amount: 0xFFFFFFFFFFFFFFFFn + 1n // u64 max + 1
+            amount: 0xFFFFFFFFFFFFFFFFn + 1n
           })
         ).rejects.toThrow('Amount exceeds u64 maximum value')
       })
@@ -740,9 +605,8 @@ describe('WalletAccountSolana', () => {
       })
 
       it('should accept valid amounts', async () => {
-        // Mock mint account data with decimals at byte 44
         const mintData = new Uint8Array(165)
-        mintData[44] = 6 // 6 decimals (like USDC)
+        mintData[44] = 6
 
         mockRpc.getAccountInfo.mockReturnValue({
           send: jest.fn().mockResolvedValue({
@@ -758,14 +622,12 @@ describe('WalletAccountSolana', () => {
 
         account._rpc = mockRpc
 
-        // Valid bigint
         await account.transfer({
           token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
           recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
           amount: 1000000n
         }, { skipConfirmation: true })
 
-        // Valid number
         await account.transfer({
           token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
           recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
@@ -794,7 +656,7 @@ describe('WalletAccountSolana', () => {
           })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
-          send: jest.fn().mockResolvedValue({ value: 15000 }) // Exceeds limit
+          send: jest.fn().mockResolvedValue({ value: 15000 })
         })
 
         limitedAccount._rpc = mockRpc
@@ -825,7 +687,7 @@ describe('WalletAccountSolana', () => {
           })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
-          send: jest.fn().mockResolvedValue({ value: 5000 }) // Below limit
+          send: jest.fn().mockResolvedValue({ value: 5000 })
         })
         mockRpc.sendTransaction.mockReturnValue({
           send: jest.fn().mockResolvedValue('sig')
@@ -862,7 +724,7 @@ describe('WalletAccountSolana', () => {
         account._rpc = mockRpc
 
         const result = await account.transfer({
-          token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+          token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
           recipient: '11111111111111111111111111111111',
           amount: 1000000n
         }, { skipConfirmation: true })

@@ -75,13 +75,13 @@ export default class WalletManagerSolana extends WalletManager {
    * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
    *
    * @example
-   * // Returns the account with derivation path m/44'/501'/0'/0/1
+   * // Returns the account with derivation path m/44'/501'/index'/0'
    * const account = await wallet.getAccount(1);
    * @param {number} [index] - The index of the account to get (default: 0).
    * @returns {Promise<WalletAccountSolana>} The account.
    */
   async getAccount (index = 0) {
-    return await this.getAccountByPath(`0'/0/${index}`)
+    return await this.getAccountByPath(`${index}'/0'`)
   }
 
   /**

@@ -131,7 +131,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @type {number}
    */
   get index () {
-    return +this.path.split('/').pop()
+    const segments = this.path.split('/')
+    return +segments[3].replace("'", '')
   }
 
   /**

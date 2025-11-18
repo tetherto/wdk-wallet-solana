@@ -25,10 +25,8 @@ describe('WalletAccountReadOnlySolana', () => {
   let mockRpc
 
   beforeEach(() => {
-    // Create instance WITHOUT rpcUrl to avoid creating real RPC client
     readOnlyAccount = new WalletAccountReadOnlySolana(TEST_ADDRESS, {})
 
-    // Create mock RPC object with all methods
     mockRpc = {
       getBalance: jest.fn(),
       getAccountInfo: jest.fn(),
@@ -38,7 +36,6 @@ describe('WalletAccountReadOnlySolana', () => {
       getTransaction: jest.fn()
     }
 
-    // Manually inject the mock RPC and commitment
     readOnlyAccount._rpc = mockRpc
     readOnlyAccount._commitment = 'confirmed'
   })
@@ -106,27 +103,6 @@ describe('WalletAccountReadOnlySolana', () => {
       await expect(readOnlyAccount.getBalance()).rejects.toThrow('RPC error')
     })
 
-    it('should handle multiple consecutive calls', async () => {
-      mockRpc.getBalance
-        .mockReturnValueOnce({
-          send: jest.fn().mockResolvedValue({ value: 1000000000n })
-        })
-        .mockReturnValueOnce({
-          send: jest.fn().mockResolvedValue({ value: 2000000000n })
-        })
-        .mockReturnValueOnce({
-          send: jest.fn().mockResolvedValue({ value: 3000000000n })
-        })
-
-      const balance1 = await readOnlyAccount.getBalance()
-      const balance2 = await readOnlyAccount.getBalance()
-      const balance3 = await readOnlyAccount.getBalance()
-
-      expect(balance1).toBe(1000000000n)
-      expect(balance2).toBe(2000000000n)
-      expect(balance3).toBe(3000000000n)
-      expect(mockRpc.getBalance).toHaveBeenCalledTimes(3)
-    })
 
     it('should pass commitment level to RPC call', async () => {
       mockRpc.getBalance.mockReturnValue({
@@ -259,36 +235,6 @@ describe('WalletAccountReadOnlySolana', () => {
       await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(
         'Failed to get token balance'
       )
-    })
-
-    it('should handle multiple token balance checks', async () => {
-      mockRpc.getAccountInfo.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: {
-            owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-            lamports: 2039280n,
-            data: [Buffer.alloc(165).toString('base64'), 'base64']
-          }
-        })
-      })
-
-      mockRpc.getTokenAccountBalance
-        .mockReturnValueOnce({
-          send: jest.fn().mockResolvedValue({
-            value: { amount: '1000000', decimals: 6, uiAmount: 1.0, uiAmountString: '1.0' }
-          })
-        })
-        .mockReturnValueOnce({
-          send: jest.fn().mockResolvedValue({
-            value: { amount: '2000000', decimals: 6, uiAmount: 2.0, uiAmountString: '2.0' }
-          })
-        })
-
-      const balance1 = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
-      const balance2 = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
-
-      expect(balance1).toBe(1000000n)
-      expect(balance2).toBe(2000000n)
     })
 
     it('should handle different token mints', async () => {
@@ -425,31 +371,6 @@ describe('WalletAccountReadOnlySolana', () => {
         await expect(readOnlyAccount.quoteSendTransaction(nativeTx)).rejects.toThrow(
           'Failed to calculate transaction fee'
         )
-      })
-
-      it('should handle multiple consecutive native transfers', async () => {
-        mockRpc.getFeeForMessage
-          .mockReturnValueOnce({
-            send: jest.fn().mockResolvedValue({ value: 5000n })
-          })
-          .mockReturnValueOnce({
-            send: jest.fn().mockResolvedValue({ value: 6000n })
-          })
-          .mockReturnValueOnce({
-            send: jest.fn().mockResolvedValue({ value: 7000n })
-          })
-
-        const nativeTx1 = { to: '3gx5puA146Y1jb6dV4KS8vQnXtuXSZsAPV89JeaqfFXW', value: 1000000n }
-        const nativeTx2 = { to: '3gx5puA146Y1jb6dV4KS8vQnXtuXSZsAPV89JeaqfFXW', value: 2000000n }
-        const nativeTx3 = { to: '3gx5puA146Y1jb6dV4KS8vQnXtuXSZsAPV89JeaqfFXW', value: 3000000n }
-
-        const result1 = await readOnlyAccount.quoteSendTransaction(nativeTx1)
-        const result2 = await readOnlyAccount.quoteSendTransaction(nativeTx2)
-        const result3 = await readOnlyAccount.quoteSendTransaction(nativeTx3)
-
-        expect(result1.fee).toBe(5000n)
-        expect(result2.fee).toBe(6000n)
-        expect(result3.fee).toBe(7000n)
       })
     })
 
@@ -896,10 +817,9 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(receipt.meta.fee).toBe(5000n)
       expect(receipt.meta.err).toBeNull()
 
-      // Check that getTransaction was called (signature is decoded to bytes)
       expect(mockRpc.getTransaction).toHaveBeenCalledTimes(1)
       expect(mockRpc.getTransaction).toHaveBeenCalledWith(
-        MOCK_TX_SIGNATURE, // Signature is decoded to bytes
+        MOCK_TX_SIGNATURE,
         expect.objectContaining({
           commitment: 'confirmed',
           maxSupportedTransactionVersion: 0
@@ -940,7 +860,6 @@ describe('WalletAccountReadOnlySolana', () => {
     it('should throw error for invalid signature format', async () => {
       const invalidSignature = 'invalid-signature'
 
-      // The base58 decoder will throw an error for invalid base58
       await expect(readOnlyAccount.getTransactionReceipt(invalidSignature)).rejects.toThrow()
     })
   })

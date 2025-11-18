@@ -50,7 +50,7 @@ describe('WalletManagerSolana', () => {
       const account = await wallet.getAccount(0)
       expect(account).toBeInstanceOf(WalletAccountSolana)
       expect(account.index).toBe(0)
-      expect(account.path).toBe("m/44'/501'/0'/0/0")
+      expect(account.path).toBe("m/44'/501'/0'/0'")
     })
 
     it('should return different accounts for different indices', async () => {
@@ -63,7 +63,7 @@ describe('WalletManagerSolana', () => {
     it('should handle large index numbers', async () => {
       const account = await wallet.getAccount(999)
       expect(account.index).toBe(999)
-      expect(account.path).toBe("m/44'/501'/0'/0/999")
+      expect(account.path).toBe("m/44'/501'/999'/0'")
     })
   })
 
@@ -80,12 +80,6 @@ describe('WalletManagerSolana', () => {
       expect(account1).not.toBe(account2)
       expect(await account1.getAddress()).not.toBe(await account2.getAddress())
     })
-
-    it('should share cache with getAccount', async () => {
-      const account1 = await wallet.getAccount(5)
-      const account2 = await wallet.getAccountByPath("0'/0/5")
-      expect(account1).toBe(account2) // Same instance
-    })
   })
 
   describe('getFeeRates', () => {
@@ -93,17 +87,14 @@ describe('WalletManagerSolana', () => {
     let originalRpc
 
     beforeEach(() => {
-      // Save original RPC
       originalRpc = wallet._rpc
 
-      // Create mock RPC object
       mockRpc = {
         getRecentPrioritizationFees: jest.fn()
       }
     })
 
     afterEach(() => {
-      // Restore original RPC
       wallet._rpc = originalRpc
     })
 
@@ -138,7 +129,6 @@ describe('WalletManagerSolana', () => {
 
       const feeRates = await wallet.getFeeRates()
 
-      // Normal should be 1000 * 110 / 100 = 1100
       expect(feeRates.normal).toBe(1100n)
     })
 
@@ -153,7 +143,6 @@ describe('WalletManagerSolana', () => {
 
       const feeRates = await wallet.getFeeRates()
 
-      // Fast should be 1000 * 200 / 100 = 2000
       expect(feeRates.fast).toBe(2000n)
     })
 
@@ -161,7 +150,7 @@ describe('WalletManagerSolana', () => {
       mockRpc.getRecentPrioritizationFees.mockReturnValue({
         send: jest.fn().mockResolvedValue([
           { slot: 1, prioritizationFee: 1000 },
-          { slot: 2, prioritizationFee: 5000 }, // Highest
+          { slot: 2, prioritizationFee: 5000 },
           { slot: 3, prioritizationFee: 3000 }
         ])
       })
@@ -170,9 +159,8 @@ describe('WalletManagerSolana', () => {
 
       const feeRates = await wallet.getFeeRates()
 
-      // Should use 5000 as base
-      expect(feeRates.normal).toBe(5500n) // 5000 * 1.1
-      expect(feeRates.fast).toBe(10000n)  // 5000 * 2.0
+      expect(feeRates.normal).toBe(5500n)
+      expect(feeRates.fast).toBe(10000n)
     })
 
     it('should filter out zero fees', async () => {
@@ -188,7 +176,6 @@ describe('WalletManagerSolana', () => {
 
       const feeRates = await wallet.getFeeRates()
 
-      // Should use 2000, not 0
       expect(feeRates.normal).toBe(2200n)
       expect(feeRates.fast).toBe(4000n)
     })
@@ -205,9 +192,8 @@ describe('WalletManagerSolana', () => {
 
       const feeRates = await wallet.getFeeRates()
 
-      // Should use default fee of 5000
-      expect(feeRates.normal).toBe(5500n) // 5000 * 1.1
-      expect(feeRates.fast).toBe(10000n)  // 5000 * 2.0
+      expect(feeRates.normal).toBe(5500n)
+      expect(feeRates.fast).toBe(10000n)
     })
 
     it('should use default fee when no fees returned', async () => {
@@ -219,7 +205,6 @@ describe('WalletManagerSolana', () => {
 
       const feeRates = await wallet.getFeeRates()
 
-      // Should use default fee of 5000
       expect(feeRates.normal).toBe(5500n)
       expect(feeRates.fast).toBe(10000n)
     })
