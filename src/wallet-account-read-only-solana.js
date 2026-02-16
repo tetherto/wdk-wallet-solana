@@ -178,6 +178,73 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   }
 
   /**
+   * Returns the account balances for a list of SPL tokens.
+   *
+   * @param {string[]} tokenAddresses - The smart contract addresses of the tokens.
+   * @returns {Promise<Record<string, bigint>>} A mapping of token addresses to their balances (in base units).
+   */
+  async getTokenBalances (tokenAddresses) {
+    if (!this._rpc) {
+      throw new Error(
+        'The wallet must be connected to a provider to retrieve token balances.'
+      )
+    }
+
+    if (!tokenAddresses || tokenAddresses.length === 0) {
+      return {}
+    }
+
+    const addr = await this.getAddress()
+    const ownerAddress = address(addr)
+
+    const uniqueTokenAddresses = [...new Set(tokenAddresses)]
+    const mints = uniqueTokenAddresses.map(t => address(t))
+
+    const atas = await Promise.all(
+      mints.map(mint =>
+        findAssociatedTokenPda({
+          mint,
+          owner: ownerAddress,
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        }).then(([ata]) => ata)
+      )
+    )
+
+    const { value: accounts } = await this._rpc
+      .getMultipleAccounts(atas, {
+        commitment: this._commitment,
+        encoding: 'base64'
+      })
+      .send()
+
+    const balances = {}
+    const base64Encoder = getBase64Encoder()
+
+    for (let i = 0; i < uniqueTokenAddresses.length; i++) {
+      const tokenAddress = uniqueTokenAddresses[i]
+      const account = accounts[i]
+
+      if (!account) {
+        balances[tokenAddress] = 0n
+        continue
+      }
+
+      const dataBase64 = account.data[0]
+      const bytes = base64Encoder.encode(dataBase64)
+
+      const view = new DataView(
+        bytes.buffer,
+        bytes.byteOffset,
+        bytes.byteLength
+      )
+      const amount = view.getBigUint64(64, true)
+      balances[tokenAddress] = amount
+    }
+
+    return balances
+  }
+
+  /**
    * Quotes the costs of a send transaction operation.
    *
    * @param {SolanaTransaction} tx - The transaction.
