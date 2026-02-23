@@ -108,4 +108,4 @@ export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type SolanaTransaction = import("./wallet-account-read-only-solana.js").SolanaTransaction;
 export type SolanaWalletConfig = import("./wallet-account-read-only-solana.js").SolanaWalletConfig;
-import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js';
+import WalletAccountReadOnlySolana from "./wallet-account-read-only-solana.js";
