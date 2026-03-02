@@ -47,6 +47,7 @@ import { isSignatureBytes } from "@solana/kit";
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
+
 /** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
 /** @typedef {import('@solana/transaction-messages').TransactionMessageWithFeePayer} TransactionMessageWithFeePayer */
 /** @typedef {ReturnType<typeof import('@solana/rpc').createSolanaRpc>} SolanaRpc */
@@ -75,13 +76,15 @@ const MAX_U64 = 0xffffffffffffffffn;
 
 /**
  * Read-only Solana wallet account implementation.
+ *
+ * @template {Omit<SolanaWalletConfig, 'transferMaxFee'>} GenericSolanaWalletConfig
  */
 export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   /**
    * Creates a new solana read-only wallet account.
    *
    * @param {string} addr - The account's address.
-   * @param {Omit<SolanaWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
+   * @param {Partial<GenericSolanaWalletConfig>} [config] - The configuration object.
    */
   constructor(addr, config = {}) {
     super(addr);
@@ -90,7 +93,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * The read-only wallet account configuration.
      *
      * @protected
-     * @type {Omit<SolanaWalletConfig, 'transferMaxFee'>}
+     * @type {Partial<GenericSolanaWalletConfig>}
      */
     this._config = config;
 
