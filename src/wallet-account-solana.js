@@ -229,7 +229,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       transactionMessage = await this._buildNativeTransferTransactionMessage(tx.to, tx.value)
     }
     if (transactionMessage?.instructions !== undefined && Array.isArray(transactionMessage.instructions)) {
-      // Check if blockhash/lifetime is missing and add it
+      // Check if the blockhash lifetime and the durable nonce are missing then add it
       if (
         !isTransactionMessageWithBlockhashLifetime(transactionMessage) &&
         !isTransactionMessageWithDurableNonceLifetime(transactionMessage)
