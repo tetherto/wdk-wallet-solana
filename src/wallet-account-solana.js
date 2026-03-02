@@ -35,6 +35,7 @@ import * as bip39 from "bip39";
 import { sodium_memzero } from "sodium-universal";
 
 import WalletAccountReadOnlySolana from "./wallet-account-read-only-solana.js";
+import { pipe } from "@solana/functional";
 
 /** @typedef {import("@tetherto/wdk-wallet").IWalletAccount} IWalletAccount */
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
@@ -43,6 +44,7 @@ import WalletAccountReadOnlySolana from "./wallet-account-read-only-solana.js";
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
 
 /** @typedef {import('@solana/signers').KeyPairSigner} KeyPairSigner */
+/** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
 
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaWalletConfig} SolanaWalletConfig */
@@ -224,42 +226,49 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       throw new Error("The wallet must be connected to a provider to send transactions.");
     }
 
-    let transactionMessage = tx;
-    if (tx?.to !== undefined && tx?.value !== undefined) {
-      // Handle native token transfer { to, value } transaction
-      transactionMessage = await this._buildNativeTransferTransactionMessage(tx.to, tx.value);
-    }
-    if (transactionMessage?.instructions !== undefined && Array.isArray(transactionMessage.instructions)) {
-      // Check if the blockhash lifetime and the durable nonce are missing then add it
-      if (
-        !isTransactionMessageWithBlockhashLifetime(transactionMessage) &&
-        !isTransactionMessageWithDurableNonceLifetime(transactionMessage)
-      ) {
-        const { value: latestBlockhash } = await this._rpc
-          .getLatestBlockhash({
-            commitment: this._commitment,
-          })
-          .send();
-
-        transactionMessage = setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, transactionMessage);
-      }
-
-      // Check and verify fee payer
-      if (transactionMessage?.feePayer) {
-        // Verify the fee payer is the current account
-        const feePayerAddress =
-          typeof transactionMessage.feePayer === "string"
-            ? transactionMessage.feePayer
-            : transactionMessage.feePayer.address;
-
-        if (feePayerAddress !== this._signer.address) {
-          throw new Error(
-            `Transaction fee payer (${feePayerAddress}) does not match wallet address (${this._signer.address})`,
-          );
+    const transactionMessage = await pipe(
+      tx,
+      async (tx) => {
+        if ("to" in tx && tx.to !== undefined && tx.value !== undefined) {
+          // Handle native token transfer { to, value } transaction
+          return await this._buildNativeTransferTransactionMessage(tx.to, tx.value);
         }
-      }
-      transactionMessage = setTransactionMessageFeePayerSigner(this._signer, transactionMessage);
-    }
+        return tx;
+      },
+      /** @param {Promise<TransactionMessage>} promise */
+      async (promise) => {
+        const tx = await promise;
+        // Check if the blockhash lifetime and the durable nonce are missing then add it
+        if (!isTransactionMessageWithBlockhashLifetime(tx) && !isTransactionMessageWithDurableNonceLifetime(tx)) {
+          const { value: latestBlockhash } = await this._rpc
+            .getLatestBlockhash({
+              commitment: this._commitment,
+            })
+            .send();
+
+          return setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx);
+        }
+        return tx;
+      },
+      async (promise) => {
+        const tx = await promise;
+
+        // Check and verify fee payer
+        if ("feePayer" in tx && !!tx.feePayer) {
+          // Verify the fee payer is the current account
+          const feePayerAddress =
+            typeof tx.feePayer == "object" && "address" in tx.feePayer ? tx.feePayer.address : tx.feePayer;
+
+          if (feePayerAddress !== this._signer.address) {
+            throw new Error(
+              `Transaction fee payer (${feePayerAddress}) does not match wallet address (${this._signer.address})`,
+            );
+          }
+        }
+
+        return setTransactionMessageFeePayerSigner(this._signer, tx);
+      },
+    );
 
     const fee = await this._getTransactionFee(transactionMessage);
 
