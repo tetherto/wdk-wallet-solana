@@ -29,7 +29,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * The Ed25519 key pair signer for signing transactions.
      *
      * @private
-     * @type {import('@solana/keys').KeyPairSigner | undefined}
+     * @type {KeyPairSigner | undefined}
      */
     private _signer;
     /**
@@ -106,6 +106,7 @@ export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
+export type KeyPairSigner = import("@solana/signers").KeyPairSigner;
 export type SolanaTransaction = import("./wallet-account-read-only-solana.js").SolanaTransaction;
 export type SolanaWalletConfig = import("./wallet-account-read-only-solana.js").SolanaWalletConfig;
 import WalletAccountReadOnlySolana from "./wallet-account-read-only-solana.js";
