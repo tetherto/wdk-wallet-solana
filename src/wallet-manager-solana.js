@@ -34,6 +34,13 @@ const DEFAULT_BASE_FEE = 5_000n
 
 export default class WalletManagerSolana extends WalletManager {
   /**
+   * Overrides the base class `_accounts` property type.
+   *
+   * @type {{ [path: string]: WalletAccountSolana }}
+   */
+  _accounts = {}
+
+  /**
    * Creates a new wallet manager for the solana blockchain.
    *
    * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
@@ -115,14 +122,10 @@ export default class WalletManagerSolana extends WalletManager {
 
     const fees = await this._rpc.getRecentPrioritizationFees().send()
 
-    const nonZeroFees = fees
-      .filter((fee) => fee.prioritizationFee > 0)
-      .map((fee) => BigInt(fee.prioritizationFee))
+    const nonZeroFees = fees.filter((fee) => fee.prioritizationFee > 0).map((fee) => BigInt(fee.prioritizationFee))
 
     const fee =
-      nonZeroFees.length > 0
-        ? nonZeroFees.reduce((max, fee) => (fee > max ? fee : max), 0n)
-        : DEFAULT_BASE_FEE
+      nonZeroFees.length > 0 ? nonZeroFees.reduce((max, fee) => (fee > max ? fee : max), 0n) : DEFAULT_BASE_FEE
 
     return {
       normal: (fee * FEE_RATE_NORMAL_MULTIPLIER) / 100n,
