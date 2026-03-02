@@ -231,7 +231,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       async (tx) => {
         if ('to' in tx && tx.to !== undefined && tx.value !== undefined) {
           // Handle native token transfer { to, value } transaction
-          return await this._buildNativeTransferTransactionMessage(tx.to, tx.value)
+          return await this._buildNativeTransferTransactionMessage(tx.to, tx.value, this._signer)
         }
         return tx
       },

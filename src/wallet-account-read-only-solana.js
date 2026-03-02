@@ -54,6 +54,7 @@ import { isSignatureBytes } from '@solana/kit'
 /** @typedef {ReturnType<import("@solana/rpc-api").SolanaRpcApi['getTransaction']>} SolanaTransactionReceipt */
 /** @typedef {import("@solana/rpc-types").Commitment} Commitment */
 /** @typedef {import('@solana/transactions').TransactionMessageBytesBase64} TransactionMessageBytesBase64 */
+/** @typedef {import('@solana/signers').KeyPairSigner} KeyPairSigner */
 
 /**
  * @typedef {Object} SimpleSolanaTransaction
@@ -283,11 +284,12 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @param {string} token - The SPL token mint address (base58-encoded public key).
    * @param {string} recipient - The recipient's wallet address (base58-encoded public key).
    * @param {number | bigint} amount - The amount to transfer in token's base units (must be ≤ 2^64-1).
+   * @param {KeyPairSigner} [signer] - TODO.
    * @returns {Promise<TransactionMessage & TransactionMessageWithFeePayer>} The constructed transaction message.
    * @todo Support Token-2022 (Token Extensions Program).
    * @todo Support transfer with memo for tokens that require it.
    */
-  async _buildSPLTransferTransactionMessage (token, recipient, amount) {
+  async _buildSPLTransferTransactionMessage (token, recipient, amount, signer) {
     if (typeof amount === 'bigint' && amount > MAX_U64) {
       throw new Error('Amount exceeds u64 maximum value')
     }
@@ -328,7 +330,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
         ata: toATA,
         mint: tokenMint,
         owner: recipientPublicKey,
-        payer: createNoopSigner(ownerPublicKey)
+        payer: signer || createNoopSigner(ownerPublicKey)
       })
       instructions.push(createATAInstruction)
     }
@@ -364,16 +366,17 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @protected
    * @param {string} to - The recipient's address.
    * @param {number | bigint} value - The amount of SOL to send (in lamports).
+   * @param {KeyPairSigner} [signer] - TODO.
    * @returns {Promise<TransactionMessage>} The constructed transaction message.
    */
-  async _buildNativeTransferTransactionMessage (to, value) {
+  async _buildNativeTransferTransactionMessage (to, value, signer) {
     const addr = await this.getAddress()
     const fromPublicKey = address(addr)
     const toPublicKey = address(to)
 
     // Create transfer instruction
     const transferInstruction = getTransferSolInstruction({
-      source: createNoopSigner(fromPublicKey),
+      source: signer || createNoopSigner(fromPublicKey),
       destination: toPublicKey,
       amount: BigInt(value)
     })
