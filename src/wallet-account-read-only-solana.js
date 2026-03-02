@@ -433,7 +433,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     const signatureBytes = Buffer.from(signature, 'hex')
 
     if (!isSignatureBytes(signatureBytes)) {
-      throw new Error('Invalid signature.')
+      return false
     }
 
     const addr = await this.getAddress()
