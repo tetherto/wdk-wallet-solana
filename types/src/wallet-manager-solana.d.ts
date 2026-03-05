@@ -17,9 +17,9 @@ export default class WalletManagerSolana extends WalletManager {
      * The commitment level for transactions.
      *
      * @protected
-     * @type {string}
+     * @type {Commitment}
      */
-    protected _commitment: string;
+    protected _commitment: Commitment;
     /**
      * Returns the wallet account at a specific index (see [SLIP-0010](https://slips.readthedocs.io/en/latest/slip-0010/)).
      *
@@ -48,6 +48,7 @@ export default class WalletManagerSolana extends WalletManager {
     getFeeRates(): Promise<FeeRates>;
 }
 export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
+export type Commitment = import("@solana/rpc-types").Commitment;
 export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
 export type SolanaWalletConfig = import("./wallet-account-solana.js").SolanaWalletConfig;
 import WalletManager from "@tetherto/wdk-wallet";

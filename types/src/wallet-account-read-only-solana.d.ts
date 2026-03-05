@@ -28,9 +28,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * Determines the level of finality required before returning results.
      *
      * @protected
-     * @type {string}
+     * @type {Commitment}
      */
-    protected _commitment: string;
+    protected _commitment: Commitment;
     /**
      * Returns the account's native SOL balance.
      *
@@ -111,6 +111,7 @@ export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
 export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
 export type SolanaTransactionReceipt = ReturnType<import("@solana/rpc-api").SolanaRpcApi["getTransaction"]>;
+export type Commitment = import("@solana/rpc-types").Commitment;
 export type SimpleSolanaTransaction = {
     /**
      * - The recipient's Solana address.
@@ -130,7 +131,7 @@ export type SolanaWalletConfig = {
     /**
      * - The commitment level (default: 'confirmed').
      */
-    commitment?: "processed" | "confirmed" | "finalized";
+    commitment?: Commitment;
     /**
      * - Maximum allowed fee in lamports for transfer operations.
      */

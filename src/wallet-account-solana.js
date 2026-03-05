@@ -21,7 +21,11 @@ import {
 } from '@solana/signers'
 import { getBase64EncodedWireTransaction } from '@solana/transactions'
 import { signBytes } from '@solana/keys'
-import { setTransactionMessageLifetimeUsingBlockhash } from '@solana/transaction-messages'
+import {
+  isTransactionMessageWithBlockhashLifetime,
+  isTransactionMessageWithDurableNonceLifetime,
+  setTransactionMessageLifetimeUsingBlockhash
+} from '@solana/transaction-messages'
 
 import HDKey from 'micro-key-producer/slip10.js'
 
@@ -226,8 +230,11 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       transactionMessage = await this._buildNativeTransferTransactionMessage(tx.to, tx.value)
     }
     if (transactionMessage?.instructions !== undefined && Array.isArray(transactionMessage.instructions)) {
-      // Check if blockhash/lifetime is missing and add it
-      if (!transactionMessage.lifetimeConstraint) {
+      // Check if the blockhash lifetime and the durable nonce are missing then add it
+      if (
+        !isTransactionMessageWithBlockhashLifetime(transactionMessage) &&
+        !isTransactionMessageWithDurableNonceLifetime(transactionMessage)
+      ) {
         const { value: latestBlockhash } = await this._rpc
           .getLatestBlockhash({
             commitment: this._commitment

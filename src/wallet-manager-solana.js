@@ -21,6 +21,7 @@ import { createSolanaRpc } from '@solana/rpc'
 import WalletAccountSolana from './wallet-account-solana.js'
 
 /** @typedef {ReturnType<typeof import('@solana/rpc').createSolanaRpc>} SolanaRpc */
+/** @typedef {import("@solana/rpc-types").Commitment} Commitment */
 
 /** @typedef {import('@tetherto/wdk-wallet').FeeRates} FeeRates */
 
@@ -65,7 +66,7 @@ export default class WalletManagerSolana extends WalletManager {
        * The commitment level for transactions.
        *
        * @protected
-       * @type {string}
+       * @type {Commitment}
        */
       this._commitment = commitment
     }
@@ -115,14 +116,10 @@ export default class WalletManagerSolana extends WalletManager {
 
     const fees = await this._rpc.getRecentPrioritizationFees().send()
 
-    const nonZeroFees = fees
-      .filter((fee) => fee.prioritizationFee > 0)
-      .map((fee) => BigInt(fee.prioritizationFee))
+    const nonZeroFees = fees.filter((fee) => fee.prioritizationFee > 0).map((fee) => BigInt(fee.prioritizationFee))
 
     const fee =
-      nonZeroFees.length > 0
-        ? nonZeroFees.reduce((max, fee) => (fee > max ? fee : max), 0n)
-        : DEFAULT_BASE_FEE
+      nonZeroFees.length > 0 ? nonZeroFees.reduce((max, fee) => (fee > max ? fee : max), 0n) : DEFAULT_BASE_FEE
 
     return {
       normal: (fee * FEE_RATE_NORMAL_MULTIPLIER) / 100n,
