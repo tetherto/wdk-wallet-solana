@@ -125,13 +125,17 @@ export type SimpleSolanaTransaction = {
 export type SolanaTransaction = SimpleSolanaTransaction | TransactionMessage;
 export type SolanaWalletConfig = {
     /**
-     * - The provider's rpc url.
+     * - The provider's rpc url. If it's a list of urls, the provider failover strategy will be enabled.
      */
     rpcUrl?: string;
     /**
      * - The commitment level (default: 'confirmed').
      */
     commitment?: Commitment;
+    /**
+     * - The number of retries in the failover mechanism.
+     */
+    retries?: number,
     /**
      * - Maximum allowed fee in lamports for transfer operations.
      */
