@@ -104,6 +104,23 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * @returns {Promise<boolean>} True if the signature is valid.
      */
     verify(message: string, signature: string): Promise<boolean>;
+    /**
+     * Ensures the transaction has either a blockhash lifetime or a durable nonce lifetime.
+     *
+     * @protected
+     * @param {SolanaTransaction} tx - The transaction.
+     * @returns {Promise<SolanaTransaction>} The transaction with lifetime.
+     */
+    protected _ensureLifetime(tx: SolanaTransaction): Promise<SolanaTransaction>;
+    /**
+     * Asserts that any explicit transaction fee payer matches this wallet address.
+     *
+     * @protected
+     * @param {SolanaTransaction} tx - The transaction.
+     * @returns {Promise<void>} Resolves when the transaction has no explicit fee payer or it matches this wallet address.
+     * @throws {Error} If the transaction fee payer does not match this wallet address.
+     */
+    protected _assertFeePayer (tx: SolanaTransaction): Promise<void>
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;

@@ -21,11 +21,6 @@ import {
 } from '@solana/signers'
 import { getBase64EncodedWireTransaction } from '@solana/transactions'
 import { signBytes } from '@solana/keys'
-import {
-  isTransactionMessageWithBlockhashLifetime,
-  isTransactionMessageWithDurableNonceLifetime,
-  setTransactionMessageLifetimeUsingBlockhash
-} from '@solana/transaction-messages'
 
 import HDKey from 'micro-key-producer/slip10.js'
 
@@ -225,39 +220,15 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     }
 
     let transactionMessage = tx
-    if (tx?.to !== undefined && tx?.value !== undefined) {
-      // Handle native token transfer { to, value } transaction
+
+    // Handle native token transfer { to, value } transaction
+    if (tx.to !== undefined && tx.value !== undefined) {
       transactionMessage = await this._buildNativeTransferTransactionMessage(tx.to, tx.value)
     }
-    if (transactionMessage?.instructions !== undefined && Array.isArray(transactionMessage.instructions)) {
-      // Check if the blockhash lifetime and the durable nonce are missing then add it
-      if (
-        !isTransactionMessageWithBlockhashLifetime(transactionMessage) &&
-        !isTransactionMessageWithDurableNonceLifetime(transactionMessage)
-      ) {
-        const { value: latestBlockhash } = await this._rpc
-          .getLatestBlockhash({
-            commitment: this._commitment
-          })
-          .send()
 
-        transactionMessage = setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, transactionMessage)
-      }
-
-      // Check and verify fee payer
-      if (transactionMessage?.feePayer) {
-        // Verify the fee payer is the current account
-        const feePayerAddress =
-          typeof transactionMessage.feePayer === 'string'
-            ? transactionMessage.feePayer
-            : transactionMessage.feePayer.address
-
-        if (feePayerAddress !== this._signer.address) {
-          throw new Error(
-            `Transaction fee payer (${feePayerAddress}) does not match wallet address (${this._signer.address})`
-          )
-        }
-      }
+    if (Array.isArray(transactionMessage.instructions)) {
+      transactionMessage = await this._ensureLifetime(transactionMessage)
+      await this._assertFeePayer(transactionMessage)
       transactionMessage = setTransactionMessageFeePayerSigner(this._signer, transactionMessage)
     }
 
