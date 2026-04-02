@@ -111,13 +111,16 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     this._rpc = undefined
 
     if (Array.isArray(rpcUrl)) {
-      this._rpc = rpcUrl
-        .reduce((failover, candidate) => failover.addProvider(createSolanaRpc(candidate)), new FailoverProvider({ retries }))
-        .initialize()
+      if (rpcUrl.length > 0) {
+        const failoverProvider = new FailoverProvider({ retries })
+        for (const entry of rpcUrl) {
+          const option = createSolanaRpc(entry)
+          failoverProvider.addProvider(option)
+        }
+        this._rpc = failoverProvider.initialize()
+      }
     } else if (rpcUrl) {
       this._rpc = createSolanaRpc(rpcUrl)
-    } else {
-      this._rpc = undefined
     }
   }
 

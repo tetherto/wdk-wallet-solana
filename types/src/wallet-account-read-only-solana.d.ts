@@ -20,9 +20,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * Solana RPC client for making HTTP requests to the blockchain.
      *
      * @protected
-     * @type {SolanaRpc}
+     * @type {SolanaRpc | undefined}
      */
-    protected _rpc: SolanaRpc;
+    protected _rpc: SolanaRpc | undefined;
     /**
      * The commitment level for querying transaction and account states.
      * Determines the level of finality required before returning results.
