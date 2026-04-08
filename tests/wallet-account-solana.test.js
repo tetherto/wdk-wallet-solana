@@ -403,7 +403,7 @@ describe('WalletAccountSolana', () => {
           send: jest.fn().mockResolvedValue({ value: 5000 })
         })
         mockRpc.sendTransaction.mockReturnValue({
-          send: jest.fn().mockResolvedValue('mock-sig'),
+          send: jest.fn().mockResolvedValue('mock-sig')
         })
 
         account._rpc = mockRpc
@@ -691,7 +691,9 @@ describe('WalletAccountSolana', () => {
       it('should build and send SPL token transfer', async () => {
         const mintData = new Uint8Array(165)
         mockRpc.getAccountInfo.mockReturnValue({
-          send: jest.fn().mockResolvedValue({ value: { data: mintData } })
+          send: jest.fn().mockResolvedValue({
+            value: { data: mintData }
+          })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
           send: jest.fn().mockResolvedValue({ value: 5000 })
