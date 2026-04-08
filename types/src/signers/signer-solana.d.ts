@@ -5,12 +5,6 @@
 export function assertFullHardenedPath(path: string): void;
 export class ISignerSolana {
     /**
-     * The flag indicates whether the signer is ready to use.
-     *
-     * @type {boolean}
-     */
-    get isActive(): boolean;
-    /**
      * The derivation path's index of this account. (i.e. m/purpose'/coin_type'/ **account'** /change/address_index)
      *
      *

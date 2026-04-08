@@ -93,17 +93,12 @@ export default class LedgerSignerSol {
     this._address = undefined
     this._sessionId = ''
     this._path = `${BIP_44_SOL_DERIVATION_PATH_PREFIX}/${path}`
-    this._isActive = false
 
     /**
      * @type {DeviceManagementKit}
      */
     this._dmk =
       opts.dmk || new DeviceManagementKitBuilder().addTransport(webHidTransportFactory).build()
-  }
-
-  get isActive () {
-    return this._isActive
   }
 
   get index () {
@@ -154,7 +149,6 @@ export default class LedgerSignerSol {
 
     // Active
     this._address = address
-    this._isActive = true
   }
 
   /**
@@ -252,11 +246,21 @@ export default class LedgerSignerSol {
   }
 
   dispose () {
-    if (this._account) this._dmk.disconnect({ sessionId: this._sessionId })
-
-    this._account = undefined
+    this._disconnect()
     this._dmk = undefined
-    this._sessionId = ''
-    this._isActive = false
+  }
+
+  /** @private */
+  async _disconnect () {
+    try {
+      if (this._account && this._dmk && this._sessionId) {
+        await this._dmk.disconnect({ sessionId: this._sessionId })
+      }
+    } catch (_) {
+      // ignore best-effort disconnect
+    } finally {
+      this._account = undefined
+      this._sessionId = ''
+    }
   }
 }
