@@ -142,8 +142,8 @@ describe('WalletAccountReadOnlySolana', () => {
             decimals: 6,
             uiAmount: 1.0,
             uiAmountString: '1.0'
-          },
-        }),
+          }
+        })
       })
 
       const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
@@ -232,11 +232,11 @@ describe('WalletAccountReadOnlySolana', () => {
       })
 
       mockRpc.getTokenAccountBalance.mockReturnValue({
-        send: jest.fn().mockRejectedValue(new Error('Failed to get token balance')),
+        send: jest.fn().mockRejectedValue(new Error('Failed to get token balance'))
       })
 
       await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(
-        'Failed to get token balance',
+        'Failed to get token balance'
       )
     })
 
@@ -249,9 +249,9 @@ describe('WalletAccountReadOnlySolana', () => {
           value: {
             owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
             lamports: 2039280n,
-            data: [Buffer.alloc(165).toString('base64'), 'base64'],
-          },
-        }),
+            data: [Buffer.alloc(165).toString('base64'), 'base64']
+          }
+        })
       })
 
       mockRpc.getTokenAccountBalance
@@ -282,8 +282,8 @@ describe('WalletAccountReadOnlySolana', () => {
             value: {
               blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
               lastValidBlockHeight: 100000n
-            },
-          }),
+            }
+          })
         })
 
         mockRpc.getFeeForMessage.mockReturnValue({
@@ -508,7 +508,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
       it('should handle RPC error when fetching latest blockhash for TransactionMessage', async () => {
         mockRpc.getLatestBlockhash.mockReturnValue({
-          send: jest.fn().mockRejectedValue(new Error('Blockhash fetch failed')),
+          send: jest.fn().mockRejectedValue(new Error('Blockhash fetch failed'))
         })
 
         const transactionMessage = {
@@ -583,10 +583,7 @@ describe('WalletAccountReadOnlySolana', () => {
     describe('Error Handling', () => {
       it('should throw error when not connected to provider', async () => {
         const disconnectedAccount = new WalletAccountReadOnlySolana(TEST_ADDRESS, {})
-        const tx = {
-          to: '3gx5puA146Y1jb6dV4KS8vQnXtuXSZsAPV89JeaqfFXW',
-          value: 1000n
-        }
+        const tx = { to: '3gx5puA146Y1jb6dV4KS8vQnXtuXSZsAPV89JeaqfFXW', value: 1000n }
 
         await expect(disconnectedAccount.quoteSendTransaction(tx)).rejects.toThrow(
           'The wallet must be connected to a provider to quote transactions.'
@@ -736,13 +733,11 @@ describe('WalletAccountReadOnlySolana', () => {
     it('should throw error when not connected to provider', async () => {
       const disconnectedAccount = new WalletAccountReadOnlySolana(TEST_ADDRESS, {})
 
-      await expect(
-        disconnectedAccount.quoteTransfer({
-          token: MOCK_TOKEN_MINT,
-          recipient: MOCK_RECIPIENT,
-          amount: 1000000n
-        })
-      ).rejects.toThrow('The wallet must be connected to a provider to quote transfer operations.')
+      await expect(disconnectedAccount.quoteTransfer({
+        token: MOCK_TOKEN_MINT,
+        recipient: MOCK_RECIPIENT,
+        amount: 1000000n
+      })).rejects.toThrow('The wallet must be connected to a provider to quote transfer operations.')
     })
 
     it('should throw error when getFeeForMessage returns null', async () => {
@@ -773,19 +768,16 @@ describe('WalletAccountReadOnlySolana', () => {
         send: jest.fn().mockResolvedValue({ value: null })
       })
 
-      await expect(
-        readOnlyAccount.quoteTransfer({
-          token: MOCK_TOKEN_MINT,
-          recipient: MOCK_RECIPIENT,
-          amount: 1000000n
-        }),
-      ).rejects.toThrow('Failed to calculate transaction fee')
+      await expect(readOnlyAccount.quoteTransfer({
+        token: MOCK_TOKEN_MINT,
+        recipient: MOCK_RECIPIENT,
+        amount: 1000000n
+      })).rejects.toThrow('Failed to calculate transaction fee')
     })
   })
 
   describe('getTransactionReceipt', () => {
-    const MOCK_TX_SIGNATURE =
-      '2k3dxVsXko3Vtb7z2W31GHCbZBzRXCAo5YYqbn7bxUCQM1RQb5Xq1XhWndFGhZGpZ5mGARUx5kavWqFVoBGujpWf'
+    const MOCK_TX_SIGNATURE = '2k3dxVsXko3Vtb7z2W31GHCbZBzRXCAo5YYqbn7bxUCQM1RQb5Xq1XhWndFGhZGpZ5mGARUx5kavWqFVoBGujpWf'
 
     it('should return transaction receipt', async () => {
       const mockReceipt = {

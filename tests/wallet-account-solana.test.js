@@ -495,8 +495,8 @@ describe('WalletAccountSolana', () => {
         await expect(
           account.sendTransaction({
             to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
-            value: 1000n,
-          }),
+            value: 1000n
+          })
         ).rejects.toThrow('Failed to calculate transaction fee')
       })
     })
@@ -568,7 +568,7 @@ describe('WalletAccountSolana', () => {
           account.transfer({
             token: 'FzFRHEc1tWLGa2doGw2KAKrfNrBH3QwGTnjm37o2HQGb',
             recipient: 'FzFRHEc1tWLGa2doGw2KAKrfNrBH3QwGTnjm37o2HQGb',
-            amount: 0xffffffffffffffffn + 1n
+            amount: 0xFFFFFFFFFFFFFFFFn + 1n
           })
         ).rejects.toThrow('Amount exceeds u64 maximum value')
       })
@@ -588,7 +588,9 @@ describe('WalletAccountSolana', () => {
         mintData[44] = 6
 
         mockRpc.getAccountInfo.mockReturnValue({
-          send: jest.fn().mockResolvedValue({ value: { data: mintData } })
+          send: jest.fn().mockResolvedValue({
+            value: { data: mintData }
+          })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
           send: jest.fn().mockResolvedValue({ value: 5000 })
@@ -630,11 +632,11 @@ describe('WalletAccountSolana', () => {
 
         mockRpc.getAccountInfo.mockReturnValue({
           send: jest.fn().mockResolvedValue({
-            value: { data: mintData },
+            value: { data: mintData }
           })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
-          send: jest.fn().mockResolvedValue({ value: 15000 }),
+          send: jest.fn().mockResolvedValue({ value: 15000 })
         })
 
         limitedAccount._rpc = mockRpc
@@ -661,18 +663,20 @@ describe('WalletAccountSolana', () => {
         mintData[44] = 6
 
         mockRpc.getAccountInfo.mockReturnValue({
-          send: jest.fn().mockResolvedValue({ value: { data: mintData } })
+          send: jest.fn().mockResolvedValue({
+            value: { data: mintData }
+          })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
-          send: jest.fn().mockResolvedValue({ value: 5000 }),
+          send: jest.fn().mockResolvedValue({ value: 5000 })
         })
         mockRpc.sendTransaction.mockReturnValue({
-          send: jest.fn().mockResolvedValue('sig'),
+          send: jest.fn().mockResolvedValue('sig')
         })
 
         limitedAccount._rpc = mockRpc
 
-        const result = await limitedAccount.transfer( {
+        const result = await limitedAccount.transfer({
           token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
           recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
           amount: 1000n
@@ -701,7 +705,7 @@ describe('WalletAccountSolana', () => {
         const result = await account.transfer({
           token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
           recipient: '11111111111111111111111111111111',
-          amount: 1000000n,
+          amount: 1000000n
         }, { skipConfirmation: true })
 
         expect(result.hash).toBe('transfer-sig')

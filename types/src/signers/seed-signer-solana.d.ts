@@ -25,10 +25,8 @@ export default class SeedSignerSolana implements ISignerSolana {
      */
     private _address;
     _path: string;
-    _isActive: boolean;
     _rawPublicKey: Uint8Array<ArrayBuffer>;
     _rawPrivateKey: Uint8Array<ArrayBuffer>;
-    get isActive(): boolean;
     get isRoot(): boolean;
     get index(): number;
     get path(): string;

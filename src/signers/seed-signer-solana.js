@@ -86,7 +86,6 @@ export default class SeedSignerSolana {
     this._address = undefined
 
     this._path = undefined
-    this._isActive = false
     this._rawPublicKey = undefined
     this._rawPrivateKey = undefined
 
@@ -96,10 +95,6 @@ export default class SeedSignerSolana {
       this._path = `${BIP_44_SOL_DERIVATION_PATH_PREFIX}/${opts.path}`
       this._isRoot = false
     }
-  }
-
-  get isActive () {
-    return this._isActive
   }
 
   get isRoot () {
@@ -144,7 +139,6 @@ export default class SeedSignerSolana {
 
     this._account = account
     this._address = this._account.address
-    this._isActive = true
 
     const publicKey = await crypto.subtle.exportKey('raw', account.keyPair.publicKey)
 
@@ -220,6 +214,5 @@ export default class SeedSignerSolana {
     this._account = undefined
     this._address = undefined
     this._path = undefined
-    this._isActive = false
   }
 }

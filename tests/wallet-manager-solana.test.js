@@ -121,7 +121,9 @@ describe('WalletManagerSolana', () => {
 
     it('should calculate normal rate as 110% of max fee', async () => {
       mockRpc.getRecentPrioritizationFees.mockReturnValue({
-        send: jest.fn().mockResolvedValue([{ slot: 1, prioritizationFee: 1000 }])
+        send: jest.fn().mockResolvedValue([
+          {slot: 1, prioritizationFee: 1000 }
+        ])
       })
 
       wallet._rpc = mockRpc
@@ -133,7 +135,9 @@ describe('WalletManagerSolana', () => {
 
     it('should calculate fast rate as 200% of max fee', async () => {
       mockRpc.getRecentPrioritizationFees.mockReturnValue({
-        send: jest.fn().mockResolvedValue([{ slot: 1, prioritizationFee: 1000 }])
+        send: jest.fn().mockResolvedValue([
+          { slot: 1, prioritizationFee: 1000 }
+        ])
       })
 
       wallet._rpc = mockRpc
