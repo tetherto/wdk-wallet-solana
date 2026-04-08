@@ -18,12 +18,10 @@ export default class LedgerSignerSol implements ISignerSolana {
     _address: any;
     _sessionId: string;
     _path: string;
-    _isActive: boolean;
     /**
      * @type {DeviceManagementKit}
      */
     _dmk: DeviceManagementKit;
-    get isActive(): boolean;
     get index(): number;
     get path(): string;
     get config(): any;
@@ -46,6 +44,8 @@ export default class LedgerSignerSol implements ISignerSolana {
     verify(message: any, signature: any): Promise<boolean>;
     signTransaction(unsignedTx: any): Promise<Uint8Array<ArrayBuffer>>;
     dispose(): void;
+    /** @private */
+    private _disconnect;
 }
 export type ISignerSolana = import("./signer-solana.js").ISignerSolana;
 export type DeviceManagementKit = any;
