@@ -34,6 +34,7 @@ npm install @tetherto/wdk-wallet-solana
 1. WalletManagerSolana: Main class for managing wallets
 2. WalletAccountSolana: Use this for full access accounts
 3. WalletAccountReadOnlySolana: Use this for read-only accounts
+4. `SeedSignerSolana` and `LedgerSignerSolana`: Use these to create signers for the wallet manager
 
 ### Creating a New Wallet
 
@@ -42,12 +43,14 @@ import WalletManagerSolana, {
   WalletAccountSolana,
   WalletAccountReadOnlySolana
 } from '@tetherto/wdk-wallet-solana'
+import { SeedSignerSolana } from '@tetherto/wdk-wallet-solana/signers'
 
 // Use a BIP-39 seed phrase (replace with your own secure phrase)
 const seedPhrase = 'test only example nut use this real life secret phrase must random'
+const signer = new SeedSignerSolana(seedPhrase)
 
-// Create wallet manager with Solana RPC provider
-const wallet = new WalletManagerSolana(seedPhrase, {
+// Create wallet manager with a signer and Solana RPC endpoint
+const wallet = new WalletManagerSolana(signer, {
   rpcUrl: 'https://api.mainnet-beta.solana.com', // or any Solana RPC endpoint
   commitment: 'confirmed' // Optional: commitment level
 })
@@ -63,8 +66,12 @@ const readOnlyAccount = await account.toReadOnlyAccount()
 
 ```javascript
 import WalletManagerSolana from '@tetherto/wdk-wallet-solana'
+import { SeedSignerSolana } from '@tetherto/wdk-wallet-solana/signers'
 
-// Assume wallet is already created
+// Assume signer and wallet are already created
+const signer = new SeedSignerSolana(seedPhrase)
+const wallet = new WalletManagerSolana(signer, { rpcUrl: 'https://api.mainnet-beta.solana.com' })
+
 // Get the first account (index 0)
 const account = await wallet.getAccount(0)
 const address = await account.getAddress()
@@ -80,8 +87,12 @@ const customAccount = await wallet.getAccountByPath("0'/0'/5'")
 const customAddress = await customAccount.getAddress()
 console.log('Custom account address:', customAddress)
 
+// Get an account using a named signer registered on the wallet manager
+const backupAccount = await wallet.getAccount(0, 'backup')
+const backupCustomAccount = await wallet.getAccountByPath("0'/0'/5'", 'backup')
+
 // Note: All addresses are base58-encoded Solana public keys
-// All accounts inherit the provider configuration from the wallet manager
+// All accounts inherit the RPC configuration from the wallet manager
 ```
 
 ### Checking Balances
@@ -103,8 +114,8 @@ const tokenMint = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB' // USDT mint ad
 const tokenBalance = await account.getTokenBalance(tokenMint)
 console.log('Token balance:', tokenBalance)
 
-// Note: Provider is required for balance checks
-// Make sure wallet was created with a provider configuration
+// Note: An RPC connection is required for balance checks
+// Make sure the wallet was created with an rpcUrl
 ```
 
 #### Read-Only Account
@@ -193,7 +204,7 @@ const transferResult = await account.transfer(
     commitment: 'confirmed' // Optional: commitment level
   }
 )
-console.log('Transaction signature:', transferResult.signature)
+console.log('Transaction hash:', transferResult.hash)
 console.log('Transfer fee:', transferResult.fee, 'lamports')
 
 // Quote token transfer fee
@@ -263,21 +274,22 @@ Extends `WalletManager` from `@tetherto/wdk-wallet`.
 #### Constructor
 
 ```javascript
-new WalletManagerSolana(seed, config)
+new WalletManagerSolana(signer, config)
 ```
 
 **Parameters:**
 
-- `seed` (string | Uint8Array): BIP-39 mnemonic seed phrase or seed bytes
+- `signer` (`ISignerSolana`): A Solana signer implementation such as `SeedSignerSolana` or `LedgerSignerSolana`
 - `config` (object): Configuration object
-  - `provider` (string | Connection): RPC endpoint URL or Solana Connection instance
+  - `rpcUrl` (string): RPC endpoint URL
   - `commitment` (string, optional): Commitment level ('processed', 'confirmed', or 'finalized')
   - `transferMaxFee` (number, optional): Maximum fee amount for transfer operations (in lamports)
 
 **Example:**
 
 ```javascript
-const wallet = new WalletManagerSolana(seedPhrase, {
+const signer = new SeedSignerSolana(seedPhrase)
+const wallet = new WalletManagerSolana(signer, {
   rpcUrl: 'https://api.mainnet-beta.solana.com',
   commitment: 'confirmed',
   transferMaxFee: 5000 // Maximum fee in lamports
@@ -288,18 +300,19 @@ const wallet = new WalletManagerSolana(seedPhrase, {
 
 | Method                   | Description                                                         | Returns                                   |
 | ------------------------ | ------------------------------------------------------------------- | ----------------------------------------- |
-| `getAccount(index)`      | Returns a wallet account at the specified index                     | `Promise<WalletAccountSolana>`            |
-| `getAccountByPath(path)` | Returns a wallet account at the specified SLIP-0010 derivation path | `Promise<WalletAccountSolana>`            |
+| `getAccount(index, signerName)`      | Returns a wallet account at the specified index                     | `Promise<WalletAccountSolana>`            |
+| `getAccountByPath(path, signerName)` | Returns a wallet account at the specified SLIP-0010 derivation path | `Promise<WalletAccountSolana>`            |
 | `getFeeRates()`          | Returns current fee rates for transactions                          | `Promise<{normal: bigint, fast: bigint}>` |
 | `dispose()`              | Disposes all wallet accounts, clearing private keys from memory     | `void`                                    |
 
-##### `getAccount(index)`
+##### `getAccount(index, signerName)`
 
 Returns a Solana wallet account at the specified index using SLIP-0010 derivation path m/44'/501'.
 
 **Parameters:**
 
 - `index` (number, optional): The index of the account to get (default: 0)
+- `signerName` (string, optional): The signer name to resolve from the wallet manager (default: `'default'`)
 
 **Returns:** `Promise<WalletAccountSolana>` - The Solana wallet account
 
@@ -311,13 +324,14 @@ const address = await account.getAddress()
 console.log('Solana account address:', address)
 ```
 
-##### `getAccountByPath(path)`
+##### `getAccountByPath(path, signerName)`
 
 Returns a Solana wallet account at the specified SLIP-0010 derivation path.
 
 **Parameters:**
 
 - `path` (string): The derivation path. Note that all child paths must be hardened in Solana (e.g., "0'/0'/0'", "1'/0'/5'").
+- `signerName` (string, optional): The signer name to resolve from the wallet manager (default: `'default'`)
 
 **Returns:** `Promise<WalletAccountSolana>` - The Solana wallet account
 
@@ -347,7 +361,7 @@ console.log('Fast fee rate:', feeRates.fast, 'lamports')
 
 // Use in transaction
 const result = await account.sendTransaction({
-  recipient: '11111111111111111111111111111112',
+  to: '11111111111111111111111111111112',
   value: 1000000000n // 1 SOL in lamports
 })
 ```
@@ -372,15 +386,14 @@ Represents an individual Solana wallet account. Implements `IWalletAccount` from
 #### Constructor
 
 ```javascript
-new WalletAccountSolana(seed, path, config)
+new WalletAccountSolana(signer, config)
 ```
 
 **Parameters:**
 
-- `seed` (string | Uint8Array): BIP-39 mnemonic seed phrase or seed bytes
-- `path` (string): SLIP-0010 derivation path (e.g., "0'/0'/0'")
+- `signer` (`ISignerSolana`): A derived signer instance
 - `config` (object): Configuration object
-  - `provider` (string | Connection): RPC endpoint URL or Solana Connection instance
+  - `rpcUrl` (string): RPC endpoint URL
   - `commitment` (string, optional): Commitment level ('processed', 'confirmed', or 'finalized')
   - `transferMaxFee` (number, optional): Maximum fee amount for transfer operations (in lamports)
 
@@ -390,9 +403,9 @@ new WalletAccountSolana(seed, path, config)
 | ---------------------------- | -------------------------------------------------------------- | ------------------------------------------- |
 | `getAddress()`               | Returns the account's public key                               | `Promise<string>`                           |
 | `sign(message)`              | Signs a message using the account's private key                | `Promise<string>`                           |
-| `sendTransaction(tx)`        | Sends a Solana transaction                                     | `Promise<{signature: string, fee: bigint}>` |
+| `sendTransaction(tx)`        | Sends a Solana transaction                                     | `Promise<{hash: string, fee: bigint}>` |
 | `quoteSendTransaction(tx)`   | Estimates the fee for a transaction                            | `Promise<{fee: bigint}>`                    |
-| `transfer(options)`          | Transfers SPL tokens to another address                        | `Promise<{signature: string, fee: bigint}>` |
+| `transfer(options)`          | Transfers SPL tokens to another address                        | `Promise<{hash: string, fee: bigint}>` |
 | `quoteTransfer(options)`     | Estimates the fee for an SPL token transfer                    | `Promise<{fee: bigint}>`                    |
 | `getBalance()`               | Returns the native SOL balance (in lamports)                   | `Promise<bigint>`                           |
 | `getTokenBalance(tokenMint)` | Returns the balance of a specific SPL token                    | `Promise<bigint>`                           |
@@ -419,7 +432,7 @@ Signs a message using the account's Ed25519 private key.
 
 - `message` (string): Message to sign
 
-**Returns:** `Promise<string>` - Signature as base58 string
+**Returns:** `Promise<string>` - Signature as a hex string
 
 **Example:**
 
@@ -435,21 +448,19 @@ Sends a Solana transaction and broadcasts it to the network.
 **Parameters:**
 
 - `tx` (object): The transaction object
-  - `recipient` (string): Recipient's public key (base58-encoded)
+  - `to` (string): Recipient's public key (base58-encoded)
   - `value` (number | bigint): Amount in lamports
-  - `commitment` (string, optional): Commitment level ('processed', 'confirmed', 'finalized')
 
-**Returns:** `Promise<{signature: string, fee: bigint}>` - Object containing signature and fee (in lamports)
+**Returns:** `Promise<{hash: string, fee: bigint}>` - Object containing transaction hash and fee (in lamports)
 
 **Example:**
 
 ```javascript
 const result = await account.sendTransaction({
-  recipient: '11111111111111111111111111111112',
-  value: 1000000000n, // 1 SOL in lamports
-  commitment: 'confirmed'
+  to: '11111111111111111111111111111112',
+  value: 1000000000n // 1 SOL in lamports
 })
-console.log('Transaction signature:', result.signature)
+console.log('Transaction hash:', result.hash)
 console.log('Fee paid:', result.fee, 'lamports')
 ```
 
@@ -460,9 +471,8 @@ Estimates the fee for a Solana transaction without broadcasting it.
 **Parameters:**
 
 - `tx` (object): Same as sendTransaction parameters
-  - `recipient` (string): Recipient's public key (base58-encoded)
+  - `to` (string): Recipient's public key (base58-encoded)
   - `value` (number | bigint): Amount in lamports
-  - `commitment` (string, optional): Commitment level
 
 **Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in lamports)
 
@@ -470,7 +480,7 @@ Estimates the fee for a Solana transaction without broadcasting it.
 
 ```javascript
 const quote = await account.quoteSendTransaction({
-  recipient: '11111111111111111111111111111112',
+  to: '11111111111111111111111111111112',
   value: 1000000000n // 1 SOL in lamports
 })
 console.log('Estimated fee:', quote.fee, 'lamports')
@@ -487,9 +497,8 @@ Transfers SPL tokens to another address and broadcasts the transaction.
   - `token` (string): Token mint address (base58-encoded)
   - `recipient` (string): Recipient's public key (base58-encoded)
   - `amount` (number | bigint): Amount in token's smallest unit
-  - `commitment` (string, optional): Commitment level
 
-**Returns:** `Promise<{signature: string, fee: bigint}>` - Object containing signature and fee (in lamports)
+**Returns:** `Promise<{hash: string, fee: bigint}>` - Object containing transaction hash and fee (in lamports)
 
 **Example:**
 
@@ -497,10 +506,9 @@ Transfers SPL tokens to another address and broadcasts the transaction.
 const result = await account.transfer({
   token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
   recipient: '11111111111111111111111111111112',
-  amount: 1000000n, // 1 USDT (6 decimals)
-  commitment: 'confirmed'
+  amount: 1000000n // 1 USDT (6 decimals)
 })
-console.log('Transfer signature:', result.signature)
+console.log('Transfer hash:', result.hash)
 console.log('Gas fee:', result.fee, 'lamports')
 ```
 
@@ -598,7 +606,7 @@ new WalletAccountReadOnlySolana(publicKey, config)
 
 - `publicKey` (string): The account's public key (base58-encoded)
 - `config` (object): Configuration object
-  - `provider` (string | Connection): RPC endpoint URL or Solana Connection instance
+  - `rpcUrl` (string): RPC endpoint URL
   - `commitment` (string, optional): Commitment level ('processed', 'confirmed', or 'finalized')
 
 #### Methods
@@ -670,9 +678,8 @@ Estimates the fee for a Solana transaction without broadcasting it.
 **Parameters:**
 
 - `tx` (object): The transaction object
-  - `recipient` (string): Recipient's public key (base58-encoded)
+  - `to` (string): Recipient's public key (base58-encoded)
   - `value` (number | bigint): Amount in lamports
-  - `commitment` (string, optional): Commitment level
 
 **Returns:** `Promise<{fee: bigint}>` - Object containing estimated fee (in lamports)
 
@@ -680,13 +687,23 @@ Estimates the fee for a Solana transaction without broadcasting it.
 
 ```javascript
 const quote = await readOnlyAccount.quoteSendTransaction({
-  recipient: '11111111111111111111111111111112',
-  value: 1000000000n, // 1 SOL in lamports
-  commitment: 'confirmed'
+  to: '11111111111111111111111111111112',
+  value: 1000000000n // 1 SOL in lamports
 })
 console.log('Estimated fee:', quote.fee, 'lamports')
 console.log('Estimated fee in SOL:', Number(quote.fee) / 1e9)
 ```
+
+### Signers
+
+You can import signer implementations from the signers entrypoint:
+
+```javascript
+import { SeedSignerSolana, LedgerSignerSolana } from '@tetherto/wdk-wallet-solana/signers'
+```
+
+- `SeedSignerSolana` is the software signer for mnemonic-based wallets.
+- `LedgerSignerSolana` is the hardware signer for Ledger-backed wallets.
 
 ##### `quoteTransfer(options)`
 
