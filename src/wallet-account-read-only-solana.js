@@ -172,8 +172,6 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       throw new Error('The wallet must be connected to a provider to quote transactions.')
     }
 
-    const addr = await this.getAddress()
-
     let transactionMessage = tx
 
     // Handle native token transfer { to, value } transaction
@@ -183,8 +181,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     if (Array.isArray(transactionMessage.instructions)) {
       transactionMessage = await this._ensureLifetime(transactionMessage)
-      await this._assertFeePayer(transactionMessage)
-      transactionMessage = setTransactionMessageFeePayer(address(addr), transactionMessage)
+      transactionMessage = await this._ensureFeePayer(transactionMessage)
     }
     // Check if it's a native transfer object {to, value}
     const fee = await this._getTransactionFee(transactionMessage)
@@ -426,20 +423,26 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   }
 
   /**
-   * Asserts that any explicit transaction fee payer matches this wallet address.
+   * Ensures the transaction fee payer is this wallet address.
+   *
+   * If a fee payer is already present, it must match this wallet address.
+   * Otherwise, the wallet address is set as the fee payer.
    *
    * @protected
    * @param {SolanaTransaction} tx - The transaction.
-   * @returns {Promise<void>} Resolves when the transaction has no explicit fee payer or it matches this wallet address.
+   * @returns {Promise<SolanaTransaction>} The transaction with this wallet address as fee payer.
    * @throws {Error} If the transaction fee payer does not match this wallet address.
    */
-  async _assertFeePayer (tx) {
+  async _ensureFeePayer (tx) {
+    const ownerAddress = await this.getAddress()
+
     if (tx.feePayer) {
-      const ownerAddress = await this.getAddress()
       const feePayerAddress = typeof tx.feePayer === 'string' ? tx.feePayer : tx.feePayer.address
       if (feePayerAddress !== ownerAddress) {
         throw new Error(`Transaction fee payer (${feePayerAddress}) does not match wallet address (${ownerAddress})`)
       }
     }
+
+    return setTransactionMessageFeePayer(address(ownerAddress), tx)
   }
 }

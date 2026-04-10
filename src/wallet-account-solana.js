@@ -18,10 +18,6 @@ import {
   compileTransaction,
   getBase64EncodedWireTransaction
 } from '@solana/transactions'
-import {
-  setTransactionMessageFeePayer,
-  setTransactionMessageLifetimeUsingBlockhash
-} from '@solana/transaction-messages'
 
 import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
@@ -57,8 +53,6 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
         'The signer is the root signer. Call derive method to create a child signer.'
       )
     }
-
-    assertFullHardenedPath(path)
 
     super(undefined, config)
 
@@ -174,8 +168,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     if (Array.isArray(transactionMessage.instructions)) {
       transactionMessage = await this._ensureLifetime(transactionMessage)
-      await this._assertFeePayer(transactionMessage)
-      transactionMessage = setTransactionMessageFeePayerSigner(this._signer, transactionMessage)
+      transactionMessage = await this._ensureFeePayer(transactionMessage)
     }
 
     const fee = await this._getTransactionFee(transactionMessage)
