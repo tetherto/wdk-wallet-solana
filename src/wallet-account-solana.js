@@ -26,11 +26,12 @@ import {
 import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
 /** @typedef {import("@tetherto/wdk-wallet").IWalletAccount} IWalletAccount */
-
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
+
+/** @typedef {import('@solana/signers').KeyPairSigner} KeyPairSigner */
 
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaWalletConfig} SolanaWalletConfig */
@@ -56,6 +57,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
         'The signer is the root signer. Call derive method to create a child signer.'
       )
     }
+
+    assertFullHardenedPath(path)
 
     super(undefined, config)
 
@@ -163,50 +166,16 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     }
 
     let transactionMessage = tx
-    if (tx?.to !== undefined && tx?.value !== undefined) {
-      // Handle native token transfer { to, value } transaction
-      transactionMessage = await this._buildNativeTransferTransactionMessage(
-        tx.to,
-        tx.value
-      )
+
+    // Handle native token transfer { to, value } transaction
+    if (tx.to !== undefined && tx.value !== undefined) {
+      transactionMessage = await this._buildNativeTransferTransactionMessage(tx.to, tx.value)
     }
-    if (
-      transactionMessage?.instructions !== undefined &&
-      Array.isArray(transactionMessage.instructions)
-    ) {
-      // Check if blockhash/lifetime is missing and add it
-      if (!transactionMessage.lifetimeConstraint) {
-        const { value: latestBlockhash } = await this._rpc
-          .getLatestBlockhash({
-            commitment: this._commitment
-          })
-          .send()
 
-        transactionMessage = setTransactionMessageLifetimeUsingBlockhash(
-          latestBlockhash,
-          transactionMessage
-        )
-      }
-
-      // Check and verify fee payer
-      const signerAddress = await this._signer.getAddress()
-      if (transactionMessage?.feePayer) {
-        // Verify the fee payer is the current account
-        const feePayerAddress =
-          typeof transactionMessage.feePayer === 'string'
-            ? transactionMessage.feePayer
-            : transactionMessage.feePayer.address
-
-        if (feePayerAddress !== signerAddress) {
-          throw new Error(
-            `Transaction fee payer (${feePayerAddress}) does not match wallet address (${signerAddress})`
-          )
-        }
-      }
-      transactionMessage = setTransactionMessageFeePayer(
-        signerAddress,
-        transactionMessage
-      )
+    if (Array.isArray(transactionMessage.instructions)) {
+      transactionMessage = await this._ensureLifetime(transactionMessage)
+      await this._assertFeePayer(transactionMessage)
+      transactionMessage = setTransactionMessageFeePayerSigner(this._signer, transactionMessage)
     }
 
     const fee = await this._getTransactionFee(transactionMessage)
@@ -251,11 +220,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     const { token, recipient, amount } = options
 
-    const transactionMessage = await this._buildSPLTransferTransactionMessage(
-      token,
-      recipient,
-      amount
-    )
+    const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount)
     const fee = await this._getTransactionFee(transactionMessage)
     if (
       this._config.transferMaxFee !== undefined &&

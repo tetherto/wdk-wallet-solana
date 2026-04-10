@@ -17,11 +17,11 @@ export default class WalletManagerSolana extends WalletManager {
      * The commitment level for transactions.
      *
      * @protected
-     * @type {string}
+     * @type {Commitment}
      */
-    protected _commitment: string;
+    protected _commitment: Commitment;
     /**
-     * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
+     * Returns the wallet account at a specific index (see [SLIP-0010](https://slips.readthedocs.io/en/latest/slip-0010/)).
      *
      * @example
      * // Returns the account with derivation path m/44'/501'/index'/0'
@@ -31,18 +31,24 @@ export default class WalletManagerSolana extends WalletManager {
      */
     getAccount(index?: number, signerName?: string): Promise<WalletAccountSolana>;
     /**
-     * Returns the wallet account at a specific BIP-44 derivation path.
+     * Returns the wallet account at a specific SLIP-0010 derivation path.
      *
      * @example
-     * // Returns the account with derivation path m/44'/501'/0'/0/1
-     * const account = await wallet.getAccountByPath("0'/0/1");
-     *
-     * @param {string} path - The derivation path (e.g. "0'/0/0").
+     * // Returns the account with derivation path m/44'/501'/0'/0'/1'
+     * const account = await wallet.getAccountByPath("0'/0'/1'");
+     * @param {string} path - The derivation path (e.g. "0'/0'/0'").
      * @returns {Promise<WalletAccountSolana>} The account.
      */
-    getAccountByPath(path: string, signerName?: string): Promise<WalletAccountSolana>;
+    getAccountByPath(path: string): Promise<WalletAccountSolana>;
+    /**
+     * Returns the current fee rates.
+     *
+     * @returns {Promise<FeeRates>} The fee rates (in lamports).
+     */
+    getFeeRates(): Promise<FeeRates>;
 }
 export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
+export type Commitment = import("@solana/rpc-types").Commitment;
 export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
 export type SolanaWalletConfig = import("./wallet-account-solana.js").SolanaWalletConfig;
 export type ISignerSolana = import("./signers/index.js").ISignerSolana;

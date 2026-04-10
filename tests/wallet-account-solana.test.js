@@ -14,13 +14,22 @@
 
 'use strict'
 
-import { describe, it, expect, beforeAll, jest, beforeEach, afterEach } from '@jest/globals'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  jest,
+  beforeEach,
+  afterEach
+} from '@jest/globals'
 import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
 import SeedSignerSolana from '../src/signers/seed-signer-solana.js'
 
-const TEST_SEED_PHRASE = 'test walk nut penalty hip pave soap entry language right filter choice'
+const TEST_SEED_PHRASE =
+  'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mockurl.com'
 
 describe('WalletAccountSolana', () => {
@@ -45,7 +54,7 @@ describe('WalletAccountSolana', () => {
           const invalidSigner = new SeedSignerSolana(
             'invalid word that does not exist test test test test test test test',
             {},
-            { path: "0'/0/0" }
+            { path: "0'/0'/0'" }
           )
           return new WalletAccountSolana(invalidSigner, {
             rpcUrl: TEST_RPC_URL,
@@ -83,9 +92,15 @@ describe('WalletAccountSolana', () => {
         const address1 = await account1.getAddress()
         const address2 = await account2.getAddress()
 
-        expect(address0).toMatch('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
-        expect(address1).toMatch('CfGcujEkPVDx7yGyn1PUjxn2e353MXbLk8ixzwuJUktK')
-        expect(address2).toMatch('Grwp8oDHgAD8PVSS51pWGCY5QRM3hqiH8QcbPRAEUABq')
+        expect(address0).toMatch(
+          '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
+        )
+        expect(address1).toMatch(
+          'CfGcujEkPVDx7yGyn1PUjxn2e353MXbLk8ixzwuJUktK'
+        )
+        expect(address2).toMatch(
+          'Grwp8oDHgAD8PVSS51pWGCY5QRM3hqiH8QcbPRAEUABq'
+        )
       })
 
       it('should return different addresses for different derivation paths', async () => {
@@ -97,17 +112,25 @@ describe('WalletAccountSolana', () => {
         const address2 = await accountPath2.getAddress()
         const address3 = await accountPath3.getAddress()
 
-        expect(address1).toMatch('DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM')
+        expect(address1).toMatch(
+          'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM'
+        )
         expect(address2).toMatch('jbhYXhWfRPqPvaKqaWCJEgBdZMquFxUvjWaWLEH3YCz')
-        expect(address3).toMatch('57hwCai22XueypvXcXKotkuAQYj2eukFcY5ymWB7Arvg')
+        expect(address3).toMatch(
+          '57hwCai22XueypvXcXKotkuAQYj2eukFcY5ymWB7Arvg'
+        )
       })
     })
 
     describe('keyPair', () => {
       it('should have consistent keyPair', () => {
         const keyPair = account.keyPair
-        expect(Buffer.from(keyPair.publicKey).toString('hex')).toBe('2b2c715c2cf24db57e95a44df34cb424de2460e86c4f6ebe7ba62b574830de19')
-        expect(Buffer.from(keyPair.privateKey).toString('hex')).toBe('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f')
+        expect(Buffer.from(keyPair.publicKey).toString('hex')).toBe(
+          '2b2c715c2cf24db57e95a44df34cb424de2460e86c4f6ebe7ba62b574830de19'
+        )
+        expect(Buffer.from(keyPair.privateKey).toString('hex')).toBe(
+          'de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f'
+        )
       })
 
       it('should have different key pairs for different accounts', async () => {
@@ -125,7 +148,7 @@ describe('WalletAccountSolana', () => {
     })
 
     describe('path', () => {
-      it('should follow BIP-44 Solana derivation path format', () => {
+      it('should follow SLIP-0010 Solana derivation path format', () => {
         const path = account.path
 
         expect(path).toMatch("m/44'/501'/0'/0'")
@@ -232,7 +255,9 @@ describe('WalletAccountSolana', () => {
         const message = 'Test message'
         const signature = await account.sign(message)
 
-        expect(signature).toBe('90d1d5dc7430f3efa9fa037ba2179458fad9a8bfdf42ba74fff4581ce9e0ac2fba1562483b072e9eee709ef8d59448b379d9a61e634b37a3c13858bab7754f08')
+        expect(signature).toBe(
+          '90d1d5dc7430f3efa9fa037ba2179458fad9a8bfdf42ba74fff4581ce9e0ac2fba1562483b072e9eee709ef8d59448b379d9a61e634b37a3c13858bab7754f08'
+        )
       })
 
       it('should produce different signatures for different messages', async () => {
@@ -242,8 +267,12 @@ describe('WalletAccountSolana', () => {
         const signature1 = await account.sign(message1)
         const signature2 = await account.sign(message2)
 
-        expect(signature1).toBe('06f06d64f9a5338595410825aee9ae6b04bd0069fcd36afca765f75b3c4ebb42c2ee35a62961b8edc3afc1d10b50dcdb558d9904707326236598d0b7c0385204')
-        expect(signature2).toBe('c4d4f624a1d7ba1992cdfd6ce5a8a3e7e2ac46ad342ef8b00b8c10f73633223a882ff8230b009691d57291aa6224a648371f9208c447ed695be47ec395a6ad0d')
+        expect(signature1).toBe(
+          '06f06d64f9a5338595410825aee9ae6b04bd0069fcd36afca765f75b3c4ebb42c2ee35a62961b8edc3afc1d10b50dcdb558d9904707326236598d0b7c0385204'
+        )
+        expect(signature2).toBe(
+          'c4d4f624a1d7ba1992cdfd6ce5a8a3e7e2ac46ad342ef8b00b8c10f73633223a882ff8230b009691d57291aa6224a648371f9208c447ed695be47ec395a6ad0d'
+        )
       })
 
       it('should throw error after account disposal', async () => {
@@ -338,7 +367,9 @@ describe('WalletAccountSolana', () => {
           value: 1000000n
         }
 
-        const result = await account.sendTransaction(tx, { skipConfirmation: true })
+        const result = await account.sendTransaction(tx, {
+          skipConfirmation: true
+        })
 
         expect(result).toBeDefined()
         expect(result.hash).toBe('mock-signature-123')
@@ -356,15 +387,21 @@ describe('WalletAccountSolana', () => {
 
         account._rpc = mockRpc
 
-        await account.sendTransaction({
-          to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
-          value: 1000000n
-        }, { skipConfirmation: true })
+        await account.sendTransaction(
+          {
+            to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
+            value: 1000000n
+          },
+          { skipConfirmation: true }
+        )
 
-        await account.sendTransaction({
-          to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
-          value: 1000000
-        }, { skipConfirmation: true })
+        await account.sendTransaction(
+          {
+            to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
+            value: 1000000
+          },
+          { skipConfirmation: true }
+        )
 
         expect(mockRpc.sendTransaction).toHaveBeenCalledTimes(2)
       })
@@ -442,7 +479,9 @@ describe('WalletAccountSolana', () => {
           feePayer: accountAddress
         }
 
-        const result = await account.sendTransaction(txMessage, { skipConfirmation: true })
+        const result = await account.sendTransaction(txMessage, {
+          skipConfirmation: true
+        })
 
         expect(result.hash).toBe('mock-sig')
         expect(mockRpc.sendTransaction).toHaveBeenCalled()
@@ -459,9 +498,9 @@ describe('WalletAccountSolana', () => {
           }
         }
 
-        await expect(
-          account.sendTransaction(txMessage)
-        ).rejects.toThrow('does not match wallet address')
+        await expect(account.sendTransaction(txMessage)).rejects.toThrow(
+          'does not match wallet address'
+        )
       })
     })
 
@@ -476,10 +515,13 @@ describe('WalletAccountSolana', () => {
 
         account._rpc = mockRpc
 
-        const result = await account.sendTransaction({
-          to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
-          value: 1000n
-        }, { skipConfirmation: true })
+        const result = await account.sendTransaction(
+          {
+            to: '8KpbCiK2SfNRNqosmkfvys5itK6CbjcxLXG8e2gLgzmP',
+            value: 1000n
+          },
+          { skipConfirmation: true }
+        )
 
         expect(result.fee).toBe(7500n)
         expect(mockRpc.getFeeForMessage).toHaveBeenCalled()
@@ -568,7 +610,7 @@ describe('WalletAccountSolana', () => {
           account.transfer({
             token: 'FzFRHEc1tWLGa2doGw2KAKrfNrBH3QwGTnjm37o2HQGb',
             recipient: 'FzFRHEc1tWLGa2doGw2KAKrfNrBH3QwGTnjm37o2HQGb',
-            amount: 0xFFFFFFFFFFFFFFFFn + 1n
+            amount: 0xffffffffffffffffn + 1n
           })
         ).rejects.toThrow('Amount exceeds u64 maximum value')
       })
@@ -601,17 +643,23 @@ describe('WalletAccountSolana', () => {
 
         account._rpc = mockRpc
 
-        await account.transfer({
-          token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-          recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
-          amount: 1000000n
-        }, { skipConfirmation: true })
+        await account.transfer(
+          {
+            token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+            recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
+            amount: 1000000n
+          },
+          { skipConfirmation: true }
+        )
 
-        await account.transfer({
-          token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-          recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
-          amount: 1000000
-        }, { skipConfirmation: true })
+        await account.transfer(
+          {
+            token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+            recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
+            amount: 1000000
+          },
+          { skipConfirmation: true }
+        )
 
         expect(mockRpc.sendTransaction).toHaveBeenCalledTimes(2)
       })
@@ -676,11 +724,14 @@ describe('WalletAccountSolana', () => {
 
         limitedAccount._rpc = mockRpc
 
-        const result = await limitedAccount.transfer({
-          token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-          recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
-          amount: 1000n
-        }, { skipConfirmation: true })
+        const result = await limitedAccount.transfer(
+          {
+            token: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+            recipient: 'ASbM8cPUrBxgjgNuu3hQSK2JSDDG6HhQ9FqU3ofprkMV',
+            amount: 1000n
+          },
+          { skipConfirmation: true }
+        )
 
         expect(result.hash).toBe('sig')
         expect(mockRpc.sendTransaction).toHaveBeenCalled()
@@ -704,11 +755,14 @@ describe('WalletAccountSolana', () => {
 
         account._rpc = mockRpc
 
-        const result = await account.transfer({
-          token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-          recipient: '11111111111111111111111111111111',
-          amount: 1000000n
-        }, { skipConfirmation: true })
+        const result = await account.transfer(
+          {
+            token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+            recipient: '11111111111111111111111111111111',
+            amount: 1000000n
+          },
+          { skipConfirmation: true }
+        )
 
         expect(result.hash).toBe('transfer-sig')
         expect(result.fee).toBe(5000n)

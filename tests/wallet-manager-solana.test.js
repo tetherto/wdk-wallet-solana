@@ -14,12 +14,20 @@
 
 'use strict'
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals'
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest
+} from '@jest/globals'
 import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
 import SeedSignerSolana from '../src/signers/seed-signer-solana.js'
 
-const TEST_SEED_PHRASE = 'test walk nut penalty hip pave soap entry language right filter choice'
+const TEST_SEED_PHRASE =
+  'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mock-url.com'
 
 describe('WalletManagerSolana', () => {
@@ -121,9 +129,9 @@ describe('WalletManagerSolana', () => {
 
     it('should calculate normal rate as 110% of max fee', async () => {
       mockRpc.getRecentPrioritizationFees.mockReturnValue({
-        send: jest.fn().mockResolvedValue([
-          { slot: 1, prioritizationFee: 1000 }
-        ])
+        send: jest
+          .fn()
+          .mockResolvedValue([{ slot: 1, prioritizationFee: 1000 }])
       })
 
       wallet._rpc = mockRpc
@@ -135,9 +143,9 @@ describe('WalletManagerSolana', () => {
 
     it('should calculate fast rate as 200% of max fee', async () => {
       mockRpc.getRecentPrioritizationFees.mockReturnValue({
-        send: jest.fn().mockResolvedValue([
-          { slot: 1, prioritizationFee: 1000 }
-        ])
+        send: jest
+          .fn()
+          .mockResolvedValue([{ slot: 1, prioritizationFee: 1000 }])
       })
 
       wallet._rpc = mockRpc
@@ -225,7 +233,9 @@ describe('WalletManagerSolana', () => {
 
       wallet._rpc = mockRpc
 
-      await expect(wallet.getFeeRates()).rejects.toThrow('RPC connection failed')
+      await expect(wallet.getFeeRates()).rejects.toThrow(
+        'RPC connection failed'
+      )
     })
   })
 })

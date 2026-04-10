@@ -21,6 +21,7 @@ import { createSolanaRpc } from '@solana/rpc'
 import WalletAccountSolana from './wallet-account-solana.js'
 
 /** @typedef {ReturnType<typeof import('@solana/rpc').createSolanaRpc>} SolanaRpc */
+/** @typedef {import("@solana/rpc-types").Commitment} Commitment */
 
 /** @typedef {import('@tetherto/wdk-wallet').FeeRates} FeeRates */
 
@@ -67,14 +68,14 @@ export default class WalletManagerSolana extends WalletManager {
        * The commitment level for transactions.
        *
        * @protected
-       * @type {string}
+       * @type {Commitment}
        */
       this._commitment = commitment
     }
   }
 
   /**
-   * Returns the wallet account at a specific index (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
+   * Returns the wallet account at a specific index (see [SLIP-0010](https://slips.readthedocs.io/en/latest/slip-0010/)).
    *
    * @example
    * // Returns the account with derivation path m/44'/501'/index'/0'
@@ -87,13 +88,12 @@ export default class WalletManagerSolana extends WalletManager {
   }
 
   /**
-   * Returns the wallet account at a specific BIP-44 derivation path.
+   * Returns the wallet account at a specific SLIP-0010 derivation path.
    *
    * @example
-   * // Returns the account with derivation path m/44'/501'/0'/0/1
-   * const account = await wallet.getAccountByPath("0'/0/1");
-   *
-   * @param {string} path - The derivation path (e.g. "0'/0/0").
+   * // Returns the account with derivation path m/44'/501'/0'/0'/1'
+   * const account = await wallet.getAccountByPath("0'/0'/1'");
+   * @param {string} path - The derivation path (e.g. "0'/0'/0'").
    * @returns {Promise<WalletAccountSolana>} The account.
    */
   async getAccountByPath (path, signerName = 'default') {
