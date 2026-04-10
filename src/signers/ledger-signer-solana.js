@@ -1,3 +1,17 @@
+// Copyright 2024 Tether Operations Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 'use strict'
 
 import { DeviceActionStatus, DeviceManagementKitBuilder } from '@ledgerhq/device-management-kit'
@@ -71,7 +85,7 @@ export const constructOffchainMessageV0Content = (addr, message) => {
 /**
  * @implements {ISignerSolana}
  */
-export default class LedgerSignerSol {
+export default class LedgerSignerSolana {
   /**
    * @constructor
    * @param {string} path The BIP-44 derivation path (e.g. "0'/0'"). Note that, All child paths must be hardened in Solana.
@@ -86,15 +100,26 @@ export default class LedgerSignerSol {
     assertFullHardenedPath(path)
 
     this._config = config
+
     /**
-     * @type {DefaultSignerSolana | undefined} The solana signer.
+     * The ledger signer.
+     *
+     * @private
+     * @type {DefaultSignerSolana | undefined}
      */
     this._account = undefined
+
+    /** @private */
     this._address = undefined
+
+    /** @private */
     this._sessionId = ''
+
+    /** @private */
     this._path = `${BIP_44_SOL_DERIVATION_PATH_PREFIX}/${path}`
 
     /**
+     * @private
      * @type {DeviceManagementKit}
      */
     this._dmk =
@@ -112,11 +137,6 @@ export default class LedgerSignerSol {
 
   get config () {
     return this._config
-  }
-
-  get address () {
-    if (!this._account) throw new Error('Ledger is not connected yet.')
-    return this._address
   }
 
   /**
@@ -174,7 +194,7 @@ export default class LedgerSignerSol {
       dmk: this._dmk
     }
 
-    return new LedgerSignerSol(`${this._path}/${relPath}`, mergedCfg, mergedOpts)
+    return new LedgerSignerSolana(`${this._path}/${relPath}`, mergedCfg, mergedOpts)
   }
 
   async getAddress () {

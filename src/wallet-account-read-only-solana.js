@@ -431,7 +431,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @protected
    * @param {SolanaTransaction} tx - The transaction.
    * @returns {Promise<SolanaTransaction>} The transaction with this wallet address as fee payer.
-   * @throws {Error} If the transaction fee payer does not match this wallet address.
+   * @throws {Error} If the transaction fee payer does not match this wallet address, throw an error.
    */
   async _ensureFeePayer (tx) {
     const ownerAddress = await this.getAddress()

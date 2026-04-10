@@ -27,6 +27,7 @@ export default class WalletManagerSolana extends WalletManager {
      * // Returns the account with derivation path m/44'/501'/index'/0'
      * const account = await wallet.getAccount(1);
      * @param {number} [index] - The index of the account to get (default: 0).
+     * @param {string} [signerName] - The signer name to resolve from the wallet manager (default: 'default').
      * @returns {Promise<WalletAccountSolana>} The account.
      */
     getAccount(index?: number, signerName?: string): Promise<WalletAccountSolana>;
@@ -37,9 +38,10 @@ export default class WalletManagerSolana extends WalletManager {
      * // Returns the account with derivation path m/44'/501'/0'/0'/1'
      * const account = await wallet.getAccountByPath("0'/0'/1'");
      * @param {string} path - The derivation path (e.g. "0'/0'/0'").
+     * @param {string} [signerName] - The signer name to resolve from the wallet manager (default: 'default').
      * @returns {Promise<WalletAccountSolana>} The account.
      */
-    getAccountByPath(path: string): Promise<WalletAccountSolana>;
+    getAccountByPath(path: string, signerName?: string): Promise<WalletAccountSolana>;
     /**
      * Returns the current fee rates.
      *

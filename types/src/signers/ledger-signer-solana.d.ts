@@ -2,7 +2,7 @@ export function constructOffchainMessageV0Content(addr: string, message: string)
 /**
  * @implements {ISignerSolana}
  */
-export default class LedgerSignerSol implements ISignerSolana {
+export default class LedgerSignerSolana implements ISignerSolana {
     /**
      * @constructor
      * @param {string} path The BIP-44 derivation path (e.g. "0'/0'"). Note that, All child paths must be hardened in Solana.
@@ -10,22 +10,28 @@ export default class LedgerSignerSol implements ISignerSolana {
      * @param {LedgerSignerSolOpts} opts
      */
     constructor(path: string, config?: LedgerSignerSolCfg, opts?: LedgerSignerSolOpts);
-    _config: any;
+    _config: LedgerSignerSolCfg;
     /**
-     * @type {DefaultSignerSolana | undefined} The solana signer.
+     * The ledger signer.
+     * 
+     * @private
+     * @type {DefaultSignerSolana | undefined}
      */
     _account: DefaultSignerSolana | undefined;
-    _address: any;
+    /** @private */
+    _address: string | undefined;
+    /** @private */
     _sessionId: string;
+    /** @private */
     _path: string;
     /**
+     * @private
      * @type {DeviceManagementKit}
      */
     _dmk: DeviceManagementKit;
     get index(): number;
     get path(): string;
-    get config(): any;
-    get address(): any;
+    get config(): LedgerSignerSolCfg;
     /**
      * Discover and connect the device
      *
@@ -38,11 +44,11 @@ export default class LedgerSignerSol implements ISignerSolana {
      * @param {LedgerSignerSolCfg} cfg
      * @returns
      */
-    derive(relPath: string, cfg?: LedgerSignerSolCfg): LedgerSignerSol;
-    getAddress(): Promise<any>;
-    sign(message: any): Promise<string>;
-    verify(message: any, signature: any): Promise<boolean>;
-    signTransaction(unsignedTx: any): Promise<Uint8Array<ArrayBuffer>>;
+    derive(relPath: string, cfg?: LedgerSignerSolCfg): LedgerSignerSolana;
+    getAddress(): Promise<string>;
+    sign(message: string): Promise<string>;
+    verify(message: string, signature: string): Promise<boolean>;
+    signTransaction(unsignedTx: Uint8Array): Promise<Uint8Array>;
     dispose(): void;
     /** @private */
     private _disconnect;

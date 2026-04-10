@@ -49,12 +49,32 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     protected _commitment: Commitment;
     /**
+     * Returns the account's native SOL balance.
+     *
+     * @returns {Promise<bigint>} The sol balance (in lamports).
+     */
+    getBalance(): Promise<bigint>
+    /**
+     * Returns the account balance for a specific SPL token.
+     *
+     * @param {string} tokenAddress - The smart contract address of the token.
+     * @returns {Promise<bigint>} The token balance (in base unit).
+     */
+    getTokenBalance(tokenAddress: string): Promise<bigint>
+    /**
      * Quotes the costs of a send transaction operation.
      *
      * @param {SolanaTransaction} tx - The transaction.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
      */
     quoteSendTransaction(tx: SolanaTransaction): Promise<Omit<TransactionResult, "hash">>;
+    /**
+     * Quotes the costs of a transfer operation.
+     *
+     * @param {TransferOptions} options - The transfer's options.
+     * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
+     */
+    quoteTransfer(options: TransferOptions): Promise<Omit<TransferResult, 'hash'>>
     /**
      * Retrieves a transaction receipt by its signature
      *
@@ -110,14 +130,17 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     protected _ensureLifetime(tx: SolanaTransaction): Promise<SolanaTransaction>;
     /**
-     * Asserts that any explicit transaction fee payer matches this wallet address.
+     * Ensures the transaction fee payer is this wallet address.
+     *
+     * If a fee payer is already present, it must match this wallet address.
+     * Otherwise, the wallet address is set as the fee payer.
      *
      * @protected
      * @param {SolanaTransaction} tx - The transaction.
-     * @returns {Promise<void>} Resolves when the transaction has no explicit fee payer or it matches this wallet address.
-     * @throws {Error} If the transaction fee payer does not match this wallet address.
+     * @returns {Promise<SolanaTransaction>} The transaction with this wallet address as fee payer.
+     * @throws {Error} If the transaction fee payer does not match this wallet address, throw an error.
      */
-    protected _assertFeePayer (tx: SolanaTransaction): Promise<void>
+    protected _ensureFeePayer (tx: SolanaTransaction): Promise<SolanaTransaction>
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;

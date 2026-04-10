@@ -24,16 +24,6 @@ export class ISignerSolana {
      */
     get config(): object;
     /**
-     * The account's key pair.
-     *
-     * Returns the raw key pair bytes in standard Solana format.
-     * - privateKey: 32-byte Ed25519 secret key (Uint8Array)
-     * - publicKey: 32-byte Ed25519 public key (Uint8Array)
-     *
-     * @type {KeyPair}
-     */
-    get keyPair(): KeyPair;
-    /**
      * Derive a child account.
      *
      * @param {string} relPath - The relative path.

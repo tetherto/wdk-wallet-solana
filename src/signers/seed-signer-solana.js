@@ -1,3 +1,17 @@
+// Copyright 2024 Tether Operations Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 'use strict'
 
 import * as bip39 from 'bip39'
@@ -65,28 +79,35 @@ export default class SeedSignerSolana {
       seed = bip39.mnemonicToSeedSync(seed)
     }
 
+    /** @private */
     this._config = config
+
+    /** @private */
     this._isRoot = true
+
+    /** @private */
     this._root =
       opts.root ||
       (seed ? HDKey.fromMasterSeed(seed).derive(BIP_44_SOL_DERIVATION_PATH_PREFIX) : undefined)
 
     /**
-     * The solana keypair
+     * The solana keypair.
+     *
      * @private
      * @type {KeyPairSigner | undefined}
      */
     this._account = undefined
 
-    /**
-     * The solana base58 address
-     * @private
-     * @type {string | undefined}
-     */
+    /** @private */
     this._address = undefined
 
+    /** @private */
     this._path = undefined
+
+    /** @private */
     this._rawPublicKey = undefined
+
+    /** @private */
     this._rawPrivateKey = undefined
 
     if (opts.path) {
@@ -95,6 +116,10 @@ export default class SeedSignerSolana {
       this._path = `${BIP_44_SOL_DERIVATION_PATH_PREFIX}/${opts.path}`
       this._isRoot = false
     }
+  }
+
+  get config () {
+    return this._config
   }
 
   get isRoot () {
@@ -110,6 +135,15 @@ export default class SeedSignerSolana {
     return this._path
   }
 
+  /**
+   * The account's key pair.
+   *
+   * Returns the raw key pair bytes in standard Solana format.
+   * - privateKey: 32-byte Ed25519 secret key (Uint8Array)
+   * - publicKey: 32-byte Ed25519 public key (Uint8Array)
+   *
+   * @type {KeyPair}
+   */
   get keyPair () {
     return {
       privateKey: this._rawPrivateKey,

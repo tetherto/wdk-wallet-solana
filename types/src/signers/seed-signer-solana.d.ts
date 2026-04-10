@@ -9,27 +9,40 @@ export default class SeedSignerSolana implements ISignerSolana {
      * @param {SeedSignerSolOpts} opts
      */
     constructor(seed: string, config?: SeedSignerSolCfg, opts?: SeedSignerSolOpts);
-    _config: any;
+    /** @private */
+    _config: SeedSignerSolCfg;
+    /** @private */
     _isRoot: boolean;
+    /** @private */
     _root: HDKey;
     /**
-     * The solana keypair
+     * The solana keypair.
+     * 
      * @private
      * @type {KeyPairSigner | undefined}
      */
     private _account;
-    /**
-     * The solana base58 address
-     * @private
-     * @type {string | undefined}
-     */
+    /** @private */
     private _address;
+    /** @private */
     _path: string;
+    /** @private */
     _rawPublicKey: Uint8Array<ArrayBuffer>;
+    /** @private */
     _rawPrivateKey: Uint8Array<ArrayBuffer>;
+    get config(): SeedSignerSolCfg;
     get isRoot(): boolean;
     get index(): number;
     get path(): string;
+    /**
+     * The account's key pair.
+     *
+     * Returns the raw key pair bytes in standard Solana format.
+     * - privateKey: 32-byte Ed25519 secret key (Uint8Array)
+     * - publicKey: 32-byte Ed25519 public key (Uint8Array)
+     *
+     * @type {KeyPair}
+     */
     get keyPair(): {
         privateKey: Uint8Array<ArrayBuffer>;
         publicKey: Uint8Array<ArrayBuffer>;
@@ -43,11 +56,11 @@ export default class SeedSignerSolana implements ISignerSolana {
      * @returns {Promise<void>} Void.
      */
     private _connect;
-    derive(relPath: any, config?: {}): SeedSignerSolana;
+    derive(relPath: string, config?: {}): SeedSignerSolana;
     getAddress(): Promise<string>;
-    sign(message: any): Promise<string>;
-    verify(message: any, signature: any): Promise<boolean>;
-    signTransaction(unsignedTx: any): Promise<Buffer>;
+    sign(message: string): Promise<string>;
+    verify(message: string, signature: string): Promise<boolean>;
+    signTransaction(unsignedTx: Uint8Array): Promise<Uint8Array>;
     dispose(): void;
 }
 export type ISignerSolana = import("./signer-solana.js").ISignerSolana;
@@ -65,4 +78,3 @@ export type SeedSignerSolOpts = {
     path?: string;
 };
 export type SeedSignerSolCfg = any;
-import HDKey from 'micro-key-producer/slip10.js';
