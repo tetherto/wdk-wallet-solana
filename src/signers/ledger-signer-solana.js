@@ -46,13 +46,15 @@ const BIP_44_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
 
 /** @typedef {import("@solana/offchain-messages").OffchainMessage} OffchainMessage */
 
+/** @typedef {import('rxjs').Observable} Observable */
+
 /**
  * @typedef {Object} LedgerSignerSolOpts
  * @property {DeviceManagementKit} [dmk] Shared [DMK](https://developers.ledger.com/docs/device-interaction/integration/how_to/dmk).
  */
 
 /**
- * @typedef {Object} LedgerSignerSolCfg
+ * @typedef {{}} LedgerSignerSolCfg
  */
 
 /**
@@ -84,8 +86,8 @@ export default class LedgerSignerSolana {
   /**
    * @constructor
    * @param {string} path The BIP-44 derivation path (e.g. "0'/0'"). Note that, All child paths must be hardened in Solana.
-   * @param {LedgerSignerSolCfg} config
-   * @param {LedgerSignerSolOpts} opts
+   * @param {LedgerSignerSolCfg} config - The signer configuration. Currently unused.
+   * @param {LedgerSignerSolOpts} opts - Optional constructor dependencies.
    */
   constructor (path, config = {}, opts = {}) {
     if (!path) {
@@ -285,7 +287,7 @@ export default class LedgerSignerSolana {
    *
    * @private
    * @template TOutput
-   * @param {import('rxjs').Observable<DeviceActionState<TOutput>>} observable
+   * @param {Observable<DeviceActionState<TOutput>>} observable
    * @returns {Promise<TOutput>}
    */
   async _consumeDeviceAction (observable) {
