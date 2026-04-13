@@ -14,7 +14,7 @@
 
 'use strict'
 
-import { DeviceActionStatus, DeviceManagementKitBuilder } from '@ledgerhq/device-management-kit'
+import { DeviceActionStatus, DeviceManagementKitBuilder, DeviceStatus } from '@ledgerhq/device-management-kit'
 import { webHidTransportFactory } from '@ledgerhq/device-transport-kit-web-hid'
 import { SignerSolanaBuilder } from '@ledgerhq/device-signer-kit-solana'
 import { filter, firstValueFrom, map } from 'rxjs'
@@ -35,21 +35,16 @@ import { assertFullHardenedPath } from './signer-solana.js'
 
 const BIP_44_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
 
+/** @typedef {import("./signer-solana.js").ISignerSolana} ISignerSolana */
+
+/** @typedef {import("@ledgerhq/device-management-kit").DeviceManagementKit} DeviceManagementKit */
+/** @typedef {import("@ledgerhq/device-signer-kit-solana/internal/DefaultSignerSolana.js").DefaultSignerSolana} DefaultSignerSolana */
 /**
- * @typedef {import("./signer-solana.js").ISignerSolana} ISignerSolana
+ * @template TOutput
+ * @typedef {import('@ledgerhq/device-management-kit').DeviceActionState<TOutput, Error, unknown>} DeviceActionState
  */
 
-/**
- * @typedef {import("@ledgerhq/device-management-kit").DeviceManagementKit} DeviceManagementKit
- */
-
-/**
- * @typedef {import("@ledgerhq/device-signer-kit-solana/internal/DefaultSignerSolana.js").DefaultSignerSolana} DefaultSignerSolana
- */
-
-/**
- * @typedef {import("@solana/offchain-messages").OffchainMessage} OffchainMessage
- */
+/** @typedef {import("@solana/offchain-messages").OffchainMessage} OffchainMessage */
 
 /**
  * @typedef {Object} LedgerSignerSolOpts
@@ -122,8 +117,7 @@ export default class LedgerSignerSolana {
      * @private
      * @type {DeviceManagementKit}
      */
-    this._dmk =
-      opts.dmk || new DeviceManagementKitBuilder().addTransport(webHidTransportFactory).build()
+    this._dmk = opts.dmk || new DeviceManagementKitBuilder().addTransport(webHidTransportFactory).build()
   }
 
   get index () {
@@ -145,6 +139,8 @@ export default class LedgerSignerSolana {
    * @private
    */
   async _connect () {
+    if (!this._dmk) throw new Error('Cannot connect the disposed device.')
+
     // Discover & Connect the device
     const device = await firstValueFrom(this._dmk.startDiscovering({}))
     this._sessionId = await this._dmk.connect({
@@ -160,12 +156,7 @@ export default class LedgerSignerSolana {
 
     // Get the pubkey
     const { observable } = this._account.getAddress(this._path)
-    const address = await firstValueFrom(
-      observable.pipe(
-        filter((evt) => evt.status === DeviceActionStatus.Completed),
-        map((evt) => evt.output)
-      )
-    )
+    const address = await this._consumeDeviceAction(observable)
 
     // Active
     this._address = address
@@ -198,20 +189,16 @@ export default class LedgerSignerSolana {
   }
 
   async getAddress () {
-    if (!this._account) await this._connect()
+    await this._ensureDeviceReady()
+
     return this._address
   }
 
   async sign (message) {
-    if (!this._account) await this._connect()
+    await this._ensureDeviceReady()
 
     const { observable } = this._account.signMessage(this._path, message)
-    const { signature: envelopedSignature } = await firstValueFrom(
-      observable.pipe(
-        filter((evt) => evt.status === DeviceActionStatus.Completed),
-        map((evt) => evt.output)
-      )
-    )
+    const { signature: envelopedSignature } = await this._consumeDeviceAction(observable)
 
     const { signatures } = getOffchainMessageEnvelopeDecoder().decode(
       getBase58Encoder().encode(envelopedSignature)
@@ -235,7 +222,7 @@ export default class LedgerSignerSolana {
   }
 
   async signTransaction (unsignedTx) {
-    if (!this._account) await this._connect()
+    await this._ensureDeviceReady()
 
     const tx = getTransactionDecoder().decode(unsignedTx)
 
@@ -248,12 +235,7 @@ export default class LedgerSignerSolana {
       this._path,
       Uint8Array.from(compiledTransactionMessage)
     )
-    const signature = await firstValueFrom(
-      observable.pipe(
-        filter((evt) => evt.status === DeviceActionStatus.Completed),
-        map((evt) => evt.output)
-      )
-    )
+    const signature = await this._consumeDeviceAction(observable)
 
     const readonlySignedTransaction = getTransactionEncoder().encode({
       messageBytes: compiledTransactionMessage,
@@ -268,6 +250,62 @@ export default class LedgerSignerSolana {
   dispose () {
     this._disconnect()
     this._dmk = undefined
+  }
+
+  /**
+   * Ensures the device is in a usable state before sending actions.
+   * - If the device is locked or busy, fails fast with a friendly error.
+   * - If the device is not connected, attempts to reconnect.
+   *
+   * @private
+   * @throws {Error} If the device is locked, busy, or not ready before the timeout expires.
+   */
+  async _ensureDeviceReady () {
+    if (!this._account) await this._connect()
+
+    const state = await firstValueFrom(
+      this._dmk.getDeviceSessionState({ sessionId: this._sessionId })
+    )
+
+    if (state.status === DeviceStatus.LOCKED) {
+      throw new Error('Device is locked.')
+    }
+
+    if (state.status === DeviceStatus.BUSY) {
+      throw new Error('Device is busy.')
+    }
+
+    if (state.status === DeviceStatus.NOT_CONNECTED) {
+      await this._connect()
+    }
+  }
+
+  /**
+   * Consume a DeviceAction observable and resolve on Completed; reject early on Error/Stopped.
+   *
+   * @private
+   * @template TOutput
+   * @param {import('rxjs').Observable<DeviceActionState<TOutput>>} observable
+   * @returns {Promise<TOutput>}
+   */
+  async _consumeDeviceAction (observable) {
+    return await firstValueFrom(
+      observable.pipe(
+        filter(
+          (evt) =>
+            evt.status === DeviceActionStatus.Completed ||
+            evt.status === DeviceActionStatus.Error ||
+            evt.status === DeviceActionStatus.Stopped
+        ),
+        map((evt) => {
+          if (evt.status === DeviceActionStatus.Completed) return evt.output
+          if (evt.status === DeviceActionStatus.Error) {
+            throw evt.error || new Error('Unknown Ledger error.')
+          }
+          throw new Error('Action stopped.')
+        })
+      )
+    )
   }
 
   /** @private */
