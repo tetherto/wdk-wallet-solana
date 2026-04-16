@@ -244,6 +244,7 @@ export default class LedgerSignerSolana {
         [address(this._address)]: signatureBytes(signature)
       }
     })
+    console.log('signedTransaction', signedTransaction)
 
     return Buffer.from(getBase64EncodedWireTransaction(signedTransaction), 'base64')
   }
