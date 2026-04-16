@@ -176,7 +176,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     const fee = await this._getTransactionFee(transactionMessage)
 
     const compiledTransaction = compileTransaction(transactionMessage)
-    console.log("compileTransaction", compileTransaction)
+    console.log("compileTransaction", compiledTransaction)
     const unsignedTransaction = getBase64EncodedWireTransaction(compiledTransaction)
     console.log("unsignedTransaction", unsignedTransaction)
 
