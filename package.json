@@ -63,7 +63,7 @@
       "default": "./package.json"
     },
     "./signers": {
-      "types": "./types/signers/index.d.ts",
+      "types": "./types/src/signers/index.d.ts",
       "default": "./src/signers/index.js"
     }
   },
