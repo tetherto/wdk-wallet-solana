@@ -238,16 +238,11 @@ export default class LedgerSignerSolana {
     const signature = await this._consumeDeviceAction(observable)
     console.log('signature', signature)
 
-    const signedTransaction = {
-      messageBytes: tx.messageBytes,
-      signatures: {
-        [address(this._address)]: signatureBytes(signature)
-      }
-    }
-    console.log('signedTransaction', signedTransaction)
-    console.log('getBase64EncodedWireTransaction(signedTransaction)', getBase64EncodedWireTransaction(signedTransaction))
+    tx.signatures[address(this._address)] = signatureBytes(signature)
+    console.log('signedTransaction', tx)
+    console.log('getBase64EncodedWireTransaction(signedTransaction)', getBase64EncodedWireTransaction(tx))
 
-    return Buffer.from(getBase64EncodedWireTransaction(signedTransaction), 'base64')
+    return Buffer.from(getBase64EncodedWireTransaction(tx), 'base64')
   }
 
   dispose () {
