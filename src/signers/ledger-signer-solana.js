@@ -33,7 +33,7 @@ import { SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system'
 
 import { assertFullHardenedPath } from './signer-solana.js'
 
-const BIP_44_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
+const BIP_44_SOL_DERIVATION_PATH_PREFIX = "44'/501'"
 
 /** @typedef {import("./signer-solana.js").ISignerSolana} ISignerSolana */
 

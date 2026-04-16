@@ -181,16 +181,11 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       Buffer.from(unsignedTransaction, 'base64')
     )
 
-    const signature = await this._rpc
-      .sendTransaction(signedTransaction.toString('base64'), {
-        encoding: 'base64'
-      })
+    const hash = await this._rpc
+      .sendTransaction(signedTransaction.toString('base64'), { encoding: 'base64' })
       .send()
 
-    return {
-      hash: signature,
-      fee
-    }
+    return { hash, fee }
   }
 
   /**
