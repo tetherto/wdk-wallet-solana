@@ -16,6 +16,8 @@
 
 import WalletManager from '@tetherto/wdk-wallet'
 
+import FailoverProvider from '@tetherto/wdk-failover-provider'
+
 import { createSolanaRpc } from '@solana/rpc'
 
 import WalletAccountSolana from './wallet-account-solana.js'
@@ -53,24 +55,35 @@ export default class WalletManagerSolana extends WalletManager {
      */
     this._config = config
 
-    const { rpcUrl, commitment = 'confirmed' } = config
+    const { rpcUrl, commitment = 'confirmed', retries = 3 } = config
 
-    if (rpcUrl) {
-      /**
-       * A Solana RPC client for HTTP requests.
-       *
-       * @protected
-       * @type {SolanaRpc}
-       */
+    /**
+     * The commitment level for transactions.
+     *
+     * @protected
+     * @type {Commitment}
+     */
+    this._commitment = commitment
+
+    /**
+     * Solana RPC client for making HTTP requests to the blockchain.
+     *
+     * @protected
+     * @type {SolanaRpc | undefined}
+     */
+    this._rpc = undefined
+
+    if (Array.isArray(rpcUrl)) {
+      if (rpcUrl.length > 0) {
+        const failoverProvider = new FailoverProvider({ retries })
+        for (const entry of rpcUrl) {
+          const option = createSolanaRpc(entry)
+          failoverProvider.addProvider(option)
+        }
+        this._rpc = failoverProvider.initialize()
+      }
+    } else if (rpcUrl) {
       this._rpc = createSolanaRpc(rpcUrl)
-
-      /**
-       * The commitment level for transactions.
-       *
-       * @protected
-       * @type {Commitment}
-       */
-      this._commitment = commitment
     }
   }
 

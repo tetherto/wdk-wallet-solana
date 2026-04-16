@@ -10,9 +10,9 @@ export default class WalletManagerSolana extends WalletManager {
      * A Solana RPC client for HTTP requests.
      *
      * @protected
-     * @type {SolanaRpc}
+     * @type {SolanaRpc | undefined}
      */
-    protected _rpc: SolanaRpc;
+    protected _rpc: SolanaRpc | undefined;
     /**
      * The commitment level for transactions.
      *

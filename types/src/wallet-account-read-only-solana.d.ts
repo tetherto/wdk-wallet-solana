@@ -37,9 +37,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * Solana RPC client for making HTTP requests to the blockchain.
      *
      * @protected
-     * @type {SolanaRpc}
+     * @type {SolanaRpc | undefined}
      */
-    protected _rpc: SolanaRpc;
+    protected _rpc: SolanaRpc | undefined;
     /**
      * The commitment level for querying transaction and account states.
      * Determines the level of finality required before returning results.
@@ -162,13 +162,17 @@ export type SimpleSolanaTransaction = {
 export type SolanaTransaction = SimpleSolanaTransaction | TransactionMessage;
 export type SolanaWalletConfig = {
     /**
-     * - The provider's rpc url.
+     * - The provider's rpc url. If it's a list of urls, the provider failover strategy will be enabled.
      */
     rpcUrl?: string;
     /**
      * - The commitment level (default: 'confirmed').
      */
     commitment?: Commitment;
+    /**
+     * - The number of retries in the failover mechanism.
+     */
+    retries?: number,
     /**
      * - Maximum allowed fee in lamports for transfer operations.
      */

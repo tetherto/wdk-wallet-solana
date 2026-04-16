@@ -40,6 +40,7 @@
     "@solana/signers": "6.0.1",
     "@solana/transaction-messages": "6.0.1",
     "@solana/transactions": "6.0.1",
+    "@tetherto/wdk-failover-provider": "1.0.0-beta.1",
     "@tetherto/wdk-wallet": "github:claudiovb/wdk-wallet#poc-signer",
     "bare-node-runtime": "^1.1.4",
     "bip39": "3.1.0",

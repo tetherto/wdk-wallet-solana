@@ -16,6 +16,8 @@
 
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet'
 
+import FailoverProvider from '@tetherto/wdk-failover-provider'
+
 import { address, getPublicKeyFromAddress } from '@solana/addresses'
 import { createSolanaRpc } from '@solana/rpc'
 import { pipe } from '@solana/functional'
@@ -60,8 +62,9 @@ import { isSignature, verifySignature } from '@solana/keys'
 
 /**
  * @typedef {Object} SolanaWalletConfig
- * @property {string} [rpcUrl] - The provider's rpc url.
+ * @property {string | string[]} [rpcUrl] - The provider's rpc url. If it's a list of urls, the provider failover strategy will be enabled.
  * @property {Commitment} [commitment] - The commitment level (default: 'confirmed').
+ * @property {number} [retries] - The number of retries in the failover mechanism.
  * @property {number | bigint} [transferMaxFee] - Maximum allowed fee in lamports for transfer operations.
  */
 
@@ -88,24 +91,36 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     this._config = config
 
-    const { rpcUrl, commitment = 'confirmed' } = config
-    if (rpcUrl) {
-      /**
-       * Solana RPC client for making HTTP requests to the blockchain.
-       *
-       * @protected
-       * @type {SolanaRpc}
-       */
-      this._rpc = createSolanaRpc(rpcUrl)
+    const { rpcUrl, commitment = 'confirmed', retries = 3 } = config
 
-      /**
-       * The commitment level for querying transaction and account states.
-       * Determines the level of finality required before returning results.
-       *
-       * @protected
-       * @type {Commitment}
-       */
-      this._commitment = commitment
+    /**
+     * The commitment level for querying transaction and account states.
+     * Determines the level of finality required before returning results.
+     *
+     * @protected
+     * @type {Commitment}
+     */
+    this._commitment = commitment
+
+    /**
+     * Solana RPC client for making HTTP requests to the blockchain.
+     *
+     * @protected
+     * @type {SolanaRpc | undefined}
+     */
+    this._rpc = undefined
+
+    if (Array.isArray(rpcUrl)) {
+      if (rpcUrl.length > 0) {
+        const failoverProvider = new FailoverProvider({ retries })
+        for (const entry of rpcUrl) {
+          const option = createSolanaRpc(entry)
+          failoverProvider.addProvider(option)
+        }
+        this._rpc = failoverProvider.initialize()
+      }
+    } else if (rpcUrl) {
+      this._rpc = createSolanaRpc(rpcUrl)
     }
   }
 
