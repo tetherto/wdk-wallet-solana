@@ -171,14 +171,14 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       transactionMessage = await this._ensureFeePayer(transactionMessage)
     }
 
-    console.log("==========", tx);
+    console.log('==========', tx)
 
     const fee = await this._getTransactionFee(transactionMessage)
 
     const compiledTransaction = compileTransaction(transactionMessage)
-    console.log("compileTransaction", compiledTransaction)
+    console.log('compileTransaction', compiledTransaction)
     const unsignedTransaction = getBase64EncodedWireTransaction(compiledTransaction)
-    console.log("unsignedTransaction", unsignedTransaction)
+    console.log('unsignedTransaction', unsignedTransaction)
 
     const signedTransaction = await this._signer.signTransaction(
       Buffer.from(unsignedTransaction, 'base64')

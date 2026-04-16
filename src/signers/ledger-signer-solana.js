@@ -27,7 +27,6 @@ import {
 } from '@solana/offchain-messages'
 import { signatureBytes, verifySignature } from '@solana/keys'
 import { address, getPublicKeyFromAddress } from '@solana/addresses'
-import { getCompiledTransactionMessageEncoder } from '@solana/transaction-messages'
 import { getTransactionDecoder, getTransactionEncoder } from '@solana/transactions'
 import { SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system'
 
@@ -227,22 +226,16 @@ export default class LedgerSignerSolana {
     await this._ensureDeviceReady()
 
     const tx = getTransactionDecoder().decode(unsignedTx)
-    console.log("tx", tx)
-
-    /**
-     * @type {TransactionMessageBytes} Cast the type from ReadonlyUint8Array<ArrayBuffer> to TransactionMessageBytes
-     */
-    const compiledTransactionMessage = getCompiledTransactionMessageEncoder().encode(tx)
-    console.log("compiledTransactionMessage", compiledTransactionMessage)
+    console.log('tx', tx)
 
     const { observable } = this._account.signTransaction(
       this._path,
-      Uint8Array.from(compiledTransactionMessage)
+      Uint8Array.from(tx.messageBytes)
     )
     const signature = await this._consumeDeviceAction(observable)
 
     const readonlySignedTransaction = getTransactionEncoder().encode({
-      messageBytes: compiledTransactionMessage,
+      messageBytes: tx.messageBytes,
       signatures: {
         [address(this._address)]: signatureBytes(signature)
       }
