@@ -177,7 +177,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     console.log("compiledTransactionMessage", compiledTransactionMessage)
 
-    const unsignedTransaction = getBase64EncodedWireTransaction(unsignedTransaction)
+    const unsignedTransaction = getBase64EncodedWireTransaction(compiledTransactionMessage)
 
     console.log("unsignedTransaction", unsignedTransaction)
 
