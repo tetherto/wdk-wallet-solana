@@ -27,7 +27,7 @@ import {
 } from '@solana/offchain-messages'
 import { signatureBytes, verifySignature } from '@solana/keys'
 import { address, getPublicKeyFromAddress } from '@solana/addresses'
-import { getBase64EncodedWireTransaction, getTransactionDecoder, getTransactionEncoder } from '@solana/transactions'
+import { getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system'
 
 import { assertFullHardenedPath } from './signer-solana.js'
