@@ -245,6 +245,7 @@ export default class LedgerSignerSolana {
       }
     })
     console.log('signedTransaction', signedTransaction)
+    console.log('getBase64EncodedWireTransaction(signedTransaction)', getBase64EncodedWireTransaction(signedTransaction))
 
     return Buffer.from(getBase64EncodedWireTransaction(signedTransaction), 'base64')
   }
