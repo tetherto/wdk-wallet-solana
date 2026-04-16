@@ -83,4 +83,4 @@ export type LedgerSignerSolOpts = {
 };
 export type LedgerSignerSolCfg = {};
 export type Observable<T> = import("rxjs").Observable<T>;
-export type DeviceActionState<TOutput> = import("@ledgerhq/device-management-kit").DeviceActionState<TOutput, Error, unknown>;
+export type DeviceActionState<TOutput> = import("@ledgerhq/device-management-kit").DeviceActionState<TOutput, unknown, unknown>;
