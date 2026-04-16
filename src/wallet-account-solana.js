@@ -14,8 +14,10 @@
 
 'use strict'
 
-import { getBase64EncodedWireTransaction } from '@solana/transactions'
-import { compileTransactionMessage } from '@solana/transaction-messages'
+import {
+  compileTransaction,
+  getBase64EncodedWireTransaction
+} from '@solana/transactions'
 
 import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
@@ -157,8 +159,6 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       )
     }
 
-    console.log("==========", tx)
-
     let transactionMessage = tx
 
     // Handle native token transfer { to, value } transaction
@@ -171,14 +171,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       transactionMessage = await this._ensureFeePayer(transactionMessage)
     }
 
+    console.log("==========", tx);
+
     const fee = await this._getTransactionFee(transactionMessage)
 
-    const compiledTransactionMessage = compileTransactionMessage(transactionMessage)
-
-    console.log("compiledTransactionMessage", compiledTransactionMessage)
-
-    const unsignedTransaction = getBase64EncodedWireTransaction(compiledTransactionMessage)
-
+    const compiledTransaction = compileTransaction(transactionMessage)
+    console.log("compileTransaction", compileTransaction)
+    const unsignedTransaction = getBase64EncodedWireTransaction(compiledTransaction)
     console.log("unsignedTransaction", unsignedTransaction)
 
     const signedTransaction = await this._signer.signTransaction(
