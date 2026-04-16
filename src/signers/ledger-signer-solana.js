@@ -228,9 +228,6 @@ export default class LedgerSignerSolana {
 
     const tx = getTransactionDecoder().decode(unsignedTx)
 
-    /**
-     * @type {TransactionMessageBytes} Cast the type from ReadonlyUint8Array<ArrayBuffer> to TransactionMessageBytes
-     */
     const compiledTransactionMessage = getCompiledTransactionMessageEncoder().encode(tx)
 
     const { observable } = this._account.signTransaction(
