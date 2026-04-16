@@ -14,9 +14,10 @@
 
 'use strict'
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals'
+import { describe, it, expect, beforeEach, jest, afterEach } from '@jest/globals'
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
+import SeedSignerSolana from '../src/signers/seed-signer-solana.js'
 
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
 const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
@@ -941,15 +942,23 @@ describe('WalletAccountReadOnlySolana', () => {
   })
 
   describe('verify', () => {
-    it('should verify signature for same message across multiple verifications', async () => {
-      const account = await WalletAccountSolana.at(
-        TEST_SEED_PHRASE,
-        "0'/0'/0'",
+    let account
+
+    beforeEach(() => {
+      account = new WalletAccountSolana(
+        new SeedSignerSolana(TEST_SEED_PHRASE, {}, { path: "0'/0'/0'" }),
         {
           rpcUrl: TEST_RPC_URL,
           commitment: 'processed'
         }
       )
+    })
+
+    afterEach(() => {
+      account.dispose()
+    })
+
+    it('should verify signature for same message across multiple verifications', async () => {
       const message = 'Persistent message'
       const signature = await account.sign(message)
 
@@ -964,19 +973,9 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(isValid1).toBe(true)
       expect(isValid2).toBe(true)
       expect(isValid3).toBe(true)
-
-      account.dispose()
     })
 
     it('should reject signature for different message', async () => {
-      const account = await WalletAccountSolana.at(
-        TEST_SEED_PHRASE,
-        "0'/0'/0'",
-        {
-          rpcUrl: TEST_RPC_URL,
-          commitment: 'processed'
-        }
-      )
       const message1 = 'Message 1'
       const message2 = 'Message 2'
       const signature1 = await account.sign(message1)
@@ -987,8 +986,6 @@ describe('WalletAccountReadOnlySolana', () => {
       )
       expect(await readOnlyAccount.verify(message1, signature1)).toBe(true)
       expect(await readOnlyAccount.verify(message2, signature1)).toBe(false)
-
-      account.dispose()
     })
 
     it('should reject invalid hex signature', async () => {

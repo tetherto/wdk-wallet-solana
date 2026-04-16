@@ -2,10 +2,10 @@ export default class WalletManagerSolana extends WalletManager {
     /**
      * Creates a new wallet manager for the solana blockchain.
      *
-     * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+     * @param {ISignerSolana} signer - The Solana signer.
      * @param {SolanaWalletConfig} [config] - The configuration object.
      */
-    constructor(seed: string | Uint8Array, config?: SolanaWalletConfig);
+    constructor(signer: ISignerSolana, config?: SolanaWalletConfig);
     /**
      * A Solana RPC client for HTTP requests.
      *
@@ -27,9 +27,10 @@ export default class WalletManagerSolana extends WalletManager {
      * // Returns the account with derivation path m/44'/501'/index'/0'
      * const account = await wallet.getAccount(1);
      * @param {number} [index] - The index of the account to get (default: 0).
+     * @param {string} [signerName] - The signer name to resolve from the wallet manager (default: 'default').
      * @returns {Promise<WalletAccountSolana>} The account.
      */
-    getAccount(index?: number): Promise<WalletAccountSolana>;
+    getAccount(index?: number, signerName?: string): Promise<WalletAccountSolana>;
     /**
      * Returns the wallet account at a specific SLIP-0010 derivation path.
      *
@@ -37,9 +38,10 @@ export default class WalletManagerSolana extends WalletManager {
      * // Returns the account with derivation path m/44'/501'/0'/0'/1'
      * const account = await wallet.getAccountByPath("0'/0'/1'");
      * @param {string} path - The derivation path (e.g. "0'/0'/0'").
+     * @param {string} [signerName] - The signer name to resolve from the wallet manager (default: 'default').
      * @returns {Promise<WalletAccountSolana>} The account.
      */
-    getAccountByPath(path: string): Promise<WalletAccountSolana>;
+    getAccountByPath(path: string, signerName?: string): Promise<WalletAccountSolana>;
     /**
      * Returns the current fee rates.
      *
@@ -51,5 +53,6 @@ export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>
 export type Commitment = import("@solana/rpc-types").Commitment;
 export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
 export type SolanaWalletConfig = import("./wallet-account-solana.js").SolanaWalletConfig;
-import WalletManager from "@tetherto/wdk-wallet";
-import WalletAccountSolana from "./wallet-account-solana.js";
+export type ISignerSolana = import("./signers/index.js").ISignerSolana;
+import WalletManager from '@tetherto/wdk-wallet';
+import WalletAccountSolana from './wallet-account-solana.js';

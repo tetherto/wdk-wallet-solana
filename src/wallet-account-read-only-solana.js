@@ -169,7 +169,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       return 0n
     }
 
-    const tokenAccountBalance = await this._rpc.getTokenAccountBalance(ata, { commitment: this._commitment }).send()
+    const tokenAccountBalance = await this._rpc
+      .getTokenAccountBalance(ata, { commitment: this._commitment })
+      .send()
 
     return BigInt(tokenAccountBalance.value.amount)
   }
@@ -185,8 +187,6 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       throw new Error('The wallet must be connected to a provider to quote transactions.')
     }
 
-    const addr = await this.getAddress()
-
     let transactionMessage = tx
 
     // Handle native token transfer { to, value } transaction
@@ -196,8 +196,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     if (Array.isArray(transactionMessage.instructions)) {
       transactionMessage = await this._ensureLifetime(transactionMessage)
-      await this._assertFeePayer(transactionMessage)
-      transactionMessage = setTransactionMessageFeePayer(address(addr), transactionMessage)
+      transactionMessage = await this._ensureFeePayer(transactionMessage)
     }
     // Check if it's a native transfer object {to, value}
     const fee = await this._getTransactionFee(transactionMessage)
@@ -216,7 +215,11 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     }
 
     const { token, recipient, amount } = options
-    const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount)
+    const transactionMessage = await this._buildSPLTransferTransactionMessage(
+      token,
+      recipient,
+      amount
+    )
 
     const fee = await this._getTransactionFee(transactionMessage)
 
@@ -289,10 +292,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     const instructions = []
 
     const recipientATAInfo = await this._rpc
-      .getAccountInfo(toATA, {
-        commitment: this._commitment,
-        encoding: 'base64'
-      })
+      .getAccountInfo(toATA, { commitment: this._commitment, encoding: 'base64' })
       .send()
 
     // If recipient's ATA doesn't exist, add creation instruction (idempotent)
@@ -318,7 +318,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     instructions.push(transferInstruction)
 
     // Get latest blockhash
-    const { value: latestBlockhash } = await this._rpc.getLatestBlockhash({ commitment: this._commitment }).send()
+    const { value: latestBlockhash } = await this._rpc
+      .getLatestBlockhash({ commitment: this._commitment })
+      .send()
 
     // Build transaction message using pipe
     const transactionMessage = pipe(
@@ -353,7 +355,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     })
 
     // Get latest blockhash
-    const { value: latestBlockhash } = await this._rpc.getLatestBlockhash({ commitment: this._commitment }).send()
+    const { value: latestBlockhash } = await this._rpc
+      .getLatestBlockhash({ commitment: this._commitment })
+      .send()
 
     // Build transaction message using pipe
     const transactionMessage = pipe(
@@ -434,20 +438,26 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   }
 
   /**
-   * Asserts that any explicit transaction fee payer matches this wallet address.
+   * Ensures the transaction fee payer is this wallet address.
+   *
+   * If a fee payer is already present, it must match this wallet address.
+   * Otherwise, the wallet address is set as the fee payer.
    *
    * @protected
    * @param {SolanaTransaction} tx - The transaction.
-   * @returns {Promise<void>} Resolves when the transaction has no explicit fee payer or it matches this wallet address.
-   * @throws {Error} If the transaction fee payer does not match this wallet address.
+   * @returns {Promise<SolanaTransaction>} The transaction with this wallet address as fee payer.
+   * @throws {Error} If the transaction fee payer does not match this wallet address, throw an error.
    */
-  async _assertFeePayer (tx) {
+  async _ensureFeePayer (tx) {
+    const ownerAddress = await this.getAddress()
+
     if (tx.feePayer) {
-      const ownerAddress = await this.getAddress()
       const feePayerAddress = typeof tx.feePayer === 'string' ? tx.feePayer : tx.feePayer.address
       if (feePayerAddress !== ownerAddress) {
         throw new Error(`Transaction fee payer (${feePayerAddress}) does not match wallet address (${ownerAddress})`)
       }
     }
+
+    return setTransactionMessageFeePayer(address(ownerAddress), tx)
   }
 }

@@ -24,16 +24,19 @@ import {
 } from '@jest/globals'
 import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
+import SeedSignerSolana from '../src/signers/seed-signer-solana.js'
 
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mock-url.com'
 
 describe('WalletManagerSolana', () => {
+  let signer
   let wallet
 
-  beforeEach(() => {
-    wallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+  beforeEach(async () => {
+    signer = new SeedSignerSolana(TEST_SEED_PHRASE)
+    wallet = new WalletManagerSolana(signer, {
       rpcUrl: TEST_RPC_URL,
       commitment: 'confirmed'
     })
@@ -46,9 +49,7 @@ describe('WalletManagerSolana', () => {
     })
 
     it('should create wallet manager with string seed phrase', () => {
-      const newWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-        rpcUrl: TEST_RPC_URL
-      })
+      const newWallet = new WalletManagerSolana(TEST_SEED_PHRASE, { rpcUrl: TEST_RPC_URL })
       expect(newWallet).toBeInstanceOf(WalletManagerSolana)
     })
   })
@@ -76,7 +77,7 @@ describe('WalletManagerSolana', () => {
   })
 
   describe('getAccountByPath', () => {
-    it("should return account for path \"0'/0'/0'\"", async () => {
+    it('should return account for path "0\'/0\'/0\'"', async () => {
       const account = await wallet.getAccountByPath("0'/0'/0'")
       expect(account).toBeInstanceOf(WalletAccountSolana)
       expect(account.path).toBe("m/44'/501'/0'/0'/0'")

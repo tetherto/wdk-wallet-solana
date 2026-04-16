@@ -15,19 +15,9 @@
 'use strict'
 
 import {
-  createKeyPairSignerFromPrivateKeyBytes,
-  signTransactionMessageWithSigners,
-  setTransactionMessageFeePayerSigner
-} from '@solana/signers'
-import { getBase64EncodedWireTransaction } from '@solana/transactions'
-import { signBytes } from '@solana/keys'
-
-import HDKey from 'micro-key-producer/slip10.js'
-
-import * as bip39 from 'bip39'
-
-// eslint-disable-next-line camelcase
-import { sodium_memzero } from 'sodium-universal'
+  compileTransaction,
+  getBase64EncodedWireTransaction
+} from '@solana/transactions'
 
 import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
@@ -41,20 +31,7 @@ import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaWalletConfig} SolanaWalletConfig */
-
-const SLIP_0010_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
-
-/**
- * Assert the full path is hardened.
- * @param {string} path The derivation path.
- */
-function assertFullHardenedPath (path) {
-  const isValid = path.split('/').reduce((s, e) => s && e.endsWith("'"), true)
-
-  if (!isValid) {
-    throw new Error('In Solana, every child path in a derivation path must be hardened.')
-  }
-}
+/** @typedef {import('@tetherto/wdk-wallet-solana/signers').ISignerSolana} ISignerSolana */
 
 /**
  * Full-featured Solana wallet account implementation with signing capabilities.
@@ -62,19 +39,20 @@ function assertFullHardenedPath (path) {
  */
 export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
-   * @private
-   * Use {@link WalletAccountSolana.at} instead.
+   * Creates a new solana wallet account.
+   *
+   * @param {ISignerSolana} signer - The solana signer.
+   * @param {SolanaWalletConfig} config - The wallet account configuration.
    */
-  constructor (seed, path, config = {}) {
-    if (typeof seed === 'string') {
-      if (!bip39.validateMnemonic(seed)) {
-        throw new Error('The seed phrase is invalid.')
-      }
-
-      seed = bip39.mnemonicToSeedSync(seed)
+  constructor (signer, config = {}) {
+    if (!signer) {
+      throw new Error('A signer is required.')
     }
-
-    assertFullHardenedPath(path)
+    if (signer.isRoot) {
+      throw new Error(
+        'The signer is the root signer. Call derive method to create a child signer.'
+      )
+    }
 
     super(undefined, config)
 
@@ -87,60 +65,12 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     this._config = config
 
     /**
-     * @private
-     */
-    this._seed = seed
-
-    /**
-     * @private
-     */
-    this._path = `${SLIP_0010_SOL_DERIVATION_PATH_PREFIX}/${path}`
-
-    /**
-     * The Ed25519 key pair signer for signing transactions.
+     * The Solana seed signer.
      *
      * @private
-     * @type {KeyPairSigner | undefined}
+     * @type {ISignerSolana}
      */
-    this._signer = undefined
-
-    /**
-     * Raw Ed25519 public key bytes (32 bytes).
-     *
-     * @private
-     * @type {Uint8Array | undefined}
-     */
-    this._rawPublicKey = undefined
-
-    /**
-     * Raw Ed25519 private key bytes (32 bytes).
-     *
-     * @private
-     * @type {Uint8Array | undefined}
-     */
-    this._rawPrivateKey = undefined
-  }
-
-  /**
-   * Creates a new solana wallet account.
-   *
-   * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
-   * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
-   * @param {SolanaWalletConfig} [config] - The configuration object.
-   * @returns {Promise<WalletAccountSolana>} The wallet account.
-   */
-  static async at (seed, path, config = {}) {
-    const account = new WalletAccountSolana(seed, path, config)
-
-    const hdKey = HDKey.fromMasterSeed(account._seed)
-    const { privateKey } = hdKey.derive(account._path, true)
-    account._signer = await createKeyPairSignerFromPrivateKeyBytes(privateKey)
-    const publicKey = await crypto.subtle.exportKey('raw', account._signer.keyPair.publicKey)
-    account._rawPublicKey = new Uint8Array(publicKey)
-    account._rawPrivateKey = new Uint8Array(privateKey)
-    sodium_memzero(privateKey)
-
-    return account
+    this._signer = signer
   }
 
   /**
@@ -149,8 +79,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @type {number}
    */
   get index () {
-    const segments = this.path.split('/')
-    return +segments[3].replace("'", '')
+    return this._signer.index
   }
 
   /**
@@ -159,7 +88,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @type {string}
    */
   get path () {
-    return this._path
+    return this._signer.path
   }
 
   /**
@@ -172,10 +101,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @type {KeyPair}
    */
   get keyPair () {
-    return {
-      privateKey: this._rawPrivateKey,
-      publicKey: this._rawPublicKey
-    }
+    return this._signer.keyPair
   }
 
   /**
@@ -184,7 +110,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @returns {Promise<string>} The address.
    */
   async getAddress () {
-    return this._signer.address
+    return await this._signer.getAddress()
   }
 
   /**
@@ -194,14 +120,26 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @returns {Promise<string>} The message's signature.
    */
   async sign (message) {
-    if (!this._signer) {
+    if (!this._signer.path) {
       throw new Error('The wallet account has been disposed.')
     }
-    const messageBytes = Buffer.from(message, 'utf8')
-    const signatureBytes = await signBytes(this._signer.keyPair.privateKey, messageBytes)
-    const signature = Buffer.from(signatureBytes).toString('hex')
+
+    const signature = await this._signer.sign(message)
 
     return signature
+  }
+
+  /**
+   * Verifies a message's signature.
+   *
+   * @param {string} message - The original message.
+   * @param {string} signature - The signature to verify.
+   * @returns {Promise<boolean>} True if the signature is valid.
+   */
+  async verify (message, signature) {
+    const isValid = await this._signer.verify(message, signature)
+
+    return isValid
   }
 
   /**
@@ -211,12 +149,14 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @returns {Promise<TransactionResult>} The transaction's result.
    */
   async sendTransaction (tx) {
-    if (!this._signer) {
+    if (!this._signer.path) {
       throw new Error('The wallet account has been disposed.')
     }
 
     if (!this._rpc) {
-      throw new Error('The wallet must be connected to a provider to send transactions.')
+      throw new Error(
+        'The wallet must be connected to a provider to send transactions.'
+      )
     }
 
     let transactionMessage = tx
@@ -228,21 +168,23 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     if (Array.isArray(transactionMessage.instructions)) {
       transactionMessage = await this._ensureLifetime(transactionMessage)
-      await this._assertFeePayer(transactionMessage)
-      transactionMessage = setTransactionMessageFeePayerSigner(this._signer, transactionMessage)
+      transactionMessage = await this._ensureFeePayer(transactionMessage)
     }
 
     const fee = await this._getTransactionFee(transactionMessage)
 
-    const signedtransaction = await signTransactionMessageWithSigners(transactionMessage)
+    const compiledTransaction = compileTransaction(transactionMessage)
+    const unsignedTransaction = getBase64EncodedWireTransaction(compiledTransaction)
 
-    const encodedTransaction = getBase64EncodedWireTransaction(signedtransaction)
-    const signature = await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
+    const signedTransaction = await this._signer.signTransaction(
+      Buffer.from(unsignedTransaction, 'base64')
+    )
 
-    return {
-      hash: signature,
-      fee
-    }
+    const hash = await this._rpc
+      .sendTransaction(signedTransaction.toString('base64'), { encoding: 'base64' })
+      .send()
+
+    return { hash, fee }
   }
 
   /**
@@ -253,19 +195,24 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @note only SPL tokens - won't work for native SOL
    */
   async transfer (options) {
-    if (!this._signer) {
+    if (!this._signer?.path) {
       throw new Error('The wallet account has been disposed.')
     }
 
     if (!this._rpc) {
-      throw new Error('The wallet must be connected to a provider to transfer tokens.')
+      throw new Error(
+        'The wallet must be connected to a provider to transfer tokens.'
+      )
     }
 
     const { token, recipient, amount } = options
 
     const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount)
     const fee = await this._getTransactionFee(transactionMessage)
-    if (this._config.transferMaxFee !== undefined && fee >= this._config.transferMaxFee) {
+    if (
+      this._config.transferMaxFee !== undefined &&
+      fee >= this._config.transferMaxFee
+    ) {
       throw new Error('Exceeded maximum fee cost for transfer operation.')
     }
 
@@ -282,7 +229,10 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   async toReadOnlyAccount () {
     const address = await this.getAddress()
 
-    const readOnlyAccount = new WalletAccountReadOnlySolana(address, this._config)
+    const readOnlyAccount = new WalletAccountReadOnlySolana(
+      address,
+      this._config
+    )
 
     return readOnlyAccount
   }
@@ -291,9 +241,6 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * Disposes the wallet account, erasing the private key from the memory.
    */
   dispose () {
-    sodium_memzero(this._rawPrivateKey)
-    this._rawPrivateKey = undefined
-    this._signer = undefined
-    this._seed = undefined
+    this._signer.dispose()
   }
 }
