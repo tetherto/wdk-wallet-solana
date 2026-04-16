@@ -40,12 +40,15 @@ const BIP_44_SOL_DERIVATION_PATH_PREFIX = "44'/501'"
 /** @typedef {import("@ledgerhq/device-signer-kit-solana/internal/DefaultSignerSolana.js").DefaultSignerSolana} DefaultSignerSolana */
 /**
  * @template TOutput
- * @typedef {import('@ledgerhq/device-management-kit').DeviceActionState<TOutput, Error, unknown>} DeviceActionState
+ * @typedef {import('@ledgerhq/device-management-kit').DeviceActionState<TOutput, unknown, unknown>} DeviceActionState
  */
 
 /** @typedef {import("@solana/offchain-messages").OffchainMessage} OffchainMessage */
 
-/** @typedef {import('rxjs').Observable} Observable */
+/**
+ * @template T
+ * @typedef {import('rxjs').Observable<T>} Observable
+ */
 
 /**
  * @typedef {Object} LedgerSignerSolOpts
@@ -233,6 +236,7 @@ export default class LedgerSignerSolana {
       Uint8Array.from(tx.messageBytes)
     )
     const signature = await this._consumeDeviceAction(observable)
+    console.log('signature', signature)
 
     const signedTransaction = getTransactionEncoder().encode({
       messageBytes: tx.messageBytes,
