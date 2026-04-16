@@ -157,6 +157,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       )
     }
 
+    console.log("==========", tx)
+
     let transactionMessage = tx
 
     // Handle native token transfer { to, value } transaction
@@ -171,9 +173,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     const fee = await this._getTransactionFee(transactionMessage)
 
-    const unsignedTransaction = getBase64EncodedWireTransaction(
-      compileTransactionMessage(transactionMessage)
-    )
+    const compiledTransactionMessage = compileTransactionMessage(transactionMessage)
+
+    console.log("compiledTransactionMessage", compiledTransactionMessage)
+
+    const unsignedTransaction = getBase64EncodedWireTransaction(unsignedTransaction)
+
+    console.log("unsignedTransaction", unsignedTransaction)
 
     const signedTransaction = await this._signer.signTransaction(
       Buffer.from(unsignedTransaction, 'base64')

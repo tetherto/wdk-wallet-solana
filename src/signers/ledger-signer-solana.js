@@ -228,7 +228,11 @@ export default class LedgerSignerSolana {
 
     const tx = getTransactionDecoder().decode(unsignedTx)
 
+    console.log("tx", tx)
+
     const compiledTransactionMessage = getCompiledTransactionMessageEncoder().encode(tx)
+
+    console.log("compiledTransactionMessage", compiledTransactionMessage)
 
     const { observable } = this._account.signTransaction(
       this._path,
