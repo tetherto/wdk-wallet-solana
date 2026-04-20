@@ -23,7 +23,10 @@
     "lint:fix": "standard --fix --env jest",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:coverage:html": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage --coverageReporters=html text"
+    "test:coverage:html": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage --coverageReporters=html text",
+    "test:integration": "concurrently -k -s first --prefix none --hide rpc -n rpc,test 'npm run rpc' 'cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration'",
+    "test:integration:coverage":"concurrently -k -s first --prefix none --hide rpc -n rpc,test 'npm run rpc' 'cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --coverage'",
+    "rpc": "solana-test-validator"
   },
   "dependencies": {
     "@solana-program/system": "0.9.0",
@@ -36,17 +39,18 @@
     "@solana/signers": "3.0.3",
     "@solana/transaction-messages": "3.0.3",
     "@solana/transactions": "3.0.3",
-    "@tetherto/wdk-wallet": "1.0.0-beta.7",
     "@tetherto/wdk-failover-provider": "1.0.0-beta.1",
+    "@tetherto/wdk-wallet": "1.0.0-beta.7",
     "bare-node-runtime": "^1.1.4",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
     "sodium-universal": "5.0.1"
   },
   "devDependencies": {
+    "concurrently": "9.2.1",
+    "cross-env": "7.0.3",
     "jest": "^30.2.0",
     "standard": "17.1.2",
-    "cross-env": "7.0.3",
     "typescript": "5.8.3"
   },
   "exports": {
