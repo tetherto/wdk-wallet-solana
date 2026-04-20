@@ -32,11 +32,12 @@ import {
   isTransactionMessageWithBlockhashLifetime,
   isTransactionMessageWithDurableNonceLifetime
 } from '@solana/transaction-messages'
-import { getBase64Decoder } from '@solana/codecs'
+import { getBase64Decoder, getBase64Encoder } from '@solana/codecs'
 import { getTransferSolInstruction } from '@solana-program/system'
 import {
   findAssociatedTokenPda,
   getCreateAssociatedTokenIdempotentInstruction,
+  getTokenDecoder,
   getTransferInstruction,
   TOKEN_PROGRAM_ADDRESS
 } from '@solana-program/token'
@@ -160,18 +161,20 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       owner: ownerAddress,
       tokenProgram: TOKEN_PROGRAM_ADDRESS
     })
+
     const accountInfo = await this._rpc
       .getAccountInfo(ata, { commitment: this._commitment, encoding: 'base64' })
       .send()
 
     if (!accountInfo.value) {
-      // ATA doesn't exist, user has never received this token
       return 0n
     }
 
-    const tokenAccountBalance = await this._rpc.getTokenAccountBalance(ata, { commitment: this._commitment }).send()
+    const serializedData = getBase64Encoder().encode(accountInfo.value.data[0])
 
-    return BigInt(tokenAccountBalance.value.amount)
+    const tokenData = getTokenDecoder().decode(serializedData)
+
+    return tokenData.amount
   }
 
   /**
@@ -238,11 +241,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     }
 
     const transaction = await this._rpc
-      .getTransaction(hash, {
-        commitment: this._commitment,
-        maxSupportedTransactionVersion: 0,
-        encoding: 'json'
-      })
+      .getTransaction(hash, { commitment: this._commitment, maxSupportedTransactionVersion: 0, encoding: 'json' })
       .send()
 
     return transaction
