@@ -280,11 +280,12 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @returns {Promise<WalletAccountReadOnlySolana>} The read-only account.
    */
   async toReadOnlyAccount () {
-    const address = await this.getAddress()
+    if (!this._solanaReadOnlyAccount) {
+      const address = await this.getAddress()
+      this._solanaReadOnlyAccount = new WalletAccountReadOnlySolana(address, this._config)
+    }
 
-    const readOnlyAccount = new WalletAccountReadOnlySolana(address, this._config)
-
-    return readOnlyAccount
+    return this._solanaReadOnlyAccount
   }
 
   /**
