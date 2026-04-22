@@ -19,11 +19,13 @@ import { address } from '@solana/addresses'
 import { fetchMint, findAssociatedTokenPda, getCreateAssociatedTokenIdempotentInstruction, getInitializeMintInstruction, getMintSize, getMintToInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
 import { getCreateAccountInstruction } from '@solana-program/system'
 import { createSolanaRpc } from '@solana/rpc'
-import { generateKeyPairSigner } from '@solana/signers'
-import { appendTransactionMessageInstructions, createTransactionMessage } from '@solana/transaction-messages'
+import { generateKeyPairSigner, setTransactionMessageFeePayerSigner, signTransactionMessageWithSigners } from '@solana/signers'
+import { getBase64EncodedWireTransaction } from '@solana/transactions'
+import { appendTransactionMessageInstructions, createTransactionMessage, setTransactionMessageLifetimeUsingBlockhash } from '@solana/transaction-messages'
 import { pipe } from '@solana/functional'
 
-import { WalletAccountReadOnlySolana, WalletAccountSolana } from '@tetherto/wdk-wallet-solana'
+import WalletAccountReadOnlySolana from '../../src/wallet-account-read-only-solana.js'
+import WalletAccountSolana from '../../src/wallet-account-solana.js'
 
 const LAMPORTS_PER_SOL = 1_000_000_000n
 
@@ -32,6 +34,7 @@ const TEST_SEED_PHRASE =
 const TEST_RPC_URL = 'http://127.0.0.1:8899'
 const TEST_TOKEN_DECIMALS = 6
 const TEST_TOKEN_SUPPLY = 1_000_000_000n
+const MEMO_PROGRAM_ADDRESS = address('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr')
 const RPC_READY_RETRIES = 40
 const RPC_READY_DELAY_MS = 500
 
@@ -76,16 +79,17 @@ async function waitForRpcReady (rpc) {
 
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
- * @param {WalletAccountSolana} walletAccount
+ * @param {string} tokenOwnerAddress
  * @returns {Promise<string>}
  */
-async function deploySplToken (rpc, walletAccount) {
-  if (!walletAccount._signer) {
-    throw new Error('Wallet account signer is unavailable.')
-  }
+async function deploySplToken (rpc, tokenOwnerAddress) {
+  const deployerSigner = await generateKeyPairSigner()
+  const airdropSignature = await rpc
+    .requestAirdrop(address(deployerSigner.address), LAMPORTS_PER_SOL, { commitment: 'confirmed' })
+    .send()
+  await confirmTransaction(rpc, airdropSignature)
 
-  const ownerAddress = await walletAccount.getAddress()
-  const owner = address(ownerAddress)
+  const owner = address(tokenOwnerAddress)
   const mintSigner = await generateKeyPairSigner()
   const mintAddress = address(mintSigner.address)
   const mintRent = await rpc
@@ -100,7 +104,7 @@ async function deploySplToken (rpc, walletAccount) {
 
   const instructions = [
     getCreateAccountInstruction({
-      payer: walletAccount._signer,
+      payer: deployerSigner,
       newAccount: mintSigner,
       lamports: mintRent,
       space: BigInt(getMintSize()),
@@ -109,11 +113,11 @@ async function deploySplToken (rpc, walletAccount) {
     getInitializeMintInstruction({
       mint: mintAddress,
       decimals: TEST_TOKEN_DECIMALS,
-      mintAuthority: owner,
-      freezeAuthority: owner
+      mintAuthority: deployerSigner.address,
+      freezeAuthority: deployerSigner.address
     }),
     getCreateAssociatedTokenIdempotentInstruction({
-      payer: owner,
+      payer: deployerSigner.address,
       ata: ownerAta,
       owner,
       mint: mintAddress
@@ -121,17 +125,24 @@ async function deploySplToken (rpc, walletAccount) {
     getMintToInstruction({
       mint: mintAddress,
       token: ownerAta,
-      mintAuthority: walletAccount._signer,
+      mintAuthority: deployerSigner,
       amount: TEST_TOKEN_SUPPLY
     })
   ]
 
+  const { value: latestBlockhash } = await rpc
+    .getLatestBlockhash({ commitment: 'confirmed' })
+    .send()
   const transactionMessage = pipe(
     createTransactionMessage({ version: 0 }),
+    (tx) => setTransactionMessageFeePayerSigner(deployerSigner, tx),
+    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
     (tx) => appendTransactionMessageInstructions(instructions, tx)
   )
 
-  const { hash } = await walletAccount.sendTransaction(transactionMessage)
+  const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
+  const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
+  const hash = await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
 
   const confirmed = await confirmTransaction(rpc, hash)
 
@@ -146,7 +157,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
   const rpc = createSolanaRpc(TEST_RPC_URL)
 
   beforeAll(async () => {
-    await waitForRpcReady(rpc)    
+    await waitForRpcReady(rpc)
   })
 
   describe('WalletAccountSolana', () => {
@@ -162,7 +173,10 @@ describe('@tetherto/wdk-wallet-solana', () => {
     let tokenMintAddress
 
     beforeAll(async () => {
-      account = await WalletAccountSolana.at(TEST_SEED_PHRASE, "0'/0'/0'", { rpcUrl: TEST_RPC_URL })    
+      account = await WalletAccountSolana.at(TEST_SEED_PHRASE, "0'/0'/0'", { rpcUrl: TEST_RPC_URL })
+
+      const tokenOwnerAddress = await account.getAddress()
+      tokenMintAddress = await deploySplToken(rpc, tokenOwnerAddress)
     })
 
     beforeEach(async () => {
@@ -176,15 +190,6 @@ describe('@tetherto/wdk-wallet-solana', () => {
       expect(amount).toBeGreaterThan(LAMPORTS_PER_SOL)
     })
 
-    test('should successfully deploy (sendTransaction) an SPL token', async () => {
-      tokenMintAddress = await deploySplToken(rpc, account)
-
-      const mintAccount = await fetchMint(rpc, address(tokenMintAddress))
-
-      expect(mintAccount.data.decimals).toBe(TEST_TOKEN_DECIMALS)
-      expect(mintAccount.data.supply).toBe(TEST_TOKEN_SUPPLY)
-    })
-
     test('should get token balance', async () => {
       const tokenBalance = await account.getTokenBalance(tokenMintAddress)
 
@@ -196,7 +201,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
       const emptyAddress = address(emptySigner.address)
 
       const tokenBalance = await account.getTokenBalance(emptyAddress)
-      
+
       expect(tokenBalance).toBe(0n)
     })
 
@@ -221,6 +226,25 @@ describe('@tetherto/wdk-wallet-solana', () => {
       expect(confirmed).toBe(true)
       expect(fee).toBeGreaterThan(0n)
       expect(balanceAfter).toBe(balanceBefore + transferAmount)
+    })
+
+    test('should send transaction message', async () => {
+      const memo = 'hello solana memo'
+      const transactionMessage = pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => appendTransactionMessageInstructions([
+          {
+            programAddress: MEMO_PROGRAM_ADDRESS,
+            accounts: [],
+            data: new TextEncoder().encode(memo)
+          }
+        ], tx)
+      )
+      const { hash, fee } = await account.sendTransaction(transactionMessage)
+      const confirmed = await confirmTransaction(rpc, hash)
+
+      expect(confirmed).toBe(true)
+      expect(fee).toBeGreaterThan(0n)
     })
 
     test('should transfer tokens', async () => {
