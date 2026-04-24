@@ -14,9 +14,9 @@
 
 'use strict'
 
-import { spawn } from 'node:child_process'
+import { spawn } from 'child_process'
+import { describe, expect, test, beforeEach, afterEach, jest } from '@jest/globals'
 
-import { describe, expect, test, beforeAll, beforeEach, afterAll, jest } from '@jest/globals'
 import { address } from '@solana/addresses'
 import {
   createSolanaRpcSubscriptions,
@@ -133,13 +133,20 @@ async function startSolanaTestValidator (rpc) {
   })
 
   let startupError
+  const closed = new Promise(resolve => {
+    validatorProcess.once('close', resolve)
+  })
 
   validatorProcess.once('error', (error) => {
     startupError = error
   })
 
   const stopSolanaTestValidator = async () => {
-    validatorProcess.kill('SIGKILL')
+    if (!validatorProcess.killed && validatorProcess.exitCode === null) {
+      validatorProcess.kill('SIGKILL')
+    }
+
+    await closed
   }
 
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -259,17 +266,8 @@ describe('@tetherto/wdk-wallet-solana', () => {
     await sendAndConfirmTransaction(signedTransaction, { commitment: 'confirmed' })
   }
 
-  beforeAll(async () => {
-    stopSolanaTestValidator = await startSolanaTestValidator(rpc)
-  })
-
-  afterAll(async () => {
-    if (stopSolanaTestValidator) {
-      await stopSolanaTestValidator()
-    }
-  })
-
   beforeEach(async () => {
+    stopSolanaTestValidator = await startSolanaTestValidator(rpc)
     testToken = await deployTestToken(rpc, sendAndConfirmTransaction)
 
     for (const account of [ACCOUNT_0, ACCOUNT_1]) {
@@ -279,6 +277,13 @@ describe('@tetherto/wdk-wallet-solana', () => {
     }
 
     wallet = new WalletManagerSolana(SEED_PHRASE, { rpcUrl: TEST_RPC_URL })
+  })
+
+  afterEach(async () => {
+    if (stopSolanaTestValidator) {
+      await stopSolanaTestValidator()
+      stopSolanaTestValidator = undefined
+    }
   })
 
   test('should derive an account, quote the cost of a tx and send the tx', async () => {
