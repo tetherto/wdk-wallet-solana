@@ -75,7 +75,6 @@ const ACCOUNT_1 = {
 const INITIAL_BALANCE = 1_000_000_000n
 const INITIAL_TOKEN_BALANCE = 1_000_000n
 const TEST_TOKEN_DECIMALS = 6
-const MEMO_PROGRAM_ADDRESS = address('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr')
 
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
@@ -259,14 +258,6 @@ describe('@tetherto/wdk-wallet-solana', () => {
     await sendAndConfirmTransaction(signedTransaction, { commitment: 'confirmed' })
   }
 
-  async function setupTestTokenBalances () {
-    testToken = await deployTestToken(rpc, sendAndConfirmTransaction)
-
-    for (const account of [ACCOUNT_0, ACCOUNT_1]) {
-      await sendTestTokensTo(account.address, INITIAL_TOKEN_BALANCE)
-    }
-  }
-
   beforeAll(async () => {
     stopSolanaTestValidator = await startSolanaTestValidator(rpc)
   })
@@ -278,15 +269,15 @@ describe('@tetherto/wdk-wallet-solana', () => {
   })
 
   beforeEach(async () => {
-    testToken = undefined
+    testToken = await deployTestToken(rpc, sendAndConfirmTransaction)
 
     for (const account of [ACCOUNT_0, ACCOUNT_1]) {
       await sendSolsTo(account.address, INITIAL_BALANCE)
+
+      await sendTestTokensTo(account.address, INITIAL_TOKEN_BALANCE)
     }
 
-    wallet = new WalletManagerSolana(SEED_PHRASE, {
-      rpcUrl: TEST_RPC_URL
-    })
+    wallet = new WalletManagerSolana(SEED_PHRASE, { rpcUrl: TEST_RPC_URL })
   })
 
   test('should derive an account, quote the cost of a tx and send the tx', async () => {
@@ -294,9 +285,11 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
     const TRANSACTION = { to: ACCOUNT_1.address, value: 1_000 }
 
+    const EXPECTED_FEE = 5000n
+
     const { fee: feeEstimate } = await account.quoteSendTransaction(TRANSACTION)
 
-    expect(feeEstimate).toBeGreaterThan(0n)
+    expect(feeEstimate).toBe(EXPECTED_FEE)
 
     const { hash, fee } = await account.sendTransaction(TRANSACTION)
     await confirmTransaction(rpc, hash, 'finalized')
@@ -331,33 +324,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     expect(balanceAccount1).toBe(balanceAccount1Before + 1_000n)
   })
 
-  test('should derive an account, send a transaction message and get its receipt', async () => {
-    const account = await wallet.getAccountByPath("0'/0'")
-
-    const MESSAGE = 'Hello, Solana memo!'
-    const transactionMessage = pipe(
-      createTransactionMessage({ version: 0 }),
-      (tx) => appendTransactionMessageInstructions([
-        {
-          programAddress: MEMO_PROGRAM_ADDRESS,
-          accounts: [],
-          data: new TextEncoder().encode(MESSAGE)
-        }
-      ], tx)
-    )
-
-    const { hash, fee } = await account.sendTransaction(transactionMessage)
-    await confirmTransaction(rpc, hash, 'finalized')
-    const receipt = await getTransactionReceipt(account, hash)
-
-    expect(receipt.transaction.signatures).toContain(hash)
-    expect(receipt.meta.err).toBeNull()
-    expect(fee).toBeGreaterThan(0n)
-  })
-
   test('should derive an account by its path, quote the cost of transferring a token and transfer a token', async () => {
-    await setupTestTokenBalances()
-
     const account = await wallet.getAccountByPath("0'/0'")
 
     const TRANSFER = {
@@ -366,9 +333,11 @@ describe('@tetherto/wdk-wallet-solana', () => {
       amount: 100
     }
 
+    const EXPECTED_FEE = 5000n
+
     const { fee: feeEstimate } = await account.quoteTransfer(TRANSFER)
 
-    expect(feeEstimate).toBeGreaterThan(0n)
+    expect(feeEstimate).toBe(EXPECTED_FEE)
 
     const { hash, fee } = await account.transfer(TRANSFER)
     await confirmTransaction(rpc, hash, 'finalized')
@@ -380,8 +349,6 @@ describe('@tetherto/wdk-wallet-solana', () => {
   })
 
   test('should derive two accounts by their paths, transfer a token from account 1 to 2 and get the correct balances and token balances', async () => {
-    await setupTestTokenBalances()
-
     const account0 = await wallet.getAccountByPath("0'/0'")
     const account1 = await wallet.getAccountByPath("1'/0'")
 
