@@ -75,6 +75,7 @@ const ACCOUNT_1 = {
 const INITIAL_BALANCE = 1_000_000_000n
 const INITIAL_TOKEN_BALANCE = 1_000_000n
 const TEST_TOKEN_DECIMALS = 6
+const TEST_RECIPIENT_ADDRESS = 'Hsg1peob7yZNwaBAbaqKjNBkX1zgiyKpPELec1jQofem'
 
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
@@ -329,7 +330,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
     const TRANSFER = {
       token: testToken.mint,
-      recipient: 'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM',
+      recipient: TEST_RECIPIENT_ADDRESS,
       amount: 100
     }
 
@@ -395,13 +396,13 @@ describe('@tetherto/wdk-wallet-solana', () => {
     const MESSAGE = 'Hello, world!'
 
     const TRANSACTION = {
-      to: 'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM',
+      to: TEST_RECIPIENT_ADDRESS,
       value: 1_000
     }
 
     const TRANSFER = {
-      token: 'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM',
-      recipient: 'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM',
+      token: TEST_RECIPIENT_ADDRESS,
+      recipient: TEST_RECIPIENT_ADDRESS,
       amount: 100
     }
 
@@ -412,5 +413,23 @@ describe('@tetherto/wdk-wallet-solana', () => {
       await expect(account.sendTransaction(TRANSACTION)).rejects.toThrow('The wallet account has been disposed.')
       await expect(account.transfer(TRANSFER)).rejects.toThrow('The wallet account has been disposed.')
     }
+  })
+
+  test('should create a wallet with a low transfer max fee, derive an account, try to transfer some tokens and gracefully fail', async () => {
+    const wallet = new WalletManagerSolana(SEED_PHRASE, {
+      rpcUrl: TEST_RPC_URL,
+      transferMaxFee: 0
+    })
+
+    const account = await wallet.getAccount(0)
+
+    const TRANSFER = {
+      token: testToken.mint,
+      recipient: TEST_RECIPIENT_ADDRESS,
+      amount: 100
+    }
+
+    await expect(account.transfer(TRANSFER))
+      .rejects.toThrow('Exceeded maximum fee cost for transfer operation.')
   })
 })
