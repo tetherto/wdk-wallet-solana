@@ -15,7 +15,6 @@
 'use strict'
 
 import { spawn } from 'node:child_process'
-import { rm } from 'node:fs/promises'
 
 import { describe, expect, test, beforeAll, beforeEach, afterAll, jest } from '@jest/globals'
 import { address } from '@solana/addresses'
@@ -73,7 +72,6 @@ const INITIAL_BALANCE = 1_000_000_000n
 const INITIAL_TOKEN_BALANCE = 1_000_000n
 const TEST_TOKEN_DECIMALS = 6
 const MEMO_PROGRAM_ADDRESS = address('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr')
-const VALIDATOR_LEDGER_DIRECTORY = 'test-ledger'
 
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
@@ -122,7 +120,7 @@ async function getTransactionReceipt (account, hash) {
  * @returns {Promise<() => Promise<void>>}
  */
 async function startSolanaTestValidator (rpc) {
-  const validatorProcess = spawn('solana-test-validator', ['--ledger', VALIDATOR_LEDGER_DIRECTORY], {
+  const validatorProcess = spawn('solana-test-validator', ['--reset'], {
     stdio: ['ignore', 'ignore', 'ignore']
   })
 
@@ -134,7 +132,6 @@ async function startSolanaTestValidator (rpc) {
 
   const stopSolanaTestValidator = async () => {
     validatorProcess.kill('SIGKILL')
-    await rm(VALIDATOR_LEDGER_DIRECTORY, { recursive: true, force: true })
   }
 
   for (let attempt = 0; attempt < 10; attempt++) {
