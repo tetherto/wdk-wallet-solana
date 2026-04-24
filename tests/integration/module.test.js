@@ -76,17 +76,21 @@ const MEMO_PROGRAM_ADDRESS = address('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcH
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
  * @param {string} signature
+ * @param {'confirmed' | 'finalized'} [commitment]
  * @returns {Promise<boolean>}
  */
-async function confirmTransaction (rpc, signature) {
-  for (let attempt = 0; attempt < 10; attempt++) {
+async function confirmTransaction (rpc, signature, commitment = 'confirmed') {
+  for (let attempt = 0; attempt < 40; attempt++) {
     const { value: [status] } = await rpc.getSignatureStatuses([signature]).send()
 
     if (status?.err) {
       throw new Error(`Transaction failed: ${JSON.stringify(status.err)}`)
     }
 
-    if (['confirmed', 'finalized'].includes(status?.confirmationStatus)) {
+    if (
+      status?.confirmationStatus === commitment ||
+      (commitment === 'confirmed' && status?.confirmationStatus === 'finalized')
+    ) {
       return true
     }
 
@@ -154,29 +158,6 @@ async function startSolanaTestValidator (rpc) {
 
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
- * @param {import('@solana/signers').KeyPairSigner} signer
- * @param {Array<import('@solana/transaction-messages').IInstruction>} instructions
- * @returns {Promise<string>}
- */
-async function sendInstructions (rpc, signer, instructions) {
-  const { value: latestBlockhash } = await rpc
-    .getLatestBlockhash({ commitment: 'confirmed' })
-    .send()
-  const transactionMessage = pipe(
-    createTransactionMessage({ version: 0 }),
-    (tx) => setTransactionMessageFeePayerSigner(signer, tx),
-    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-    (tx) => appendTransactionMessageInstructions(instructions, tx)
-  )
-
-  const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
-  const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
-
-  return await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
-}
-
-/**
- * @param {ReturnType<typeof createSolanaRpc>} rpc
  * @returns {Promise<{ mint: string, mintAuthority: import('@solana/signers').KeyPairSigner }>}
  */
 async function deployTestToken (rpc) {
@@ -196,31 +177,37 @@ async function deployTestToken (rpc) {
     .getMinimumBalanceForRentExemption(BigInt(getMintSize()), { commitment: 'confirmed' })
     .send()
 
-  const hash = await sendInstructions(rpc, mintAuthority, [
-    getCreateAccountInstruction({
-      payer: mintAuthority,
-      newAccount: mintSigner,
-      lamports: mintRent,
-      space: BigInt(getMintSize()),
-      programAddress: TOKEN_PROGRAM_ADDRESS
-    }),
-    getInitializeMintInstruction({
-      mint,
-      decimals: TEST_TOKEN_DECIMALS,
-      mintAuthority: mintAuthority.address,
-      freezeAuthority: mintAuthority.address
-    })
-  ])
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash({ commitment: 'confirmed' }).send()
+  const transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    (tx) => setTransactionMessageFeePayerSigner(mintAuthority, tx),
+    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+    (tx) => appendTransactionMessageInstructions([
+      getCreateAccountInstruction({
+        payer: mintAuthority,
+        newAccount: mintSigner,
+        lamports: mintRent,
+        space: BigInt(getMintSize()),
+        programAddress: TOKEN_PROGRAM_ADDRESS
+      }),
+      getInitializeMintInstruction({
+        mint,
+        decimals: TEST_TOKEN_DECIMALS,
+        mintAuthority: mintAuthority.address,
+        freezeAuthority: mintAuthority.address
+      })
+    ], tx)
+  )
+  const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
+  const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
+  const hash = await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
   const confirmed = await confirmTransaction(rpc, hash)
 
   if (!confirmed) {
     throw new Error(`Token deployment transaction was not confirmed: ${hash}`)
   }
 
-  return {
-    mint,
-    mintAuthority
-  }
+  return { mint, mintAuthority }
 }
 
 describe('@tetherto/wdk-wallet-solana', () => {
@@ -247,20 +234,29 @@ describe('@tetherto/wdk-wallet-solana', () => {
       tokenProgram: TOKEN_PROGRAM_ADDRESS
     })
 
-    const hash = await sendInstructions(rpc, testToken.mintAuthority, [
-      getCreateAssociatedTokenIdempotentInstruction({
-        payer: testToken.mintAuthority.address,
-        ata,
-        owner,
-        mint: testToken.mint
-      }),
-      getMintToInstruction({
-        mint: testToken.mint,
-        token: ata,
-        mintAuthority: testToken.mintAuthority,
-        amount: value
-      })
-    ])
+    const { value: latestBlockhash } = await rpc.getLatestBlockhash({ commitment: 'confirmed' }).send()
+    const transactionMessage = pipe(
+      createTransactionMessage({ version: 0 }),
+      (tx) => setTransactionMessageFeePayerSigner(testToken.mintAuthority, tx),
+      (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+      (tx) => appendTransactionMessageInstructions([
+        getCreateAssociatedTokenIdempotentInstruction({
+          payer: testToken.mintAuthority.address,
+          ata,
+          owner,
+          mint: testToken.mint
+        }),
+        getMintToInstruction({
+          mint: testToken.mint,
+          token: ata,
+          mintAuthority: testToken.mintAuthority,
+          amount: value
+        })
+      ], tx)
+    )
+    const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
+    const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
+    const hash = await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
     const confirmed = await confirmTransaction(rpc, hash)
 
     if (!confirmed) {
@@ -301,17 +297,14 @@ describe('@tetherto/wdk-wallet-solana', () => {
   test('should derive an account, quote the cost of a tx and send the tx', async () => {
     const account = await wallet.getAccount(0)
 
-    const TRANSACTION = {
-      to: ACCOUNT_1.address,
-      value: 1_000
-    }
+    const TRANSACTION = { to: ACCOUNT_1.address, value: 1_000 }
 
     const { fee: feeEstimate } = await account.quoteSendTransaction(TRANSACTION)
 
     expect(feeEstimate).toBeGreaterThan(0n)
 
     const { hash, fee } = await account.sendTransaction(TRANSACTION)
-    await confirmTransaction(rpc, hash)
+    await confirmTransaction(rpc, hash, 'finalized')
     const receipt = await getTransactionReceipt(account, hash)
 
     expect(receipt.transaction.signatures).toContain(hash)
@@ -333,7 +326,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     const balanceAccount1Before = await account1.getBalance()
 
     const { hash } = await account0.sendTransaction(TRANSACTION)
-    await confirmTransaction(rpc, hash)
+    await confirmTransaction(rpc, hash, 'finalized')
     const receipt = await getTransactionReceipt(account0, hash)
 
     const balanceAccount0 = await account0.getBalance()
@@ -359,7 +352,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     )
 
     const { hash, fee } = await account.sendTransaction(transactionMessage)
-    await confirmTransaction(rpc, hash)
+    await confirmTransaction(rpc, hash, 'finalized')
     const receipt = await getTransactionReceipt(account, hash)
 
     expect(receipt.transaction.signatures).toContain(hash)
@@ -383,7 +376,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     expect(feeEstimate).toBeGreaterThan(0n)
 
     const { hash, fee } = await account.transfer(TRANSFER)
-    await confirmTransaction(rpc, hash)
+    await confirmTransaction(rpc, hash, 'finalized')
     const receipt = await getTransactionReceipt(account, hash)
 
     expect(receipt.transaction.signatures).toContain(hash)
@@ -406,7 +399,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     const balanceAccount0Before = await account0.getBalance()
 
     const { hash } = await account0.transfer(TRANSFER)
-    await confirmTransaction(rpc, hash)
+    await confirmTransaction(rpc, hash, 'finalized')
     const receipt = await getTransactionReceipt(account0, hash)
 
     const balanceAccount0 = await account0.getBalance()
