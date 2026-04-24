@@ -14,26 +14,59 @@
 
 'use strict'
 
-import { beforeAll, beforeEach, describe, expect, test } from '@jest/globals'
+import { describe, expect, test, beforeAll, beforeEach } from '@jest/globals'
 import { address } from '@solana/addresses'
-import { fetchMint, findAssociatedTokenPda, getCreateAssociatedTokenIdempotentInstruction, getInitializeMintInstruction, getMintSize, getMintToInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
+import {
+  findAssociatedTokenPda,
+  getCreateAssociatedTokenIdempotentInstruction,
+  getInitializeMintInstruction,
+  getMintSize,
+  getMintToInstruction,
+  TOKEN_PROGRAM_ADDRESS
+} from '@solana-program/token'
 import { getCreateAccountInstruction } from '@solana-program/system'
 import { createSolanaRpc } from '@solana/rpc'
-import { generateKeyPairSigner, setTransactionMessageFeePayerSigner, signTransactionMessageWithSigners } from '@solana/signers'
+import {
+  generateKeyPairSigner,
+  setTransactionMessageFeePayerSigner,
+  signTransactionMessageWithSigners
+} from '@solana/signers'
 import { getBase64EncodedWireTransaction } from '@solana/transactions'
-import { appendTransactionMessageInstructions, createTransactionMessage, setTransactionMessageLifetimeUsingBlockhash } from '@solana/transaction-messages'
+import {
+  appendTransactionMessageInstructions,
+  createTransactionMessage,
+  setTransactionMessageLifetimeUsingBlockhash
+} from '@solana/transaction-messages'
 import { pipe } from '@solana/functional'
 
-import WalletAccountReadOnlySolana from '../../src/wallet-account-read-only-solana.js'
-import WalletAccountSolana from '../../src/wallet-account-solana.js'
+import WalletManagerSolana from '../../index.js'
 
-const LAMPORTS_PER_SOL = 1_000_000_000n
-
-const TEST_SEED_PHRASE =
-  'test walk nut penalty hip pave soap entry language right filter choice'
+const SEED_PHRASE = 'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'http://127.0.0.1:8899'
+
+const ACCOUNT_0 = {
+  index: 0,
+  path: "m/44'/501'/0'/0'",
+  address: '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE',
+  keyPair: {
+    privateKey: 'de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f',
+    publicKey: '2b2c715c2cf24db57e95a44df34cb424de2460e86c4f6ebe7ba62b574830de19'
+  }
+}
+
+const ACCOUNT_1 = {
+  index: 1,
+  path: "m/44'/501'/1'/0'",
+  address: 'CfGcujEkPVDx7yGyn1PUjxn2e353MXbLk8ixzwuJUktK',
+  keyPair: {
+    privateKey: '4642fc818f6525a2c5ae784cc98f44d639492c21271c5f7f0ac30ee95a3357bb',
+    publicKey: 'ad3e499bc158a797574c53bcca546939f0de16242b85ed39a848092c4d9d5274'
+  }
+}
+
+const INITIAL_BALANCE = 1_000_000_000n
+const INITIAL_TOKEN_BALANCE = 1_000_000n
 const TEST_TOKEN_DECIMALS = 6
-const TEST_TOKEN_SUPPLY = 1_000_000_000n
 const MEMO_PROGRAM_ADDRESS = address('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr')
 const RPC_READY_RETRIES = 40
 const RPC_READY_DELAY_MS = 500
@@ -68,7 +101,8 @@ async function confirmTransaction (rpc, signature) {
 async function waitForRpcReady (rpc) {
   for (let attempt = 0; attempt < RPC_READY_RETRIES; attempt++) {
     try {
-      return await rpc.getLatestBlockhash({ commitment: 'confirmed' }).send()
+      await rpc.getLatestBlockhash({ commitment: 'confirmed' }).send()
+      return
     } catch {
       await new Promise(resolve => setTimeout(resolve, RPC_READY_DELAY_MS))
     }
@@ -79,241 +113,281 @@ async function waitForRpcReady (rpc) {
 
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
- * @param {string} tokenOwnerAddress
+ * @param {import('@solana/signers').KeyPairSigner} signer
+ * @param {Array<import('@solana/transaction-messages').IInstruction>} instructions
  * @returns {Promise<string>}
  */
-async function deploySplToken (rpc, tokenOwnerAddress) {
-  const deployerSigner = await generateKeyPairSigner()
-  const airdropSignature = await rpc
-    .requestAirdrop(address(deployerSigner.address), LAMPORTS_PER_SOL, { commitment: 'confirmed' })
-    .send()
-  await confirmTransaction(rpc, airdropSignature)
-
-  const owner = address(tokenOwnerAddress)
-  const mintSigner = await generateKeyPairSigner()
-  const mintAddress = address(mintSigner.address)
-  const mintRent = await rpc
-    .getMinimumBalanceForRentExemption(BigInt(getMintSize()), { commitment: 'confirmed' })
-    .send()
-
-  const [ownerAta] = await findAssociatedTokenPda({
-    mint: mintAddress,
-    owner,
-    tokenProgram: TOKEN_PROGRAM_ADDRESS
-  })
-
-  const instructions = [
-    getCreateAccountInstruction({
-      payer: deployerSigner,
-      newAccount: mintSigner,
-      lamports: mintRent,
-      space: BigInt(getMintSize()),
-      programAddress: TOKEN_PROGRAM_ADDRESS
-    }),
-    getInitializeMintInstruction({
-      mint: mintAddress,
-      decimals: TEST_TOKEN_DECIMALS,
-      mintAuthority: deployerSigner.address,
-      freezeAuthority: deployerSigner.address
-    }),
-    getCreateAssociatedTokenIdempotentInstruction({
-      payer: deployerSigner.address,
-      ata: ownerAta,
-      owner,
-      mint: mintAddress
-    }),
-    getMintToInstruction({
-      mint: mintAddress,
-      token: ownerAta,
-      mintAuthority: deployerSigner,
-      amount: TEST_TOKEN_SUPPLY
-    })
-  ]
-
+async function sendInstructions (rpc, signer, instructions) {
   const { value: latestBlockhash } = await rpc
     .getLatestBlockhash({ commitment: 'confirmed' })
     .send()
   const transactionMessage = pipe(
     createTransactionMessage({ version: 0 }),
-    (tx) => setTransactionMessageFeePayerSigner(deployerSigner, tx),
+    (tx) => setTransactionMessageFeePayerSigner(signer, tx),
     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
     (tx) => appendTransactionMessageInstructions(instructions, tx)
   )
 
   const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
   const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
-  const hash = await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
 
+  return await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
+}
+
+/**
+ * @param {ReturnType<typeof createSolanaRpc>} rpc
+ * @returns {Promise<{ mint: string, mintAuthority: import('@solana/signers').KeyPairSigner }>}
+ */
+async function deployTestToken (rpc) {
+  const mintAuthority = await generateKeyPairSigner()
+  const airdropSignature = await rpc
+    .requestAirdrop(address(mintAuthority.address), INITIAL_BALANCE, { commitment: 'confirmed' })
+    .send()
+  const airdropConfirmed = await confirmTransaction(rpc, airdropSignature)
+
+  if (!airdropConfirmed) {
+    throw new Error(`Airdrop transaction was not confirmed: ${airdropSignature}`)
+  }
+
+  const mintSigner = await generateKeyPairSigner()
+  const mint = address(mintSigner.address)
+  const mintRent = await rpc
+    .getMinimumBalanceForRentExemption(BigInt(getMintSize()), { commitment: 'confirmed' })
+    .send()
+
+  const hash = await sendInstructions(rpc, mintAuthority, [
+    getCreateAccountInstruction({
+      payer: mintAuthority,
+      newAccount: mintSigner,
+      lamports: mintRent,
+      space: BigInt(getMintSize()),
+      programAddress: TOKEN_PROGRAM_ADDRESS
+    }),
+    getInitializeMintInstruction({
+      mint,
+      decimals: TEST_TOKEN_DECIMALS,
+      mintAuthority: mintAuthority.address,
+      freezeAuthority: mintAuthority.address
+    })
+  ])
   const confirmed = await confirmTransaction(rpc, hash)
 
   if (!confirmed) {
     throw new Error(`Token deployment transaction was not confirmed: ${hash}`)
   }
 
-  return mintAddress
+  return {
+    mint,
+    mintAuthority
+  }
 }
 
 describe('@tetherto/wdk-wallet-solana', () => {
   const rpc = createSolanaRpc(TEST_RPC_URL)
 
+  let testToken,
+    wallet
+
+  async function sendSolsTo (to, value) {
+    const signature = await rpc.requestAirdrop(address(to), value, { commitment: 'confirmed' }).send()
+    const confirmed = await confirmTransaction(rpc, signature)
+
+    if (!confirmed) {
+      throw new Error(`Airdrop transaction was not confirmed: ${signature}`)
+    }
+  }
+
+  async function sendTestTokensTo (to, value) {
+    const owner = address(to)
+    const [ata] = await findAssociatedTokenPda({
+      mint: testToken.mint,
+      owner,
+      tokenProgram: TOKEN_PROGRAM_ADDRESS
+    })
+
+    const hash = await sendInstructions(rpc, testToken.mintAuthority, [
+      getCreateAssociatedTokenIdempotentInstruction({
+        payer: testToken.mintAuthority.address,
+        ata,
+        owner,
+        mint: testToken.mint
+      }),
+      getMintToInstruction({
+        mint: testToken.mint,
+        token: ata,
+        mintAuthority: testToken.mintAuthority,
+        amount: value
+      })
+    ])
+    const confirmed = await confirmTransaction(rpc, hash)
+
+    if (!confirmed) {
+      throw new Error(`Token mint transaction was not confirmed: ${hash}`)
+    }
+  }
+
   beforeAll(async () => {
     await waitForRpcReady(rpc)
   })
 
-  describe('WalletAccountSolana', () => {
+  beforeEach(async () => {
+    testToken = await deployTestToken(rpc)
 
-    /**
-     * @type {WalletAccountSolana}
-     */
-    let account
+    for (const account of [ACCOUNT_0, ACCOUNT_1]) {
+      await sendSolsTo(account.address, INITIAL_BALANCE)
+      await sendTestTokensTo(account.address, INITIAL_TOKEN_BALANCE)
+    }
 
-    /**
-     * @type {string}
-     */
-    let tokenMintAddress
-
-    beforeAll(async () => {
-      account = await WalletAccountSolana.at(TEST_SEED_PHRASE, "0'/0'/0'", { rpcUrl: TEST_RPC_URL })
-
-      const tokenOwnerAddress = await account.getAddress()
-      tokenMintAddress = await deploySplToken(rpc, tokenOwnerAddress)
+    wallet = new WalletManagerSolana(SEED_PHRASE, {
+      rpcUrl: TEST_RPC_URL
     })
+  })
 
-    beforeEach(async () => {
-      const recipient = await account.getAddress()
-      const signature = await rpc.requestAirdrop(address(recipient), LAMPORTS_PER_SOL, { commitment: 'confirmed' }).send()
-      const confirmed = await confirmTransaction(rpc, signature)
+  test('should derive an account, quote the cost of a tx and send the tx', async () => {
+    const account = await wallet.getAccount(0)
 
-      if (!confirmed) {
-        throw new Error(`Airdrop transaction was not confirmed: ${signature}`)
-      }
-    })
+    const TRANSACTION = {
+      to: 'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM',
+      value: 1_000
+    }
 
-    test('should get balance', async () => {
-      const amount = await account.getBalance()
+    const { fee: feeEstimate } = await account.quoteSendTransaction(TRANSACTION)
 
-      expect(amount).toBeGreaterThan(LAMPORTS_PER_SOL)
-    })
+    expect(feeEstimate).toBeGreaterThan(0n)
 
-    test('should get token balance', async () => {
-      const tokenBalance = await account.getTokenBalance(tokenMintAddress)
+    const { hash, fee } = await account.sendTransaction(TRANSACTION)
+    const confirmed = await confirmTransaction(rpc, hash)
+    const receipt = await account.getTransactionReceipt(hash)
 
-      expect(tokenBalance).toBe(TEST_TOKEN_SUPPLY)
-    })
+    expect(confirmed).toBe(true)
+    expect(receipt).not.toBeNull()
+    expect(receipt.transaction.signatures).toContain(hash)
+    expect(receipt.meta.err).toBeNull()
+    expect(fee).toBe(feeEstimate)
+  })
 
-    test('should get empty token balance', async () => {
-      const emptySigner = await generateKeyPairSigner()
-      const emptyAddress = address(emptySigner.address)
+  test('should derive two accounts, send a tx from account 1 to 2 and get the correct balances', async () => {
+    const account0 = await wallet.getAccount(0)
 
-      const tokenBalance = await account.getTokenBalance(emptyAddress)
+    const account1 = await wallet.getAccount(1)
 
-      expect(tokenBalance).toBe(0n)
-    })
+    const TRANSACTION = {
+      to: await account1.getAddress(),
+      value: 1_000
+    }
 
-    test('should transfer lamports', async () => {
-      const recipientSigner = await generateKeyPairSigner()
-      const recipient = new WalletAccountReadOnlySolana(recipientSigner.address, {
-        rpcUrl: TEST_RPC_URL
-      })
-      const recipientAddress = await recipient.getAddress()
+    const balanceAccount0Before = await account0.getBalance()
+    const balanceAccount1Before = await account1.getBalance()
 
-      const balanceBefore = await recipient.getBalance()
+    const { hash } = await account0.sendTransaction(TRANSACTION)
+    await confirmTransaction(rpc, hash)
+    const receipt = await account0.getTransactionReceipt(hash)
 
-      const transferAmount = 1_000_000n
-      const { hash, fee } = await account.sendTransaction({
-        to: recipientAddress,
-        value: transferAmount
-      })
-      const confirmed = await confirmTransaction(rpc, hash)
+    const balanceAccount0 = await account0.getBalance()
+    const balanceAccount1 = await account1.getBalance()
 
-      const balanceAfter = await recipient.getBalance()
+    expect(balanceAccount0).toBe(balanceAccount0Before - BigInt(receipt.meta.fee) - 1_000n)
+    expect(balanceAccount1).toBe(balanceAccount1Before + 1_000n)
+  })
 
-      expect(confirmed).toBe(true)
-      expect(fee).toBeGreaterThan(0n)
-      expect(balanceAfter).toBe(balanceBefore + transferAmount)
-    })
+  test('should derive an account, send a transaction message and get its receipt', async () => {
+    const account = await wallet.getAccountByPath("0'/0'")
 
-    test('should send transaction message', async () => {
-      const memo = 'hello solana memo'
-      const transactionMessage = pipe(
-        createTransactionMessage({ version: 0 }),
-        (tx) => appendTransactionMessageInstructions([
-          {
-            programAddress: MEMO_PROGRAM_ADDRESS,
-            accounts: [],
-            data: new TextEncoder().encode(memo)
-          }
-        ], tx)
-      )
-      const { hash, fee } = await account.sendTransaction(transactionMessage)
-      const confirmed = await confirmTransaction(rpc, hash)
+    const MESSAGE = 'Hello, Solana memo!'
+    const transactionMessage = pipe(
+      createTransactionMessage({ version: 0 }),
+      (tx) => appendTransactionMessageInstructions([
+        {
+          programAddress: MEMO_PROGRAM_ADDRESS,
+          accounts: [],
+          data: new TextEncoder().encode(MESSAGE)
+        }
+      ], tx)
+    )
 
-      expect(confirmed).toBe(true)
-      expect(fee).toBeGreaterThan(0n)
-    })
+    const { hash, fee } = await account.sendTransaction(transactionMessage)
+    await confirmTransaction(rpc, hash)
+    const receipt = await account.getTransactionReceipt(hash)
 
-    test('should transfer tokens', async () => {
-      const recipientSigner = await generateKeyPairSigner()
-      const recipient = new WalletAccountReadOnlySolana(recipientSigner.address, {
-        rpcUrl: TEST_RPC_URL
-      })
-      const recipientAddress = await recipient.getAddress()
+    expect(receipt.transaction.signatures).toContain(hash)
+    expect(receipt.meta.err).toBeNull()
+    expect(fee).toBeGreaterThan(0n)
+  })
 
-      const transferAmount = 1_000_000n
-      const { hash, fee } = await account.transfer({
-        token: tokenMintAddress,
-        recipient: recipientAddress,
-        amount: transferAmount
-      })
-      const confirmed = await confirmTransaction(rpc, hash)
+  test('should derive an account by its path, quote the cost of transferring a token and transfer a token', async () => {
+    const account = await wallet.getAccountByPath("0'/0'")
 
-      const recipientTokenBalance = await recipient.getTokenBalance(tokenMintAddress)
+    const TRANSFER = {
+      token: testToken.mint,
+      recipient: 'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM',
+      amount: 100
+    }
 
-      expect(confirmed).toBe(true)
-      expect(fee).toBeGreaterThan(0n)
-      expect(BigInt(recipientTokenBalance)).toBe(transferAmount)
-    })
+    const { fee: feeEstimate } = await account.quoteTransfer(TRANSFER)
 
-    test('should get transaction receipt', async () => {
-      const recipientSigner = await generateKeyPairSigner()
-      const recipient = new WalletAccountReadOnlySolana(recipientSigner.address, {
-        rpcUrl: TEST_RPC_URL
-      })
-      const recipientAddress = await recipient.getAddress()
+    expect(feeEstimate).toBeGreaterThan(0n)
 
-      const transferAmount = 1_000_000n
-      const { hash } = await account.sendTransaction({
-        to: recipientAddress,
-        value: transferAmount
-      })
-      const confirmed = await confirmTransaction(rpc, hash)
-      const receipt = await account.getTransactionReceipt(hash)
+    const { hash, fee } = await account.transfer(TRANSFER)
+    await confirmTransaction(rpc, hash)
+    const receipt = await account.getTransactionReceipt(hash)
 
-      expect(confirmed).toBe(true)
-      expect(receipt).not.toBeNull()
-      expect(receipt.transaction.signatures).toContain(hash)
-      expect(receipt.meta.err).toBeNull()
-      expect(receipt.meta.fee).toBeGreaterThan(0n)
-      expect(receipt.slot).toBeGreaterThan(0n)
-    })
+    expect(receipt.transaction.signatures).toContain(hash)
+    expect(receipt.meta.err).toBeNull()
+    expect(fee).toBe(feeEstimate)
+  })
 
-    test('should sign and verify message', async () => {
-      const message = 'hello solana'
+  test('should derive two accounts by their paths, transfer a token from account 1 to 2 and get the correct balances and token balances', async () => {
+    const account0 = await wallet.getAccountByPath("0'/0'")
+    const account1 = await wallet.getAccountByPath("1'/0'")
 
-      const signature = await account.sign(message)
-      const verified = await account.verify(message, signature)
+    const TRANSFER = {
+      token: testToken.mint,
+      recipient: await account1.getAddress(),
+      amount: 100
+    }
 
-      expect(verified).toBe(true)
-    })
+    const balanceAccount0Before = await account0.getBalance()
 
-    test('should reject tampered message signature', async () => {
-      const message = 'hello solana'
-      const tamperedMessage = 'hello solana!'
+    const { hash } = await account0.transfer(TRANSFER)
+    await confirmTransaction(rpc, hash)
+    const receipt = await account0.getTransactionReceipt(hash)
 
-      const signature = await account.sign(message)
-      const verifiedTampered = await account.verify(tamperedMessage, signature)
+    const balanceAccount0 = await account0.getBalance()
 
-      expect(verifiedTampered).toBe(false)
-    })
+    expect(balanceAccount0).toBe(balanceAccount0Before - BigInt(receipt.meta.fee))
+
+    const tokenBalanceAccount0 = await account0.getTokenBalance(testToken.mint)
+    const tokenBalanceAccount1 = await account1.getTokenBalance(testToken.mint)
+
+    expect(tokenBalanceAccount0).toBe(INITIAL_TOKEN_BALANCE - 100n)
+    expect(tokenBalanceAccount1).toBe(INITIAL_TOKEN_BALANCE + 100n)
+  })
+
+  test('should derive an account, sign a message and verify its signature', async () => {
+    const account = await wallet.getAccount(0)
+
+    const MESSAGE = 'Hello, world!'
+
+    const signature = await account.sign(MESSAGE)
+    const isValid = await account.verify(MESSAGE, signature)
+    expect(isValid).toBe(true)
+  })
+
+  test('should dispose the wallet and erase the private keys of the accounts', async () => {
+    const account0 = await wallet.getAccount(0)
+    const account1 = await wallet.getAccount(1)
+
+    const privateKey0 = account0.keyPair.privateKey
+    const privateKey1 = account1.keyPair.privateKey
+
+    expect(Buffer.from(privateKey0).toString('hex')).toBe(ACCOUNT_0.keyPair.privateKey)
+    expect(Buffer.from(privateKey1).toString('hex')).toBe(ACCOUNT_1.keyPair.privateKey)
+
+    wallet.dispose()
+
+    expect(account0.keyPair.privateKey).toBeUndefined()
+    expect(account1.keyPair.privateKey).toBeUndefined()
+    expect(privateKey0.every(byte => byte === 0)).toBe(true)
+    expect(privateKey1.every(byte => byte === 0)).toBe(true)
   })
 })
