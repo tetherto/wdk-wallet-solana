@@ -181,7 +181,12 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
     beforeEach(async () => {
       const recipient = await account.getAddress()
-      await rpc.requestAirdrop(address(recipient), LAMPORTS_PER_SOL, { commitment: 'confirmed' }).send()
+      const signature = await rpc.requestAirdrop(address(recipient), LAMPORTS_PER_SOL, { commitment: 'confirmed' }).send()
+      const confirmed = await confirmTransaction(rpc, signature)
+
+      if (!confirmed) {
+        throw new Error(`Airdrop transaction was not confirmed: ${signature}`)
+      }
     })
 
     test('should get balance', async () => {

@@ -24,7 +24,7 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:coverage:html": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage --coverageReporters=html text",
-    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
+    "test:integration": "concurrently -k -s first --prefix none --hide rpc -n rpc,test 'npm run rpc' 'cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration'",
     "test:integration:coverage": "concurrently -k -s first --prefix none --hide rpc -n rpc,test 'npm run rpc' 'cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --coverage'",
     "rpc": "solana-test-validator"
   },
