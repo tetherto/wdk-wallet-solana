@@ -63,9 +63,9 @@ import { isSignature, verifySignature } from '@solana/keys'
 
 /**
  * @typedef {Object} SolanaWalletConfig
- * @property {string | string[]} [rpcUrl] - The provider's rpc url. It's also possible to provide an array of urls instead. In such case, connection errors will cause the wallet to automatically fallback on the next provider in the list.
+ * @property {string | string[]} [rpcUrl] - The provider's rpc url. If it's a list of urls, the provider failover strategy will be enabled.
  * @property {Commitment} [commitment] - The commitment level (default: 'confirmed').
- * @property {number} [retries] - If set and if 'rpcUrl' is a list of urls, the number of additional retry attempts after the initial call fails. Total attempts = `1 + retries`. For example, `retries: 3` with 4 providers will try each provider once before throwing. If `retries` exceeds the number of providers, the failover will loop back and retry already-failed providers in round-robin order (default: 3).
+ * @property {number} [retries] - The number of retries in the failover mechanism.
  * @property {number | bigint} [transferMaxFee] - Maximum allowed fee in lamports for transfer operations.
  */
 
