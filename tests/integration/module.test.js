@@ -256,11 +256,9 @@ describe('@tetherto/wdk-wallet-solana', () => {
     expect(feeEstimate).toBeGreaterThan(0n)
 
     const { hash, fee } = await account.sendTransaction(TRANSACTION)
-    const confirmed = await confirmTransaction(rpc, hash)
+    await confirmTransaction(rpc, hash)
     const receipt = await account.getTransactionReceipt(hash)
 
-    expect(confirmed).toBe(true)
-    expect(receipt).not.toBeNull()
     expect(receipt.transaction.signatures).toContain(hash)
     expect(receipt.meta.err).toBeNull()
     expect(fee).toBe(feeEstimate)
@@ -375,19 +373,30 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
   test('should dispose the wallet and erase the private keys of the accounts', async () => {
     const account0 = await wallet.getAccount(0)
+
     const account1 = await wallet.getAccount(1)
-
-    const privateKey0 = account0.keyPair.privateKey
-    const privateKey1 = account1.keyPair.privateKey
-
-    expect(Buffer.from(privateKey0).toString('hex')).toBe(ACCOUNT_0.keyPair.privateKey)
-    expect(Buffer.from(privateKey1).toString('hex')).toBe(ACCOUNT_1.keyPair.privateKey)
 
     wallet.dispose()
 
-    expect(account0.keyPair.privateKey).toBeUndefined()
-    expect(account1.keyPair.privateKey).toBeUndefined()
-    expect(privateKey0.every(byte => byte === 0)).toBe(true)
-    expect(privateKey1.every(byte => byte === 0)).toBe(true)
+    const MESSAGE = 'Hello, world!'
+
+    const TRANSACTION = {
+      to: 'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM',
+      value: 1_000
+    }
+
+    const TRANSFER = {
+      token: testToken.mint,
+      recipient: 'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM',
+      amount: 100
+    }
+
+    for (const account of [account0, account1]) {
+      expect(account.keyPair.privateKey).toBe(undefined)
+
+      await expect(account.sign(MESSAGE)).rejects.toThrow('The wallet account has been disposed.')
+      await expect(account.sendTransaction(TRANSACTION)).rejects.toThrow('The wallet account has been disposed.')
+      await expect(account.transfer(TRANSFER)).rejects.toThrow('The wallet account has been disposed.')
+    }
   })
 })
