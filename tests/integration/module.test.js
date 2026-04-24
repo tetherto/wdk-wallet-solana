@@ -19,6 +19,10 @@ import { spawn } from 'node:child_process'
 import { describe, expect, test, beforeAll, beforeEach, afterAll, jest } from '@jest/globals'
 import { address } from '@solana/addresses'
 import {
+  createSolanaRpcSubscriptions,
+  sendAndConfirmTransactionFactory
+} from '@solana/kit'
+import {
   findAssociatedTokenPda,
   getCreateAssociatedTokenIdempotentInstruction,
   getInitializeMintInstruction,
@@ -33,7 +37,6 @@ import {
   setTransactionMessageFeePayerSigner,
   signTransactionMessageWithSigners
 } from '@solana/signers'
-import { getBase64EncodedWireTransaction } from '@solana/transactions'
 import {
   appendTransactionMessageInstructions,
   createTransactionMessage,
@@ -47,6 +50,7 @@ jest.setTimeout(30_000)
 
 const SEED_PHRASE = 'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'http://127.0.0.1:8899'
+const TEST_RPC_SUBSCRIPTIONS_URL = 'ws://127.0.0.1:8900'
 
 const ACCOUNT_0 = {
   index: 0,
@@ -158,9 +162,10 @@ async function startSolanaTestValidator (rpc) {
 
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
+ * @param {ReturnType<typeof sendAndConfirmTransactionFactory>} sendAndConfirmTransaction
  * @returns {Promise<{ mint: string, mintAuthority: import('@solana/signers').KeyPairSigner }>}
  */
-async function deployTestToken (rpc) {
+async function deployTestToken (rpc, sendAndConfirmTransaction) {
   const mintAuthority = await generateKeyPairSigner()
   const airdropSignature = await rpc
     .requestAirdrop(address(mintAuthority.address), INITIAL_BALANCE, { commitment: 'confirmed' })
@@ -199,19 +204,15 @@ async function deployTestToken (rpc) {
     ], tx)
   )
   const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
-  const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
-  const hash = await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
-  const confirmed = await confirmTransaction(rpc, hash)
-
-  if (!confirmed) {
-    throw new Error(`Token deployment transaction was not confirmed: ${hash}`)
-  }
+  await sendAndConfirmTransaction(signedTransaction, { commitment: 'confirmed' })
 
   return { mint, mintAuthority }
 }
 
 describe('@tetherto/wdk-wallet-solana', () => {
   const rpc = createSolanaRpc(TEST_RPC_URL)
+  const rpcSubscriptions = createSolanaRpcSubscriptions(TEST_RPC_SUBSCRIPTIONS_URL)
+  const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })
 
   let stopSolanaTestValidator
   let testToken
@@ -255,17 +256,11 @@ describe('@tetherto/wdk-wallet-solana', () => {
       ], tx)
     )
     const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
-    const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
-    const hash = await rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
-    const confirmed = await confirmTransaction(rpc, hash)
-
-    if (!confirmed) {
-      throw new Error(`Token mint transaction was not confirmed: ${hash}`)
-    }
+    await sendAndConfirmTransaction(signedTransaction, { commitment: 'confirmed' })
   }
 
   async function setupTestTokenBalances () {
-    testToken = await deployTestToken(rpc)
+    testToken = await deployTestToken(rpc, sendAndConfirmTransaction)
 
     for (const account of [ACCOUNT_0, ACCOUNT_1]) {
       await sendTestTokensTo(account.address, INITIAL_TOKEN_BALANCE)
