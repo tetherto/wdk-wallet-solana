@@ -8,6 +8,7 @@ on:
 
 env:
   NODE_VERSION: 22
+  SOLANA_VERSION: v3.1.9
 
 jobs:
   lint:
@@ -26,4 +27,9 @@ jobs:
     name: Test / ${{ matrix.platform }}
     steps:
       - uses: tetherto/oss-actions/node-base@v1
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/${SOLANA_VERSION}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+          solana-test-validator --version
       - run: npm test
