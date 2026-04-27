@@ -105,25 +105,6 @@ async function confirmTransaction (rpc, signature, commitment = 'confirmed') {
 }
 
 /**
- * @param {import('@tetherto/wdk-wallet-solana').WalletAccountSolana} account
- * @param {string} hash
- * @returns {Promise<import('@tetherto/wdk-wallet-solana').SolanaTransactionReceipt>}
- */
-async function getTransactionReceipt (account, hash) {
-  for (let attempt = 0; attempt < 40; attempt++) {
-    const receipt = await account.getTransactionReceipt(hash)
-
-    if (receipt) {
-      return receipt
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 250))
-  }
-
-  throw new Error(`Transaction receipt was not available: ${hash}`)
-}
-
-/**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
  * @returns {Promise<() => Promise<void>>}
  */
@@ -299,7 +280,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
     const { hash, fee } = await account.sendTransaction(TRANSACTION)
     await confirmTransaction(rpc, hash, 'finalized')
-    const receipt = await getTransactionReceipt(account, hash)
+    const receipt = await account.getTransactionReceipt(hash)
 
     expect(receipt.transaction.signatures).toContain(hash)
     expect(receipt.meta.err).toBeNull()
@@ -321,7 +302,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
     const { hash } = await account0.sendTransaction(TRANSACTION)
     await confirmTransaction(rpc, hash, 'finalized')
-    const receipt = await getTransactionReceipt(account0, hash)
+    const receipt = await account0.getTransactionReceipt(hash)
 
     const balanceAccount0 = await account0.getBalance()
     const balanceAccount1 = await account1.getBalance()
@@ -347,7 +328,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
     const { hash, fee } = await account.transfer(TRANSFER)
     await confirmTransaction(rpc, hash, 'finalized')
-    const receipt = await getTransactionReceipt(account, hash)
+    const receipt = await account.getTransactionReceipt(hash)
 
     expect(receipt.transaction.signatures).toContain(hash)
     expect(receipt.meta.err).toBeNull()
@@ -368,7 +349,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
     const { hash } = await account0.transfer(TRANSFER)
     await confirmTransaction(rpc, hash, 'finalized')
-    const receipt = await getTransactionReceipt(account0, hash)
+    const receipt = await account0.getTransactionReceipt(hash)
 
     const balanceAccount0 = await account0.getBalance()
 
