@@ -76,6 +76,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      */
     sign(message: string): Promise<string>;
     /**
+     * Signs a transaction.
+     *
+     * @param {SolanaTransaction} tx - The transaction to sign.
+     * @returns {Promise<FullySignedTransaction>} The signed transaction.
+     */
+    signTransaction(tx: SolanaTransaction): Promise<FullySignedTransaction>;
+    /**
      * Sends a transaction.
      *
      * @param {SolanaTransaction} tx - The transaction.
@@ -100,6 +107,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * Disposes the wallet account, erasing the private key from the memory.
      */
     dispose(): void;
+    /** @private */
+    private _prepareTransactionMessage;
 }
 export type IWalletAccount = import("@tetherto/wdk-wallet").IWalletAccount;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
@@ -109,4 +118,5 @@ export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type KeyPairSigner = import("@solana/signers").KeyPairSigner;
 export type SolanaTransaction = import("./wallet-account-read-only-solana.js").SolanaTransaction;
 export type SolanaWalletConfig = import("./wallet-account-read-only-solana.js").SolanaWalletConfig;
+export type FullySignedTransaction = import("@solana/transactions").FullySignedTransaction;
 import WalletAccountReadOnlySolana from "./wallet-account-read-only-solana.js";

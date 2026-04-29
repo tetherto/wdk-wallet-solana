@@ -23,6 +23,7 @@ import {
   beforeEach,
   afterEach
 } from '@jest/globals'
+import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages'
 import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
@@ -537,6 +538,51 @@ describe('WalletAccountSolana', () => {
           })
         ).rejects.toThrow('Failed to calculate transaction fee')
       })
+    })
+  })
+
+  describe('signTransaction', () => {
+    it('should sign a transaction and return the signed transaction', async () => {
+      const mockRpc = {
+        getFeeForMessage: jest.fn(),
+        sendTransaction: jest.fn(),
+        getLatestBlockhash: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({
+            value: {
+              blockhash: '6JbYxigC1rn83PMHZait5FHHpC3YqUMacnVJWFwfoayQ',
+              lastValidBlockHeight: 1000000
+            }
+          })
+        })
+      }
+
+      const originalRpc = account._rpc
+      account._rpc = mockRpc
+
+      try {
+        const TRANSACTION = {
+          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+          value: 1000000n
+        }
+
+        const signedTx = await account.signTransaction(TRANSACTION)
+
+        const decodedMessage = getCompiledTransactionMessageDecoder().decode(signedTx.messageBytes)
+
+        expect(decodedMessage.staticAccounts).toContain('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
+        expect(decodedMessage.staticAccounts).toContain(TRANSACTION.to)
+
+        // SystemProgram transfer instruction data: 4-byte LE discriminator (2) + 8-byte LE u64 lamports
+        const { data } = decodedMessage.instructions[0]
+        const view = new DataView(data.buffer, data.byteOffset, data.byteLength)
+        expect(view.getUint32(0, true)).toBe(2)
+        expect(view.getBigUint64(4, true)).toBe(TRANSACTION.value)
+        const payerSignature = signedTx.signatures['3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE']
+        expect(payerSignature).toBeInstanceOf(Uint8Array)
+        expect(payerSignature.length).toBe(64)
+      } finally {
+        account._rpc = originalRpc
+      }
     })
   })
 
