@@ -80,28 +80,24 @@ const TEST_RECIPIENT_ADDRESS = 'Hsg1peob7yZNwaBAbaqKjNBkX1zgiyKpPELec1jQofem'
 /**
  * @param {ReturnType<typeof createSolanaRpc>} rpc
  * @param {string} signature
- * @param {'confirmed' | 'finalized'} [commitment]
- * @returns {Promise<boolean>}
+ * @returns {Promise<void>}
  */
-async function confirmTransaction (rpc, signature, commitment = 'confirmed') {
-  for (let attempt = 0; attempt < 40; attempt++) {
+async function confirmTransaction (rpc, signature) {
+  for (let attempt = 0; attempt < 15; attempt++) {
     const { value: [status] } = await rpc.getSignatureStatuses([signature]).send()
 
     if (status?.err) {
       throw new Error(`Transaction failed: ${JSON.stringify(status.err)}`)
     }
 
-    if (
-      status?.confirmationStatus === commitment ||
-      (commitment === 'confirmed' && status?.confirmationStatus === 'finalized')
-    ) {
-      return true
+    if (['confirmed', 'finalized'].includes(status?.confirmationStatus)) {
+      return
     }
 
-    await new Promise(resolve => setTimeout(resolve, 250))
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
 
-  return false
+  throw new Error(`Transaction was not confirmed after several attempts: ${signature}`)
 }
 
 /**
@@ -109,7 +105,7 @@ async function confirmTransaction (rpc, signature, commitment = 'confirmed') {
  * @returns {Promise<() => Promise<void>>}
  */
 async function startSolanaTestValidator (rpc) {
-  const validatorProcess = spawn('solana-test-validator', ['--reset'], {
+  const validatorProcess = spawn('solana-test-validator', ['--reset', '--ticks-per-slot', '4'], {
     stdio: ['ignore', 'ignore', 'ignore']
   })
 
@@ -158,11 +154,7 @@ async function deployTestToken (rpc, sendAndConfirmTransaction) {
   const airdropSignature = await rpc
     .requestAirdrop(address(mintAuthority.address), INITIAL_BALANCE, { commitment: 'confirmed' })
     .send()
-  const airdropConfirmed = await confirmTransaction(rpc, airdropSignature)
-
-  if (!airdropConfirmed) {
-    throw new Error(`Airdrop transaction was not confirmed: ${airdropSignature}`)
-  }
+  await confirmTransaction(rpc, airdropSignature)
 
   const mintSigner = await generateKeyPairSigner()
   const mint = address(mintSigner.address)
@@ -208,11 +200,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
   async function sendSolsTo (to, value) {
     const signature = await rpc.requestAirdrop(address(to), value, { commitment: 'confirmed' }).send()
-    const confirmed = await confirmTransaction(rpc, signature)
-
-    if (!confirmed) {
-      throw new Error(`Airdrop transaction was not confirmed: ${signature}`)
-    }
+    await confirmTransaction(rpc, signature)
   }
 
   async function sendTestTokensTo (to, value) {
@@ -279,7 +267,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     expect(feeEstimate).toBe(EXPECTED_FEE)
 
     const { hash, fee } = await account.sendTransaction(TRANSACTION)
-    await confirmTransaction(rpc, hash, 'finalized')
+    await confirmTransaction(rpc, hash)
     const receipt = await account.getTransactionReceipt(hash)
 
     expect(receipt.transaction.signatures).toContain(hash)
@@ -301,7 +289,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     const balanceAccount1Before = await account1.getBalance()
 
     const { hash } = await account0.sendTransaction(TRANSACTION)
-    await confirmTransaction(rpc, hash, 'finalized')
+    await confirmTransaction(rpc, hash)
     const receipt = await account0.getTransactionReceipt(hash)
 
     const balanceAccount0 = await account0.getBalance()
@@ -327,7 +315,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     expect(feeEstimate).toBe(EXPECTED_FEE)
 
     const { hash, fee } = await account.transfer(TRANSFER)
-    await confirmTransaction(rpc, hash, 'finalized')
+    await confirmTransaction(rpc, hash)
     const receipt = await account.getTransactionReceipt(hash)
 
     expect(receipt.transaction.signatures).toContain(hash)
@@ -348,7 +336,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     const balanceAccount0Before = await account0.getBalance()
 
     const { hash } = await account0.transfer(TRANSFER)
-    await confirmTransaction(rpc, hash, 'finalized')
+    await confirmTransaction(rpc, hash)
     const receipt = await account0.getTransactionReceipt(hash)
 
     const balanceAccount0 = await account0.getBalance()
@@ -387,7 +375,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     }
 
     const TRANSFER = {
-      token: TEST_RECIPIENT_ADDRESS,
+      token: testToken.mint,
       recipient: TEST_RECIPIENT_ADDRESS,
       amount: 100
     }
