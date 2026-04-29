@@ -25,8 +25,7 @@ import {
 import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
 
-const TEST_SEED_PHRASE =
-  'test walk nut penalty hip pave soap entry language right filter choice'
+const TEST_SEED_PHRASE = 'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mock-url.com'
 
 describe('WalletManagerSolana', () => {
