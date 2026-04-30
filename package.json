@@ -46,7 +46,7 @@
     "sodium-universal": "5.0.1"
   },
   "devDependencies": {
-    "@solana/kit": "3.0.3",
+         "@solana/kit": "^4.0.0",
     "cross-env": "7.0.3",
     "jest": "^30.2.0",
     "standard": "17.1.2",
