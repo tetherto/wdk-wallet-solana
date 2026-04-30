@@ -42,6 +42,8 @@ import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaWalletConfig} SolanaWalletConfig */
 
+/** @typedef {import('@solana/transactions').FullySignedTransaction} FullySignedTransaction */
+
 const SLIP_0010_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
 
 /**
@@ -205,6 +207,26 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   }
 
   /**
+   * Signs a transaction.
+   *
+   * @param {SolanaTransaction} tx - The transaction to sign.
+   * @returns {Promise<FullySignedTransaction>} The signed transaction.
+   */
+  async signTransaction (tx) {
+    if (!this._signer) {
+      throw new Error('The wallet account has been disposed.')
+    }
+
+    if (!this._rpc) {
+      throw new Error('The wallet must be connected to a provider to sign transactions.')
+    }
+
+    const transactionMessage = await this._prepareTransactionMessage(tx)
+
+    return await signTransactionMessageWithSigners(transactionMessage)
+  }
+
+  /**
    * Sends a transaction.
    *
    * @param {SolanaTransaction} tx - The transaction.
@@ -219,9 +241,25 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       throw new Error('The wallet must be connected to a provider to send transactions.')
     }
 
+    const transactionMessage = await this._prepareTransactionMessage(tx)
+
+    const fee = await this._getTransactionFee(transactionMessage)
+
+    const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
+
+    const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
+    const signature = await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
+
+    return {
+      hash: signature,
+      fee
+    }
+  }
+
+  /** @private */
+  async _prepareTransactionMessage (tx) {
     let transactionMessage = tx
 
-    // Handle native token transfer { to, value } transaction
     if (tx.to !== undefined && tx.value !== undefined) {
       transactionMessage = await this._buildNativeTransferTransactionMessage(tx.to, tx.value)
     }
@@ -232,17 +270,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       transactionMessage = setTransactionMessageFeePayerSigner(this._signer, transactionMessage)
     }
 
-    const fee = await this._getTransactionFee(transactionMessage)
-
-    const signedtransaction = await signTransactionMessageWithSigners(transactionMessage)
-
-    const encodedTransaction = getBase64EncodedWireTransaction(signedtransaction)
-    const signature = await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
-
-    return {
-      hash: signature,
-      fee
-    }
+    return transactionMessage
   }
 
   /**

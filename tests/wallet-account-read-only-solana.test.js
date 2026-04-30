@@ -15,6 +15,15 @@
 'use strict'
 
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
+
+import { address } from '@solana/addresses'
+import {
+  AccountState,
+  findAssociatedTokenPda,
+  getTokenEncoder,
+  TOKEN_PROGRAM_ADDRESS
+} from '@solana-program/token'
+
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
 
@@ -295,8 +304,30 @@ describe('WalletAccountReadOnlySolana', () => {
       const usdtBalance = await readOnlyAccount.getTokenBalance(USDT_MINT)
       const usdcBalance = await readOnlyAccount.getTokenBalance(USDC_MINT)
 
+      const [usdtAta] = await findAssociatedTokenPda({
+        mint: address(USDT_MINT),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+      const [usdcAta] = await findAssociatedTokenPda({
+        mint: address(USDC_MINT),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
       expect(usdtBalance).toBe(1000000n)
       expect(usdcBalance).toBe(5000000n)
+      expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(
+        1,
+        usdtAta,
+        expect.objectContaining({ commitment: 'confirmed', encoding: 'base64' })
+      )
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(
+        2,
+        usdcAta,
+        expect.objectContaining({ commitment: 'confirmed', encoding: 'base64' })
+      )
     })
   })
 

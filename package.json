@@ -24,8 +24,7 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns='tests/integration'",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns='tests/integration' --coverage",
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
-    "test:integration:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --coverage",
-    "rpc": "solana-test-validator"
+    "test:integration:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --coverage"
   },
   "dependencies": {
     "@solana-program/system": "0.9.0",
@@ -38,7 +37,7 @@
     "@solana/signers": "3.0.3",
     "@solana/transaction-messages": "3.0.3",
     "@solana/transactions": "3.0.3",
-    "@tetherto/wdk-failover-provider": "1.0.0-beta.1",
+    "@tetherto/wdk-failover-provider": "1.0.0-beta.2",
     "@tetherto/wdk-wallet": "1.0.0-beta.7",
     "bare-node-runtime": "^1.1.4",
     "bip39": "3.1.0",

@@ -150,7 +150,7 @@ export type SolanaWalletConfig = {
      */
     commitment?: Commitment;
     /**
-     * - The number of retries in the failover mechanism.
+     * - If set and if 'rpcUrl' is a list of urls, the number of additional retry attempts after the initial call fails. Total attempts = `1 + retries`. For example, `retries: 3` with 4 providers will try each provider once before throwing. If `retries` exceeds the number of providers, the failover will loop back and retry already-failed providers in round-robin order (default: 3).
      */
     retries?: number;
     /**
