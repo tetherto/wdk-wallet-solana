@@ -210,35 +210,42 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       )
     )
 
-    const { value: accounts } = await this._rpc
-      .getMultipleAccounts(atas, {
-        commitment: this._commitment,
-        encoding: 'base64'
-      })
-      .send()
-
     const balances = {}
     const base64Encoder = getBase64Encoder()
+    // Solana's getMultipleAccounts RPC enforces a 100-pubkey limit per call.
+    const BATCH_SIZE = 100
 
-    for (let i = 0; i < uniqueTokenAddresses.length; i++) {
-      const tokenAddress = uniqueTokenAddresses[i]
-      const account = accounts[i]
+    for (let offset = 0; offset < atas.length; offset += BATCH_SIZE) {
+      const batchAtas = atas.slice(offset, offset + BATCH_SIZE)
+      const batchTokenAddresses = uniqueTokenAddresses.slice(offset, offset + BATCH_SIZE)
 
-      if (!account) {
-        balances[tokenAddress] = 0n
-        continue
+      const { value: accounts } = await this._rpc
+        .getMultipleAccounts(batchAtas, {
+          commitment: this._commitment,
+          encoding: 'base64'
+        })
+        .send()
+
+      for (let i = 0; i < batchTokenAddresses.length; i++) {
+        const tokenAddress = batchTokenAddresses[i]
+        const account = accounts[i]
+
+        if (!account) {
+          balances[tokenAddress] = 0n
+          continue
+        }
+
+        const dataBase64 = account.data[0]
+        const bytes = base64Encoder.encode(dataBase64)
+
+        const view = new DataView(
+          bytes.buffer,
+          bytes.byteOffset,
+          bytes.byteLength
+        )
+        const amount = view.getBigUint64(64, true)
+        balances[tokenAddress] = amount
       }
-
-      const dataBase64 = account.data[0]
-      const bytes = base64Encoder.encode(dataBase64)
-
-      const view = new DataView(
-        bytes.buffer,
-        bytes.byteOffset,
-        bytes.byteLength
-      )
-      const amount = view.getBigUint64(64, true)
-      balances[tokenAddress] = amount
     }
 
     return balances
