@@ -149,7 +149,7 @@ export type SimpleSolanaTransaction = {
 export type SolanaTransaction = SimpleSolanaTransaction | TransactionMessage;
 export type SolanaWalletConfig = {
     /**
-     * - The provider's rpc url. It's also possible to provide an array of urls instead. In such case, connection errors will cause the wallet to automatically fallback on the next provider in the list.
+     * - The provider's rpc url. If it's a list of urls, the provider failover strategy will be enabled.
      */
     rpcUrl?: string | string[];
     /**

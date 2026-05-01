@@ -29,23 +29,9 @@ import WalletAccountSolana from '../src/wallet-account-solana.js'
 
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
 const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
-const TEST_SEED_PHRASE = 'test walk nut penalty hip pave soap entry language right filter choice'
+const TEST_SEED_PHRASE =
+  'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mockurl.com'
-
-function createMockTokenAccountData (mint, owner, amount) {
-  const encoded = getTokenEncoder().encode({
-    mint,
-    owner,
-    amount,
-    delegate: null,
-    state: AccountState.Initialized,
-    isNative: null,
-    delegatedAmount: 0n,
-    closeAuthority: null
-  })
-
-  return [Buffer.from(encoded).toString('base64'), 'base64']
-}
 
 describe('WalletAccountReadOnlySolana', () => {
   let readOnlyAccount
@@ -57,6 +43,7 @@ describe('WalletAccountReadOnlySolana', () => {
     mockRpc = {
       getBalance: jest.fn(),
       getAccountInfo: jest.fn(),
+      getTokenAccountBalance: jest.fn(),
       getLatestBlockhash: jest.fn(),
       getFeeForMessage: jest.fn(),
       getTransaction: jest.fn(),
@@ -156,11 +143,18 @@ describe('WalletAccountReadOnlySolana', () => {
           value: {
             owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
             lamports: 2039280n,
-            data: createMockTokenAccountData(
-              MOCK_TOKEN_MINT,
-              TEST_ADDRESS,
-              1000000n
-            )
+            data: [Buffer.alloc(165).toString('base64'), 'base64']
+          }
+        })
+      })
+
+      mockRpc.getTokenAccountBalance.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: {
+            amount: '1000000',
+            decimals: 6,
+            uiAmount: 1.0,
+            uiAmountString: '1.0'
           }
         })
       })
@@ -169,17 +163,23 @@ describe('WalletAccountReadOnlySolana', () => {
 
       expect(balance).toBe(1000000n)
       expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(1)
+      expect(mockRpc.getTokenAccountBalance).toHaveBeenCalledTimes(1)
     })
 
     it('should return zero when ATA does not exist', async () => {
-      mockRpc.getAccountInfo.mockReturnValueOnce({
-        send: jest.fn().mockResolvedValue({ value: null })
-      })
+      mockRpc.getAccountInfo
+        .mockReturnValueOnce({
+          send: jest.fn().mockResolvedValue({ value: null })
+        })
+        .mockReturnValueOnce({
+          send: jest.fn().mockResolvedValue({ value: null })
+        })
 
       const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
 
       expect(balance).toBe(0n)
       expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(1)
+      expect(mockRpc.getTokenAccountBalance).not.toHaveBeenCalled()
     })
 
     it('should return zero balance when ATA exists but has no tokens', async () => {
@@ -188,11 +188,18 @@ describe('WalletAccountReadOnlySolana', () => {
           value: {
             owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
             lamports: 2039280n,
-            data: createMockTokenAccountData(
-              MOCK_TOKEN_MINT,
-              TEST_ADDRESS,
-              0n
-            )
+            data: [Buffer.alloc(165).toString('base64'), 'base64']
+          }
+        })
+      })
+
+      mockRpc.getTokenAccountBalance.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: {
+            amount: '0',
+            decimals: 6,
+            uiAmount: 0,
+            uiAmountString: '0'
           }
         })
       })
@@ -237,50 +244,60 @@ describe('WalletAccountReadOnlySolana', () => {
       ).rejects.toThrow('RPC error: Failed to fetch account info')
     })
 
-    it('should throw error when token account data cannot be decoded', async () => {
+    it('should throw error when getTokenAccountBalance fails', async () => {
       mockRpc.getAccountInfo.mockReturnValue({
         send: jest.fn().mockResolvedValue({
           value: {
             owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
             lamports: 2039280n,
-            data: ['invalid-token-account-data', 'base64']
+            data: [Buffer.alloc(165).toString('base64'), 'base64']
           }
         })
       })
 
+      mockRpc.getTokenAccountBalance.mockReturnValue({
+        send: jest
+          .fn()
+          .mockRejectedValue(new Error('Failed to get token balance'))
+      })
+
       await expect(
         readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
-      ).rejects.toThrow()
+      ).rejects.toThrow('Failed to get token balance')
     })
 
     it('should handle different token mints', async () => {
       const USDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
       const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
 
-      mockRpc.getAccountInfo
+      mockRpc.getAccountInfo.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: {
+            owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+            lamports: 2039280n,
+            data: [Buffer.alloc(165).toString('base64'), 'base64']
+          }
+        })
+      })
+
+      mockRpc.getTokenAccountBalance
         .mockReturnValueOnce({
           send: jest.fn().mockResolvedValue({
             value: {
-              owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-              lamports: 2039280n,
-              data: createMockTokenAccountData(
-                USDT_MINT,
-                TEST_ADDRESS,
-                1000000n
-              )
+              amount: '1000000',
+              decimals: 6,
+              uiAmount: 1.0,
+              uiAmountString: '1.0'
             }
           })
         })
         .mockReturnValueOnce({
           send: jest.fn().mockResolvedValue({
             value: {
-              owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-              lamports: 2039280n,
-              data: createMockTokenAccountData(
-                USDC_MINT,
-                TEST_ADDRESS,
-                5000000n
-              )
+              amount: '5000000',
+              decimals: 6,
+              uiAmount: 5.0,
+              uiAmountString: '5.0'
             }
           })
         })
