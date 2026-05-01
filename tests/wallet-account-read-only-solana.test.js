@@ -59,7 +59,8 @@ describe('WalletAccountReadOnlySolana', () => {
       getAccountInfo: jest.fn(),
       getLatestBlockhash: jest.fn(),
       getFeeForMessage: jest.fn(),
-      getTransaction: jest.fn()
+      getTransaction: jest.fn(),
+      getMultipleAccounts: jest.fn()
     }
 
     readOnlyAccount._rpc = mockRpc
@@ -311,6 +312,165 @@ describe('WalletAccountReadOnlySolana', () => {
         usdcAta,
         expect.objectContaining({ commitment: 'confirmed', encoding: 'base64' })
       )
+    })
+  })
+
+  describe('getTokenBalances', () => {
+    const MOCK_TOKEN_MINT_1 = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
+    const MOCK_TOKEN_MINT_2 = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+
+    /**
+     * Creates mock SPL token account data with the given amount at offset 64 (little-endian u64).
+     * Standard SPL token account is 165 bytes.
+     */
+    function createTokenAccountData (amount) {
+      const buffer = Buffer.alloc(165)
+      buffer.writeBigUInt64LE(BigInt(amount), 64)
+      return buffer.toString('base64')
+    }
+
+    it('should return balances for multiple tokens', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [
+            { data: [createTokenAccountData(1000000), 'base64'], owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', lamports: 2039280n },
+            { data: [createTokenAccountData(5000000), 'base64'], owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', lamports: 2039280n }
+          ]
+        })
+      })
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
+
+      expect(balances[MOCK_TOKEN_MINT_1]).toBe(1000000n)
+      expect(balances[MOCK_TOKEN_MINT_2]).toBe(5000000n)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(1)
+    })
+
+    it('should return 0n for tokens where ATA does not exist', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [null, null]
+        })
+      })
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
+
+      expect(balances[MOCK_TOKEN_MINT_1]).toBe(0n)
+      expect(balances[MOCK_TOKEN_MINT_2]).toBe(0n)
+    })
+
+    it('should handle mix of existing and non-existing ATAs', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [
+            { data: [createTokenAccountData(1000000), 'base64'], owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', lamports: 2039280n },
+            null
+          ]
+        })
+      })
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
+
+      expect(balances[MOCK_TOKEN_MINT_1]).toBe(1000000n)
+      expect(balances[MOCK_TOKEN_MINT_2]).toBe(0n)
+    })
+
+    it('should deduplicate token addresses', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [
+            { data: [createTokenAccountData(1000000), 'base64'], owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', lamports: 2039280n }
+          ]
+        })
+      })
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_1])
+
+      expect(Object.keys(balances)).toHaveLength(1)
+      expect(balances[MOCK_TOKEN_MINT_1]).toBe(1000000n)
+      const callArgs = mockRpc.getMultipleAccounts.mock.calls[0]
+      expect(callArgs[0]).toHaveLength(1)
+    })
+
+    it('should handle single token address', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [
+            { data: [createTokenAccountData(999999), 'base64'], owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', lamports: 2039280n }
+          ]
+        })
+      })
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1])
+
+      expect(balances[MOCK_TOKEN_MINT_1]).toBe(999999n)
+      expect(Object.keys(balances)).toHaveLength(1)
+    })
+
+    it('should handle zero balance in existing ATA', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [
+            { data: [createTokenAccountData(0), 'base64'], owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', lamports: 2039280n }
+          ]
+        })
+      })
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1])
+
+      expect(balances[MOCK_TOKEN_MINT_1]).toBe(0n)
+    })
+
+    it('should handle empty token addresses array', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: []
+        })
+      })
+
+      const balances = await readOnlyAccount.getTokenBalances([])
+
+      expect(balances).toEqual({})
+    })
+
+    it('should throw error when not connected to provider', async () => {
+      const disconnectedAccount = new WalletAccountReadOnlySolana(TEST_ADDRESS, {})
+
+      await expect(disconnectedAccount.getTokenBalances([MOCK_TOKEN_MINT_1])).rejects.toThrow(
+        'The wallet must be connected to a provider to retrieve token balances.'
+      )
+    })
+
+    it('should handle RPC error from getMultipleAccounts', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockRejectedValue(new Error('RPC error: Failed to fetch accounts'))
+      })
+
+      await expect(readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1])).rejects.toThrow(
+        'RPC error: Failed to fetch accounts'
+      )
+    })
+
+    it('should pass commitment and encoding to getMultipleAccounts', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [null]
+        })
+      })
+
+      await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1])
+
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          commitment: 'confirmed',
+          encoding: 'base64'
+        })
+      )
+    })
+
+    it('should throw error for invalid token mint address', async () => {
+      await expect(readOnlyAccount.getTokenBalances(['invalid-mint'])).rejects.toThrow()
     })
   })
 
