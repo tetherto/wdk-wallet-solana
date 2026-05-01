@@ -29,7 +29,7 @@ import WalletManagerSolana from '@tetherto/wdk-wallet-solana'
 const seedPhrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
 
 const wallet = new WalletManagerSolana(seedPhrase, {
-  rpcUrl: 'https://api.devnet.solana.com',
+  provider: 'https://api.devnet.solana.com',
   commitment: 'confirmed',
 })
 

@@ -34,7 +34,7 @@ describe('WalletManagerSolana', () => {
 
   beforeEach(() => {
     wallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-      rpcUrl: TEST_RPC_URL,
+      provider: TEST_RPC_URL,
       commitment: 'confirmed'
     })
   })
@@ -47,7 +47,7 @@ describe('WalletManagerSolana', () => {
 
     it('should create wallet manager with string seed phrase', () => {
       const newWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-        rpcUrl: TEST_RPC_URL
+        provider: TEST_RPC_URL
       })
       expect(newWallet).toBeInstanceOf(WalletManagerSolana)
     })

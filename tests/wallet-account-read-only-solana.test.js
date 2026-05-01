@@ -57,7 +57,7 @@ describe('WalletAccountReadOnlySolana', () => {
   describe('Constructor', () => {
     it('should create instance with valid config', () => {
       const account = new WalletAccountReadOnlySolana(TEST_ADDRESS, {
-        rpcUrl: TEST_RPC_URL,
+        provider: TEST_RPC_URL,
         commitment: 'confirmed'
       })
 
@@ -66,14 +66,14 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(account._commitment).toBe('confirmed')
     })
 
-    it('should create instance without rpcUrl', () => {
+    it('should create instance without provider', () => {
       const account = new WalletAccountReadOnlySolana(TEST_ADDRESS, {})
       expect(account._rpc).toBeUndefined()
     })
 
     it('should use default commitment level', () => {
       const account = new WalletAccountReadOnlySolana(TEST_ADDRESS, {
-        rpcUrl: TEST_RPC_URL
+        provider: TEST_RPC_URL
       })
       expect(account._commitment).toBe('confirmed')
     })
@@ -1137,7 +1137,7 @@ describe('WalletAccountReadOnlySolana', () => {
         TEST_SEED_PHRASE,
         "0'/0'/0'",
         {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'processed'
         }
       )
@@ -1164,7 +1164,7 @@ describe('WalletAccountReadOnlySolana', () => {
         TEST_SEED_PHRASE,
         "0'/0'/0'",
         {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'processed'
         }
       )
