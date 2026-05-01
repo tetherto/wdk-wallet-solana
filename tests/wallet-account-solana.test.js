@@ -38,7 +38,7 @@ describe('WalletAccountSolana', () => {
 
   beforeAll(async () => {
     wallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-      rpcUrl: TEST_RPC_URL,
+      provider: TEST_RPC_URL,
       commitment: 'processed'
     })
 
@@ -52,7 +52,7 @@ describe('WalletAccountSolana', () => {
             'invalid word that does not exist test test test test test test test',
             "0'/0'/0'",
             {
-              rpcUrl: TEST_RPC_URL,
+              provider: TEST_RPC_URL,
               commitment: 'processed'
             }
           )
@@ -64,7 +64,7 @@ describe('WalletAccountSolana', () => {
           TEST_SEED_PHRASE,
           "0'/0'/0'",
           {
-            rpcUrl: TEST_RPC_URL,
+            provider: TEST_RPC_URL,
             commitment: 'confirmed'
           }
         )
@@ -200,7 +200,7 @@ describe('WalletAccountSolana', () => {
     describe('dispose', () => {
       it('should clear private key from memory', async () => {
         const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'confirmed'
         })
         const tempAccount = await tempWallet.getAccount(99)
@@ -216,7 +216,7 @@ describe('WalletAccountSolana', () => {
 
       it('should dispose all accounts when wallet manager is disposed', async () => {
         const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'confirmed'
         })
 
@@ -236,7 +236,7 @@ describe('WalletAccountSolana', () => {
       })
       it('should keep public key accessible after disposal', async () => {
         const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'confirmed'
         })
         const tempAccount = await tempWallet.getAccount(98)
@@ -278,7 +278,7 @@ describe('WalletAccountSolana', () => {
 
       it('should throw error after account disposal', async () => {
         const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'confirmed'
         })
         const tempAccount = await tempWallet.getAccount(95)
@@ -331,7 +331,7 @@ describe('WalletAccountSolana', () => {
 
       it('should throw if account is disposed', async () => {
         const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'confirmed'
         })
         const tempAccount = await tempWallet.getAccount(90)
@@ -630,7 +630,7 @@ describe('WalletAccountSolana', () => {
 
       it('should throw if account is disposed', async () => {
         const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'confirmed'
         })
         const tempAccount = await tempWallet.getAccount(89)
@@ -709,7 +709,7 @@ describe('WalletAccountSolana', () => {
     describe('Fee Limit', () => {
       it('should respect transferMaxFee configuration', async () => {
         const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'confirmed',
           transferMaxFee: 10000n
         })
@@ -740,7 +740,7 @@ describe('WalletAccountSolana', () => {
 
       it('should allow transfer if fee is below limit', async () => {
         const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
-          rpcUrl: TEST_RPC_URL,
+          provider: TEST_RPC_URL,
           commitment: 'confirmed',
           transferMaxFee: 10000n
         })

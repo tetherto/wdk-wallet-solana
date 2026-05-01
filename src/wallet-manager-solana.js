@@ -53,7 +53,8 @@ export default class WalletManagerSolana extends WalletManager {
      */
     this._config = config
 
-    const { rpcUrl, commitment = 'confirmed', retries = 3 } = config
+    const { provider: providerOption, rpcUrl, commitment = 'confirmed', retries = 3 } = config
+    const rpcTarget = providerOption ?? rpcUrl
 
     /**
      * The commitment level for transactions.
@@ -71,17 +72,17 @@ export default class WalletManagerSolana extends WalletManager {
      */
     this._rpc = undefined
 
-    if (Array.isArray(rpcUrl)) {
-      if (rpcUrl.length > 0) {
+    if (Array.isArray(rpcTarget)) {
+      if (rpcTarget.length > 0) {
         const failoverProvider = new FailoverProvider({ retries })
-        for (const entry of rpcUrl) {
+        for (const entry of rpcTarget) {
           const option = createSolanaRpc(entry)
           failoverProvider.addProvider(option)
         }
         this._rpc = failoverProvider.initialize()
       }
-    } else if (rpcUrl) {
-      this._rpc = createSolanaRpc(rpcUrl)
+    } else if (rpcTarget) {
+      this._rpc = createSolanaRpc(rpcTarget)
     }
   }
 

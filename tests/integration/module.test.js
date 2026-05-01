@@ -245,7 +245,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
       await sendTestTokensTo(account.address, INITIAL_TOKEN_BALANCE)
     }
 
-    wallet = new WalletManagerSolana(SEED_PHRASE, { rpcUrl: TEST_RPC_URL })
+    wallet = new WalletManagerSolana(SEED_PHRASE, { provider: TEST_RPC_URL })
   })
 
   afterEach(async () => {
@@ -391,7 +391,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
   test('should create a wallet with a low transfer max fee, derive an account, try to transfer some tokens and gracefully fail', async () => {
     const wallet = new WalletManagerSolana(SEED_PHRASE, {
-      rpcUrl: TEST_RPC_URL,
+      provider: TEST_RPC_URL,
       transferMaxFee: 0
     })
 
