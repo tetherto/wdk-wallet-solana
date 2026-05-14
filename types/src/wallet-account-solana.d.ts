@@ -1,8 +1,10 @@
 /**
- * Full-featured Solana wallet account implementation with signing capabilities.
- *
+ * Assert the full path is hardened.
+ * @param {string} path The derivation path.
  */
-export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
+export function assertFullHardenedPath(path: string): void;
+/** @implements {IWalletAccount} */
+export default class WalletAccountSolana extends WalletAccountReadOnlySolana implements IWalletAccount {
     /**
      * Creates a new solana wallet account.
      *
@@ -13,8 +15,11 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      */
     static at(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig): Promise<WalletAccountSolana>;
     /**
-     * @private
-     * Use {@link WalletAccountSolana.at} instead.
+     * Creates a new solana wallet account.
+     *
+     * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+     * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
+     * @param {SolanaWalletConfig} [config] - The configuration object.
      */
     private constructor();
     /**
@@ -89,6 +94,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * @returns {Promise<TransactionResult>} The transaction's result.
      */
     sendTransaction(tx: SolanaTransaction): Promise<TransactionResult>;
+    /** @private */
+    private _prepareTransactionMessage;
     /**
      * Transfers a token to another address.
      *
@@ -107,8 +114,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * Disposes the wallet account, erasing the private key from the memory.
      */
     dispose(): void;
-    /** @private */
-    private _prepareTransactionMessage;
+    /**
+     * Creates a new {@link KeyPairSigner} from a 32-bytes `Uint8Array` private key.
+     *
+     * @private
+     * @returns {Promise<KeyPairSigner>} - The keypair signer
+     */
+    _getSigner(): Promise<KeyPairSigner>;
 }
 export type IWalletAccount = import("@tetherto/wdk-wallet").IWalletAccount;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;

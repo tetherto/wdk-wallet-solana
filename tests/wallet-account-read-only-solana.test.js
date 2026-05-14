@@ -1133,7 +1133,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
   describe('verify', () => {
     it('should verify signature for same message across multiple verifications', async () => {
-      const account = await WalletAccountSolana.at(
+      const account = new WalletAccountSolana(
         TEST_SEED_PHRASE,
         "0'/0'/0'",
         {
@@ -1160,7 +1160,7 @@ describe('WalletAccountReadOnlySolana', () => {
     })
 
     it('should reject signature for different message', async () => {
-      const account = await WalletAccountSolana.at(
+      const account = new WalletAccountSolana(
         TEST_SEED_PHRASE,
         "0'/0'/0'",
         {

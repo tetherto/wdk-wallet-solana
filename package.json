@@ -21,12 +21,15 @@
     "build:types": "tsc",
     "lint": "standard --env jest",
     "lint:fix": "standard --fix --env jest",
+    "debug": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/debug.test.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns='tests/integration'",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns='tests/integration' --coverage",
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
     "test:integration:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --coverage"
   },
   "dependencies": {
+    "@noble/ed25519": "^3.1.0",
+    "@noble/hashes": "^2.2.0",
     "@solana-program/system": "0.9.0",
     "@solana-program/token": "0.7.0",
     "@solana/addresses": "3.0.3",

@@ -31,6 +31,12 @@ import { sodium_memzero } from 'sodium-universal'
 
 import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
+import * as curve from '@noble/ed25519'
+import { sha512 } from '@noble/hashes/sha2.js'
+
+// To enable @noble's synchronous methods
+curve.hashes.sha512 = sha512
+
 /** @typedef {import("@tetherto/wdk-wallet").IWalletAccount} IWalletAccount */
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
@@ -58,14 +64,14 @@ function assertFullHardenedPath (path) {
   }
 }
 
-/**
- * Full-featured Solana wallet account implementation with signing capabilities.
- *
- */
+/** @implements {IWalletAccount} */
 export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
-   * @private
-   * Use {@link WalletAccountSolana.at} instead.
+   * Creates a new solana wallet account.
+   *
+   * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
+   * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
+   * @param {SolanaWalletConfig} [config] - The configuration object.
    */
   constructor (seed, path, config = {}) {
     if (typeof seed === 'string') {
@@ -107,42 +113,35 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     this._signer = undefined
 
     /**
-     * Raw Ed25519 public key bytes (32 bytes).
-     *
-     * @private
-     * @type {Uint8Array | undefined}
-     */
-    this._rawPublicKey = undefined
-
-    /**
      * Raw Ed25519 private key bytes (32 bytes).
      *
      * @private
      * @type {Uint8Array | undefined}
      */
-    this._rawPrivateKey = undefined
+    this._rawPrivateKey = HDKey.fromMasterSeed(this._seed)
+      .derive(this._path, true)
+      .privateKey
+
+    /**
+     * Raw Ed25519 public key bytes (32 bytes).
+     *
+     * @private
+     * @type {Uint8Array | undefined}
+     */
+    this._rawPublicKey = curve.getPublicKey(this._rawPrivateKey)
   }
 
   /**
    * Creates a new solana wallet account.
    *
+   * @deprecated
    * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
    * @param {SolanaWalletConfig} [config] - The configuration object.
    * @returns {Promise<WalletAccountSolana>} The wallet account.
    */
   static async at (seed, path, config = {}) {
-    const account = new WalletAccountSolana(seed, path, config)
-
-    const hdKey = HDKey.fromMasterSeed(account._seed)
-    const { privateKey } = hdKey.derive(account._path, true)
-    account._signer = await createKeyPairSignerFromPrivateKeyBytes(privateKey)
-    const publicKey = await crypto.subtle.exportKey('raw', account._signer.keyPair.publicKey)
-    account._rawPublicKey = new Uint8Array(publicKey)
-    account._rawPrivateKey = new Uint8Array(privateKey)
-    sodium_memzero(privateKey)
-
-    return account
+    return new WalletAccountSolana(seed, path, config)
   }
 
   /**
@@ -186,7 +185,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @returns {Promise<string>} The address.
    */
   async getAddress () {
-    return this._signer.address
+    const signer = await this._getSigner()
+    return signer.address
   }
 
   /**
@@ -196,11 +196,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @returns {Promise<string>} The message's signature.
    */
   async sign (message) {
-    if (!this._signer) {
+    if (!this._rawPrivateKey) {
       throw new Error('The wallet account has been disposed.')
     }
+
+    const signer = await this._getSigner()
     const messageBytes = Buffer.from(message, 'utf8')
-    const signatureBytes = await signBytes(this._signer.keyPair.privateKey, messageBytes)
+    const signatureBytes = await signBytes(signer.keyPair.privateKey, messageBytes)
     const signature = Buffer.from(signatureBytes).toString('hex')
 
     return signature
@@ -213,7 +215,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @returns {Promise<FullySignedTransaction>} The signed transaction.
    */
   async signTransaction (tx) {
-    if (!this._signer) {
+    if (!this._rawPrivateKey) {
       throw new Error('The wallet account has been disposed.')
     }
 
@@ -233,7 +235,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @returns {Promise<TransactionResult>} The transaction's result.
    */
   async sendTransaction (tx) {
-    if (!this._signer) {
+    if (!this._rawPrivateKey) {
       throw new Error('The wallet account has been disposed.')
     }
 
@@ -265,9 +267,10 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     }
 
     if (Array.isArray(transactionMessage.instructions)) {
+      const signer = await this._getSigner()
       transactionMessage = await this._ensureLifetime(transactionMessage)
       await this._assertFeePayer(transactionMessage)
-      transactionMessage = setTransactionMessageFeePayerSigner(this._signer, transactionMessage)
+      transactionMessage = setTransactionMessageFeePayerSigner(signer, transactionMessage)
     }
 
     return transactionMessage
@@ -281,7 +284,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @note only SPL tokens - won't work for native SOL
    */
   async transfer (options) {
-    if (!this._signer) {
+    if (!this._rawPrivateKey) {
       throw new Error('The wallet account has been disposed.')
     }
 
@@ -324,5 +327,19 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     this._rawPrivateKey = undefined
     this._signer = undefined
     this._seed = undefined
+  }
+
+  /**
+   * Creates a new {@link KeyPairSigner} from a 32-bytes `Uint8Array` private key.
+   *
+   * @private
+   * @returns {Promise<KeyPairSigner>} - The keypair signer
+   */
+  async _getSigner () {
+    if (!this._signer) {
+      this._signer = await createKeyPairSignerFromPrivateKeyBytes(this._rawPrivateKey)
+    }
+
+    return this._signer
   }
 }

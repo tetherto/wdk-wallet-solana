@@ -1,12 +1,13 @@
 export { default } from "./src/wallet-manager-solana.js";
 export { default as WalletAccountReadOnlySolana } from "./src/wallet-account-read-only-solana.js";
 export { default as WalletAccountSolana } from "./src/wallet-account-solana.js";
-export type SolanaTransactionReceipt = ReturnType<import("@solana/rpc-api").SolanaRpcApi["getTransaction"]>;
+export * from "./src/wallet-account-solana.js";
 export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type SimpleSolanaTransaction = import("./src/wallet-account-read-only-solana.js").SimpleSolanaTransaction;
+export type SolanaTransactionReceipt = import("./src/wallet-account-read-only-solana.js").SolanaTransactionReceipt;
 export type SolanaTransaction = import("./src/wallet-account-solana.js").SolanaTransaction;
 export type SolanaWalletConfig = import("./src/wallet-account-solana.js").SolanaWalletConfig;

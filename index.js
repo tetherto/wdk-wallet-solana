@@ -13,8 +13,6 @@
 // limitations under the License.
 'use strict'
 
-/** @typedef {ReturnType<import("@solana/rpc-api").SolanaRpcApi['getTransaction']>} SolanaTransactionReceipt */
-
 /** @typedef {import('@tetherto/wdk-wallet').FeeRates} FeeRates */
 
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
@@ -23,6 +21,8 @@
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
 
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SimpleSolanaTransaction} SimpleSolanaTransaction */
+/** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransactionReceipt} SolanaTransactionReceipt */
+
 /** @typedef {import('./src/wallet-account-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./src/wallet-account-solana.js').SolanaWalletConfig} SolanaWalletConfig */
 

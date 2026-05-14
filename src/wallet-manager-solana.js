@@ -23,7 +23,7 @@ import { createSolanaRpc } from '@solana/rpc'
 import WalletAccountSolana from './wallet-account-solana.js'
 
 /** @typedef {ReturnType<typeof import('@solana/rpc').createSolanaRpc>} SolanaRpc */
-/** @typedef {import("@solana/rpc-types").Commitment} Commitment */
+/** @typedef {import('@solana/rpc-types').Commitment} Commitment */
 
 /** @typedef {import('@tetherto/wdk-wallet').FeeRates} FeeRates */
 
@@ -110,7 +110,7 @@ export default class WalletManagerSolana extends WalletManager {
    */
   async getAccountByPath (path) {
     if (!this._accounts[path]) {
-      const account = await WalletAccountSolana.at(this.seed, path, this._config)
+      const account = new WalletAccountSolana(this.seed, path, this._config)
 
       this._accounts[path] = account
     }
