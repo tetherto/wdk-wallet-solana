@@ -1,13 +1,9 @@
-/**
- * Assert the full path is hardened.
- * @param {string} path The derivation path.
- */
-export function assertFullHardenedPath(path: string): void;
 /** @implements {IWalletAccount} */
 export default class WalletAccountSolana extends WalletAccountReadOnlySolana implements IWalletAccount {
     /**
      * Creates a new solana wallet account.
      *
+     * @deprecated
      * @param {string | Uint8Array} seed - The wallet's [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
      * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
      * @param {SolanaWalletConfig} [config] - The configuration object.
@@ -21,7 +17,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
      * @param {SolanaWalletConfig} [config] - The configuration object.
      */
-    private constructor();
+    constructor(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig);
     /**
      * @private
      */

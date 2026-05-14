@@ -206,12 +206,11 @@ describe('WalletAccountSolana', () => {
         const tempAccount = await tempWallet.getAccount(99)
 
         const keyPairBefore = tempAccount.keyPair
-        expect(keyPairBefore.privateKey).not.toBeNull()
-        expect(keyPairBefore.privateKey).not.toBeUndefined()
+        expect(keyPairBefore.privateKey).toBeTruthy()
 
         tempAccount.dispose()
         const keyPairAfter = tempAccount.keyPair
-        expect(keyPairAfter.privateKey).toBeNull
+        expect(keyPairAfter.privateKey).toBeUndefined()
       })
 
       it('should dispose all accounts when wallet manager is disposed', async () => {
@@ -224,15 +223,15 @@ describe('WalletAccountSolana', () => {
         const account1 = await tempWallet.getAccount(1)
         const account2 = await tempWallet.getAccount(2)
 
-        expect(account0.keyPair.privateKey).not.toBeNull
-        expect(account1.keyPair.privateKey).not.toBeNull
-        expect(account2.keyPair.privateKey).not.toBeNull
+        expect(account0.keyPair.privateKey).toBeTruthy()
+        expect(account1.keyPair.privateKey).toBeTruthy()
+        expect(account2.keyPair.privateKey).toBeTruthy()
 
         tempWallet.dispose()
 
-        expect(account0.keyPair.privateKey).toBeNull
-        expect(account1.keyPair.privateKey).toBeNull
-        expect(account2.keyPair.privateKey).toBeNull
+        expect(account0.keyPair.privateKey).toBeUndefined()
+        expect(account1.keyPair.privateKey).toBeUndefined()
+        expect(account2.keyPair.privateKey).toBeUndefined()
       })
       it('should keep public key accessible after disposal', async () => {
         const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
