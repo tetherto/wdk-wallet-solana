@@ -21,7 +21,6 @@
     "build:types": "tsc",
     "lint": "standard --env jest",
     "lint:fix": "standard --fix --env jest",
-    "debug": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/debug.test.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns='tests/integration'",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns='tests/integration' --coverage",
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",

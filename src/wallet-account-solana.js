@@ -116,7 +116,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * Raw Ed25519 private key bytes (32 bytes).
      *
      * @private
-     * @type {Uint8Array | undefined}
+     * @type {Uint8Array | null}
      */
     this._rawPrivateKey = HDKey.fromMasterSeed(this._seed)
       .derive(this._path, true)
@@ -126,7 +126,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * Raw Ed25519 public key bytes (32 bytes).
      *
      * @private
-     * @type {Uint8Array | undefined}
+     * @type {Uint8Array}
      */
     this._rawPublicKey = curve.getPublicKey(this._rawPrivateKey)
   }
@@ -324,7 +324,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    */
   dispose () {
     sodium_memzero(this._rawPrivateKey)
-    this._rawPrivateKey = undefined
+    this._rawPrivateKey = null
     this._signer = undefined
     this._seed = undefined
   }

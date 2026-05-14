@@ -210,7 +210,7 @@ describe('WalletAccountSolana', () => {
 
         tempAccount.dispose()
         const keyPairAfter = tempAccount.keyPair
-        expect(keyPairAfter.privateKey).toBeUndefined()
+        expect(keyPairAfter.privateKey).toBeNull()
       })
 
       it('should dispose all accounts when wallet manager is disposed', async () => {
@@ -229,10 +229,11 @@ describe('WalletAccountSolana', () => {
 
         tempWallet.dispose()
 
-        expect(account0.keyPair.privateKey).toBeUndefined()
-        expect(account1.keyPair.privateKey).toBeUndefined()
-        expect(account2.keyPair.privateKey).toBeUndefined()
+        expect(account0.keyPair.privateKey).toBeNull()
+        expect(account1.keyPair.privateKey).toBeNull()
+        expect(account2.keyPair.privateKey).toBeNull()
       })
+
       it('should keep public key accessible after disposal', async () => {
         const tempWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
           provider: TEST_RPC_URL,
