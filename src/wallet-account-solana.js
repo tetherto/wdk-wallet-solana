@@ -21,6 +21,7 @@ import {
 } from '@solana/signers'
 import { getBase64EncodedWireTransaction } from '@solana/transactions'
 import { signBytes } from '@solana/keys'
+import { getAddressDecoder } from '@solana/addresses'
 
 import HDKey from 'micro-key-producer/slip10.js'
 
@@ -29,10 +30,10 @@ import * as bip39 from 'bip39'
 // eslint-disable-next-line camelcase
 import { sodium_memzero } from 'sodium-universal'
 
-import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
-
 import * as curve from '@noble/ed25519'
 import { sha512 } from '@noble/hashes/sha2.js'
+
+import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
 // To enable @noble's synchronous methods
 curve.hashes.sha512 = sha512
@@ -84,7 +85,15 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     assertFullHardenedPath(path)
 
-    super(undefined, config)
+    const fullPath = `${SLIP_0010_SOL_DERIVATION_PATH_PREFIX}/${path}`
+
+    const { privateKey } = HDKey.fromMasterSeed(seed).derive(fullPath, true)
+
+    const publicKey = curve.getPublicKey(privateKey)
+
+    const address = getAddressDecoder().decode(publicKey)
+
+    super(address, config)
 
     /**
      * The wallet account configuration.
@@ -102,7 +111,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     /**
      * @private
      */
-    this._path = `${SLIP_0010_SOL_DERIVATION_PATH_PREFIX}/${path}`
+    this._path = fullPath
 
     /**
      * The Ed25519 key pair signer for signing transactions.
@@ -118,9 +127,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * @private
      * @type {Uint8Array | null}
      */
-    this._rawPrivateKey = HDKey.fromMasterSeed(this._seed)
-      .derive(this._path, true)
-      .privateKey
+    this._rawPrivateKey = privateKey
 
     /**
      * Raw Ed25519 public key bytes (32 bytes).
@@ -128,7 +135,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * @private
      * @type {Uint8Array}
      */
-    this._rawPublicKey = curve.getPublicKey(this._rawPrivateKey)
+    this._rawPublicKey = publicKey
   }
 
   /**
