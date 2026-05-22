@@ -13,5 +13,9 @@ jobs:
       name: npm
     name: Publish
     steps:
-      - uses: holepunchto/actions/node-base@v1
-      - uses: holepunchto/actions/publish@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - run: npm install -g npm@latest
+      - run: npm publish --access public --provenance
