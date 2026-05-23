@@ -10,7 +10,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     environment:
-      name: npm
+      name: release
     name: Publish
     steps:
       - uses: holepunchto/actions/node-base@v1
