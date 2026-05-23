@@ -125,7 +125,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
      * Raw Ed25519 private key bytes (32 bytes).
      *
      * @private
-     * @type {Uint8Array | null}
+     * @type {Uint8Array | undefined}
      */
     this._rawPrivateKey = privateKey
 
@@ -173,15 +173,15 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
    * The account's key pair.
    *
-   * Returns the raw key pair bytes in standard Solana format.
-   * - privateKey: 32-byte Ed25519 secret key (Uint8Array)
-   * - publicKey: 32-byte Ed25519 public key (Uint8Array)
+   * The uint8 arrays are bound to the wallet account, so any external change will reflect to the internal representation. For this reason,
+   * it's strongly recommended to treat the key pair as a read-only view of the keys. While it's still technically possible to alter their
+   * content, client code should never do so.
    *
    * @type {KeyPair}
    */
   get keyPair () {
     return {
-      privateKey: this._rawPrivateKey,
+      privateKey: this._rawPrivateKey ?? null,
       publicKey: this._rawPublicKey
     }
   }
@@ -331,7 +331,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    */
   dispose () {
     sodium_memzero(this._rawPrivateKey)
-    this._rawPrivateKey = null
+    this._rawPrivateKey = undefined
     this._signer = undefined
     this._seed = undefined
   }

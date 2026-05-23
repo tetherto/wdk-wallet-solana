@@ -62,9 +62,9 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
     /**
      * The account's key pair.
      *
-     * Returns the raw key pair bytes in standard Solana format.
-     * - privateKey: 32-byte Ed25519 secret key (Uint8Array)
-     * - publicKey: 32-byte Ed25519 public key (Uint8Array)
+     * The uint8 arrays are bound to the wallet account, so any external change will reflect to the internal representation. For this reason,
+     * it's strongly recommended to treat the key pair as a read-only view of the keys. While it's still technically possible to alter their
+     * content, client code should never do so.
      *
      * @type {KeyPair}
      */
