@@ -232,6 +232,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     const transactionMessage = await this._prepareTransactionMessage(tx)
 
+    if (this._config.transactionMaxFee !== undefined) {
+      const fee = await this._getTransactionFee(transactionMessage)
+      if (fee >= this._config.transactionMaxFee) {
+        throw new Error('Exceeded maximum fee cost for transaction operation.')
+      }
+    }
+
     return await signTransactionMessageWithSigners(transactionMessage)
   }
 
@@ -253,6 +260,10 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     const transactionMessage = await this._prepareTransactionMessage(tx)
 
     const fee = await this._getTransactionFee(transactionMessage)
+
+    if (this._config.transactionMaxFee !== undefined && fee >= this._config.transactionMaxFee) {
+      throw new Error('Exceeded maximum fee cost for transaction operation.')
+    }
 
     const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
 

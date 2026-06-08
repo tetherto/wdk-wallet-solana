@@ -6,16 +6,16 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * Creates a new solana read-only wallet account.
      *
      * @param {string} addr - The account's address.
-     * @param {Omit<SolanaWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
+     * @param {Omit<SolanaWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
      */
-    constructor(addr: string, config?: Omit<SolanaWalletConfig, "transferMaxFee">);
+    constructor(addr: string, config?: Omit<SolanaWalletConfig, "transferMaxFee" | "transactionMaxFee">);
     /**
      * The read-only wallet account configuration.
      *
      * @protected
-     * @type {Omit<SolanaWalletConfig, 'transferMaxFee'>}
+     * @type {Omit<SolanaWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>}
      */
-    protected _config: Omit<SolanaWalletConfig, "transferMaxFee">;
+    protected _config: Omit<SolanaWalletConfig, "transferMaxFee" | "transactionMaxFee">;
     /**
      * A Solana RPC client for HTTP requests.
      *
@@ -168,5 +168,9 @@ export type SolanaWalletConfig = {
      * - Maximum allowed fee in lamports for transfer operations.
      */
     transferMaxFee?: number | bigint;
+    /**
+     * - The maximum fee amount for sendTransaction and signTransaction operations.
+     */
+    transactionMaxFee?: number | bigint;
 };
 import { WalletAccountReadOnly } from "@tetherto/wdk-wallet";
