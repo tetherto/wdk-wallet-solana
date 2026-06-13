@@ -44,7 +44,10 @@
     "bare-node-runtime": "^1.1.4",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
-    "sodium-universal": "5.0.1"
+    "sodium-universal": "5.0.1",
+    "@hinkal/common": "^0.2.36",
+    "@solana/web3.js": "1.98.0",
+    "tweetnacl": "1.0.3"
   },
   "devDependencies": {
     "@solana/kit": "4.0.0",
