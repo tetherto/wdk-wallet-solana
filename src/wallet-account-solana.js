@@ -33,8 +33,8 @@ import { sodium_memzero } from 'sodium-universal'
 import * as curve from '@noble/ed25519'
 import { sha512 } from '@noble/hashes/sha2.js'
 
-import { Keypair } from "@solana/web3.js";
-import nacl from "tweetnacl";
+import { Keypair, PublicKey } from '@solana/web3.js'
+import nacl from 'tweetnacl'
 
 import {
   getERC20Token,
@@ -42,9 +42,9 @@ import {
   getCurrentTimeInSeconds,
   getFeeStructure,
   ExternalActionId,
-  HINKAL_PRIVATE_SEND_VARIABLE_RATE,
-} from "@hinkal/common";
-import { prepareSolanaHinkal } from "@hinkal/common/providers/prepareSolanaHinkal";
+  HINKAL_PRIVATE_SEND_VARIABLE_RATE
+} from '@hinkal/common'
+import { prepareSolanaHinkal } from '@hinkal/common/providers/prepareSolanaHinkal'
 
 import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
@@ -65,6 +65,8 @@ curve.hashes.sha512 = sha512
 /** @typedef {import('@solana/transactions').FullySignedTransaction} FullySignedTransaction */
 
 const SLIP_0010_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
+
+const DEFAULT_NULLIFIER_COUNT = 2
 
 /**
  * Assert the full path is hardened.
@@ -356,7 +358,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       async signMessage (message) {
         return {
           signature: nacl.sign.detached(message, keypair.secretKey),
-          publicKey: keypair.publicKey,
+          publicKey: keypair.publicKey
         }
       }
     }
@@ -393,6 +395,15 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @throws {Error} If the token is not supported by Hinkal on the current chain.
    */
   async privateSend ({ token, recipient, amount }) {
+    try {
+      new PublicKey(recipient)
+    } catch {
+      throw new Error('Invalid Solana recipient address.')
+    }
+    const parsedAmount = BigInt(amount)
+    if (parsedAmount <= 0n) {
+      throw new Error('Amount must be positive.')
+    }
     const { hinkal, erc20Token } = await this._prepareHinkal(token)
 
     const feeStructure = await getFeeStructure(
@@ -402,15 +413,15 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       ExternalActionId.Transact,
       [],
       HINKAL_PRIVATE_SEND_VARIABLE_RATE,
-      { mintTo: erc20Token.erc20TokenAddress, recipient, nullifierCount: 2 },
+      { mintTo: erc20Token.erc20TokenAddress, recipient, nullifierCount: DEFAULT_NULLIFIER_COUNT }
     )
 
     const hash = await hinkal.depositAndWithdraw(
       erc20Token,
-      [BigInt(amount)],
+      [parsedAmount],
       [recipient],
       getCurrentTimeInSeconds(),
-      feeStructure,
+      feeStructure
     )
     return { hash }
   }
