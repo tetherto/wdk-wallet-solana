@@ -68,6 +68,7 @@ import { isSignature, verifySignature } from '@solana/keys'
  * @property {Commitment} [commitment] - The commitment level (default: 'confirmed').
  * @property {number} [retries] - If set and if 'provider' is a list of urls, the number of additional retry attempts after the initial call fails. Total attempts = `1 + retries`. For example, `retries: 3` with 4 providers will try each provider once before throwing. If `retries` exceeds the number of providers, the failover will loop back and retry already-failed providers in round-robin order (default: 3).
  * @property {number | bigint} [transferMaxFee] - Maximum allowed fee in lamports for transfer operations.
+ * @property {number | bigint} [transactionMaxFee] - The maximum fee amount for sendTransaction and signTransaction operations.
  */
 
 const MAX_U64 = 0xffffffffffffffffn
@@ -80,7 +81,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * Creates a new solana read-only wallet account.
    *
    * @param {string} addr - The account's address.
-   * @param {Omit<SolanaWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
+   * @param {Omit<SolanaWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
    */
   constructor (addr, config = {}) {
     super(addr)
@@ -89,7 +90,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * The read-only wallet account configuration.
      *
      * @protected
-     * @type {Omit<SolanaWalletConfig, 'transferMaxFee'>}
+     * @type {Omit<SolanaWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>}
      */
     this._config = config
 

@@ -220,6 +220,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    *
    * @param {SolanaTransaction} tx - The transaction to sign.
    * @returns {Promise<FullySignedTransaction>} The signed transaction.
+   * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
    */
   async signTransaction (tx) {
     if (!this._rawPrivateKey) {
@@ -232,6 +233,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     const transactionMessage = await this._prepareTransactionMessage(tx)
 
+    if (this._config.transactionMaxFee !== undefined) {
+      const fee = await this._getTransactionFee(transactionMessage)
+      if (fee > this._config.transactionMaxFee) {
+        throw new Error('Exceeded maximum fee cost for transaction operation.')
+      }
+    }
+
     return await signTransactionMessageWithSigners(transactionMessage)
   }
 
@@ -240,6 +248,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    *
    * @param {SolanaTransaction} tx - The transaction.
    * @returns {Promise<TransactionResult>} The transaction's result.
+   * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
    */
   async sendTransaction (tx) {
     if (!this._rawPrivateKey) {
@@ -253,6 +262,10 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     const transactionMessage = await this._prepareTransactionMessage(tx)
 
     const fee = await this._getTransactionFee(transactionMessage)
+
+    if (this._config.transactionMaxFee !== undefined && fee > this._config.transactionMaxFee) {
+      throw new Error('Exceeded maximum fee cost for transaction operation.')
+    }
 
     const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
 
@@ -288,6 +301,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    *
    * @param {TransferOptions} options - The transfer's options.
    * @returns {Promise<TransferResult>} The transfer's result.
+   * @throws {Error} If the transfer's cost exceeds the maximum transfer fee option.
    * @note only SPL tokens - won't work for native SOL
    */
   async transfer (options) {
@@ -303,7 +317,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount)
     const fee = await this._getTransactionFee(transactionMessage)
-    if (this._config.transferMaxFee !== undefined && fee >= this._config.transferMaxFee) {
+    if (this._config.transferMaxFee !== undefined && fee > this._config.transferMaxFee) {
       throw new Error('Exceeded maximum fee cost for transfer operation.')
     }
 

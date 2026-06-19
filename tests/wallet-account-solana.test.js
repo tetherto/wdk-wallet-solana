@@ -540,6 +540,86 @@ describe('WalletAccountSolana', () => {
         ).rejects.toThrow('Failed to calculate transaction fee')
       })
     })
+
+    describe('Fee Limit', () => {
+      it('should throw if transaction fee exceeds the transaction max fee configuration', async () => {
+        mockRpc.getFeeForMessage.mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        })
+
+        const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+          provider: TEST_RPC_URL,
+          commitment: 'confirmed',
+          transactionMaxFee: 0n
+        })
+        const limitedAccount = await limitedWallet.getAccount(0)
+
+        limitedAccount._rpc = mockRpc
+
+        await expect(
+          limitedAccount.sendTransaction({
+            to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+            value: 1000000n
+          })
+        ).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+      })
+
+      it('should allow a fee exactly equal to transactionMaxFee', async () => {
+        mockRpc.getFeeForMessage.mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        })
+        mockRpc.sendTransaction.mockReturnValue({
+          send: jest.fn().mockResolvedValue('sig')
+        })
+
+        const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+          provider: TEST_RPC_URL,
+          commitment: 'confirmed',
+          transactionMaxFee: 5000n
+        })
+        const limitedAccount = await limitedWallet.getAccount(0)
+
+        limitedAccount._rpc = mockRpc
+
+        const result = await limitedAccount.sendTransaction(
+          {
+            to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+            value: 1000000n
+          },
+          { skipConfirmation: true }
+        )
+
+        expect(result).toHaveProperty('hash')
+      })
+
+      it('should allow a fee below transactionMaxFee', async () => {
+        mockRpc.getFeeForMessage.mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        })
+        mockRpc.sendTransaction.mockReturnValue({
+          send: jest.fn().mockResolvedValue('sig')
+        })
+
+        const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+          provider: TEST_RPC_URL,
+          commitment: 'confirmed',
+          transactionMaxFee: 5001n
+        })
+        const limitedAccount = await limitedWallet.getAccount(0)
+
+        limitedAccount._rpc = mockRpc
+
+        const result = await limitedAccount.sendTransaction(
+          {
+            to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+            value: 1000000n
+          },
+          { skipConfirmation: true }
+        )
+
+        expect(result).toHaveProperty('hash')
+      })
+    })
   })
 
   describe('signTransaction', () => {
@@ -584,6 +664,102 @@ describe('WalletAccountSolana', () => {
       } finally {
         account._rpc = originalRpc
       }
+    })
+
+    it('should throw if transaction fee exceeds the transaction max fee configuration', async () => {
+      const mockRpc = {
+        getFeeForMessage: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        }),
+        getLatestBlockhash: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({
+            value: {
+              blockhash: '6JbYxigC1rn83PMHZait5FHHpC3YqUMacnVJWFwfoayQ',
+              lastValidBlockHeight: 1000000
+            }
+          })
+        })
+      }
+
+      const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+        provider: TEST_RPC_URL,
+        commitment: 'confirmed',
+        transactionMaxFee: 0n
+      })
+      const limitedAccount = await limitedWallet.getAccount(0)
+
+      limitedAccount._rpc = mockRpc
+
+      await expect(
+        limitedAccount.signTransaction({
+          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+          value: 1000000n
+        })
+      ).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+    })
+
+    it('should allow a fee exactly equal to transactionMaxFee', async () => {
+      const mockRpc = {
+        getFeeForMessage: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        }),
+        getLatestBlockhash: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({
+            value: {
+              blockhash: '6JbYxigC1rn83PMHZait5FHHpC3YqUMacnVJWFwfoayQ',
+              lastValidBlockHeight: 1000000
+            }
+          })
+        })
+      }
+
+      const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+        provider: TEST_RPC_URL,
+        commitment: 'confirmed',
+        transactionMaxFee: 5000n
+      })
+      const limitedAccount = await limitedWallet.getAccount(0)
+
+      limitedAccount._rpc = mockRpc
+
+      const signedTx = await limitedAccount.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      })
+
+      expect(signedTx).toBeTruthy()
+    })
+
+    it('should allow a fee below transactionMaxFee', async () => {
+      const mockRpc = {
+        getFeeForMessage: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        }),
+        getLatestBlockhash: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({
+            value: {
+              blockhash: '6JbYxigC1rn83PMHZait5FHHpC3YqUMacnVJWFwfoayQ',
+              lastValidBlockHeight: 1000000
+            }
+          })
+        })
+      }
+
+      const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+        provider: TEST_RPC_URL,
+        commitment: 'confirmed',
+        transactionMaxFee: 5001n
+      })
+      const limitedAccount = await limitedWallet.getAccount(0)
+
+      limitedAccount._rpc = mockRpc
+
+      const signedTx = await limitedAccount.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      })
+
+      expect(signedTx).toBeTruthy()
     })
   })
 
