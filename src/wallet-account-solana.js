@@ -267,15 +267,16 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       throw new Error('Exceeded maximum fee cost for transaction operation.')
     }
 
+    const hash = await this._sendTransactionMessage(transactionMessage)
+
+    return { hash, fee }
+  }
+
+  /** @private */
+  async _sendTransactionMessage (transactionMessage) {
     const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
-
     const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
-    const signature = await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
-
-    return {
-      hash: signature,
-      fee
-    }
+    return await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
   }
 
   /** @private */
@@ -321,7 +322,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       throw new Error('Exceeded maximum fee cost for transfer operation.')
     }
 
-    const { hash } = await this.sendTransaction(transactionMessage)
+    const preparedMessage = await this._prepareTransactionMessage(transactionMessage)
+    const hash = await this._sendTransactionMessage(preparedMessage)
 
     return { hash, fee }
   }
