@@ -47,6 +47,7 @@ import { isSignature, verifySignature } from '@solana/keys'
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
 
 /** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
+/** @typedef {import('@solana/transactions').FullySignedTransaction} FullySignedTransaction */
 /** @typedef {ReturnType<typeof import('@solana/rpc').createSolanaRpc>} SolanaRpc */
 /** @typedef {ReturnType<import('@solana/rpc-api').SolanaRpcApi['getTransaction']>} SolanaTransactionReceipt */
 /** @typedef {import('@solana/rpc-types').Commitment} Commitment */
@@ -255,12 +256,17 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   /**
    * Quotes the costs of a send transaction operation.
    *
-   * @param {SolanaTransaction} tx - The transaction.
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
    */
   async quoteSendTransaction (tx) {
     if (!this._rpc) {
       throw new Error('The wallet must be connected to a provider to quote transactions.')
+    }
+
+    if (this._isSignedTransaction(tx)) {
+      const fee = await this._getSignedTransactionFee(tx)
+      return { fee }
     }
 
     const addr = await this.getAddress()
@@ -462,6 +468,45 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       base64Decoder.decode
     )
 
+    return await this._getFeeForBase64Message(base64EncodedMessage)
+  }
+
+  /**
+   * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
+   * rather than an unsigned {@link SolanaTransaction}.
+   *
+   * @private
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction to inspect.
+   * @returns {boolean} True if the value is a signed transaction.
+   */
+  _isSignedTransaction (tx) {
+    return tx !== null &&
+      typeof tx === 'object' &&
+      tx.messageBytes !== undefined &&
+      tx.signatures !== undefined
+  }
+
+  /**
+   * Calculates the fee for an already-signed transaction.
+   *
+   * @private
+   * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+   * @returns {Promise<bigint>} The calculated transaction fee in lamports.
+   */
+  async _getSignedTransactionFee (signedTransaction) {
+    const base64EncodedMessage = getBase64Decoder().decode(signedTransaction.messageBytes)
+
+    return await this._getFeeForBase64Message(base64EncodedMessage)
+  }
+
+  /**
+   * Queries the RPC for the fee of a base64-encoded, compiled transaction message.
+   *
+   * @private
+   * @param {string} base64EncodedMessage - The base64-encoded compiled transaction message.
+   * @returns {Promise<bigint>} The calculated transaction fee in lamports.
+   */
+  async _getFeeForBase64Message (base64EncodedMessage) {
     const fee = await this._rpc
       .getFeeForMessage(base64EncodedMessage, {
         commitment: this._commitment

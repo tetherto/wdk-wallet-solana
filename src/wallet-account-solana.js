@@ -246,7 +246,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
    * Sends a transaction.
    *
-   * @param {SolanaTransaction} tx - The transaction.
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction.
    * @returns {Promise<TransactionResult>} The transaction's result.
    * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
    */
@@ -257,6 +257,18 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     if (!this._rpc) {
       throw new Error('The wallet must be connected to a provider to send transactions.')
+    }
+
+    if (this._isSignedTransaction(tx)) {
+      const { fee } = await this.quoteSendTransaction(tx)
+
+      if (this._config.transactionMaxFee !== undefined && fee > this._config.transactionMaxFee) {
+        throw new Error('Exceeded maximum fee cost for transaction operation.')
+      }
+
+      const hash = await this._broadcastSignedTransaction(tx)
+
+      return { hash, fee }
     }
 
     const transactionMessage = await this._prepareTransactionMessage(tx)
@@ -275,6 +287,11 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /** @private */
   async _sendTransactionMessage (transactionMessage) {
     const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
+    return await this._broadcastSignedTransaction(signedTransaction)
+  }
+
+  /** @private */
+  async _broadcastSignedTransaction (signedTransaction) {
     const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
     return await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
   }
