@@ -620,6 +620,80 @@ describe('WalletAccountSolana', () => {
         expect(result).toHaveProperty('hash')
       })
     })
+
+    describe('Signed Transaction', () => {
+      it('should broadcast an already-signed transaction directly', async () => {
+        mockRpc.getFeeForMessage.mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        })
+        mockRpc.sendTransaction.mockReturnValue({
+          send: jest.fn().mockResolvedValue('signed-tx-signature')
+        })
+
+        account._rpc = mockRpc
+
+        const signedTx = await account.signTransaction({
+          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+          value: 1000000n
+        })
+
+        const result = await account.sendTransaction(signedTx)
+
+        expect(result.hash).toBe('signed-tx-signature')
+        expect(result.fee).toBe(5000n)
+        expect(mockRpc.sendTransaction).toHaveBeenCalled()
+      })
+
+      it('should quote a signed transaction to the same fee as its unsigned form', async () => {
+        mockRpc.getFeeForMessage.mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        })
+
+        account._rpc = mockRpc
+
+        const tx = {
+          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+          value: 1000000n
+        }
+
+        const signedTx = await account.signTransaction(tx)
+
+        const { fee: unsignedFee } = await account.quoteSendTransaction(tx)
+        const { fee: signedFee } = await account.quoteSendTransaction(signedTx)
+
+        expect(signedFee).toBe(unsignedFee)
+        expect(signedFee).toBe(5000n)
+      })
+
+      it('should throw if a signed transaction fee exceeds the transaction max fee configuration', async () => {
+        mockRpc.getFeeForMessage.mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 5000 })
+        })
+        mockRpc.sendTransaction.mockReturnValue({
+          send: jest.fn().mockResolvedValue('sig')
+        })
+
+        account._rpc = mockRpc
+
+        const signedTx = await account.signTransaction({
+          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+          value: 1000000n
+        })
+
+        const limitedWallet = new WalletManagerSolana(TEST_SEED_PHRASE, {
+          provider: TEST_RPC_URL,
+          commitment: 'confirmed',
+          transactionMaxFee: 0n
+        })
+        const limitedAccount = await limitedWallet.getAccount(0)
+
+        limitedAccount._rpc = mockRpc
+
+        await expect(
+          limitedAccount.sendTransaction(signedTx)
+        ).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+      })
+    })
   })
 
   describe('signTransaction', () => {

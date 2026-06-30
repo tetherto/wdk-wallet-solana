@@ -54,10 +54,10 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     /**
      * Quotes the costs of a send transaction operation.
      *
-     * @param {SolanaTransaction} tx - The transaction.
+     * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
      */
-    quoteSendTransaction(tx: SolanaTransaction): Promise<Omit<TransactionResult, "hash">>;
+    quoteSendTransaction(tx: SolanaTransaction | FullySignedTransaction): Promise<Omit<TransactionResult, "hash">>;
     /**
      * Quotes the costs of a transfer operation.
      *
@@ -104,6 +104,31 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     protected _getTransactionFee(transactionMessage: TransactionMessage): Promise<bigint>;
     /**
+     * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
+     * rather than an unsigned {@link SolanaTransaction}.
+     *
+     * @private
+     * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction to inspect.
+     * @returns {boolean} True if the value is a signed transaction.
+     */
+    private _isSignedTransaction;
+    /**
+     * Calculates the fee for an already-signed transaction.
+     *
+     * @private
+     * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+     * @returns {Promise<bigint>} The calculated transaction fee in lamports.
+     */
+    private _getSignedTransactionFee;
+    /**
+     * Queries the RPC for the fee of a base64-encoded, compiled transaction message.
+     *
+     * @private
+     * @param {string} base64EncodedMessage - The base64-encoded compiled transaction message.
+     * @returns {Promise<bigint>} The calculated transaction fee in lamports.
+     */
+    private _getFeeForBase64Message;
+    /**
      * Verifies a message's signature.
      *
      * @param {string} message - The original message.
@@ -133,6 +158,7 @@ export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
+export type FullySignedTransaction = import("@solana/transactions").FullySignedTransaction;
 export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
 export type SolanaTransactionReceipt = ReturnType<import("@solana/rpc-api").SolanaRpcApi["getTransaction"]>;
 export type Commitment = import("@solana/rpc-types").Commitment;

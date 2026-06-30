@@ -87,11 +87,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
     /**
      * Sends a transaction.
      *
-     * @param {SolanaTransaction} tx - The transaction.
+     * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction.
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
      */
-    sendTransaction(tx: SolanaTransaction): Promise<TransactionResult>;
+    sendTransaction(tx: SolanaTransaction | FullySignedTransaction): Promise<TransactionResult>;
+    /** @private */
+    private _broadcastSignedTransaction;
     /** @private */
     private _prepareTransactionMessage;
     /**
