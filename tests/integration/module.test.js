@@ -30,9 +30,26 @@ import {
   getMintToInstruction,
   TOKEN_PROGRAM_ADDRESS
 } from '@solana-program/token'
-import { getCreateAccountInstruction } from '@solana-program/system'
+import {
+  AccountState,
+  ExtensionType,
+  findAssociatedTokenPda as findAssociatedToken2022Pda,
+  getCreateAssociatedTokenIdempotentInstruction as getCreateAssociatedToken2022IdempotentInstruction,
+  getEnableMemoTransfersInstruction,
+  getFreezeAccountInstruction,
+  getInitializeMint2Instruction,
+  getMintSize as getMint2022Size,
+  getMintToInstruction as getMintTo2022Instruction,
+  getPostInitializeInstructionsForMintExtensions,
+  getPreInitializeInstructionsForMintExtensions,
+  getReallocateInstruction,
+  getThawAccountInstruction,
+  TOKEN_2022_PROGRAM_ADDRESS
+} from '@solana-program/token-2022'
+import { getCreateAccountInstruction, getTransferSolInstruction } from '@solana-program/system'
 import { createSolanaRpc } from '@solana/rpc'
 import {
+  createNoopSigner,
   generateKeyPairSigner,
   setTransactionMessageFeePayerSigner,
   signTransactionMessageWithSigners
@@ -44,7 +61,13 @@ import {
 } from '@solana/transaction-messages'
 import { pipe } from '@solana/functional'
 
-import WalletManagerSolana from '@tetherto/wdk-wallet-solana'
+import WalletManagerSolana, {
+  ConfidentialTransferNotSupportedError,
+  FrozenTokenAccountError,
+  NonTransferableTokenError,
+  TransferHookNotSupportedError,
+  WalletAccountReadOnlySolana
+} from '@tetherto/wdk-wallet-solana'
 
 jest.setTimeout(30_000)
 
@@ -189,6 +212,67 @@ async function deployTestToken (rpc, sendAndConfirmTransaction) {
   return { mint, mintAuthority }
 }
 
+/**
+ * @param {ReturnType<typeof sendAndConfirmTransactionFactory>} sendAndConfirmTransaction
+ * @param {ReturnType<typeof createSolanaRpc>} rpc
+ * @param {import('@solana/signers').KeyPairSigner} feePayer
+ * @param {import('@solana/kit').Instruction[]} instructions
+ * @returns {Promise<void>}
+ */
+async function sendInstructions (sendAndConfirmTransaction, rpc, feePayer, instructions) {
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash({ commitment: 'confirmed' }).send()
+  const transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    (tx) => setTransactionMessageFeePayerSigner(feePayer, tx),
+    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+    (tx) => appendTransactionMessageInstructions(instructions, tx)
+  )
+  const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
+  await sendAndConfirmTransaction(signedTransaction, { commitment: 'confirmed' })
+}
+
+/**
+ * @param {ReturnType<typeof createSolanaRpc>} rpc
+ * @param {ReturnType<typeof sendAndConfirmTransactionFactory>} sendAndConfirmTransaction
+ * @param {import('@solana-program/token-2022').ExtensionArgs[]} [extensions]
+ * @returns {Promise<{ mint: string, mintAuthority: import('@solana/signers').KeyPairSigner }>}
+ */
+async function deployTestToken2022 (rpc, sendAndConfirmTransaction, extensions = []) {
+  const mintAuthority = await generateKeyPairSigner()
+  const airdropSignature = await rpc
+    .requestAirdrop(address(mintAuthority.address), INITIAL_BALANCE, { commitment: 'confirmed' })
+    .send()
+  await confirmTransaction(rpc, airdropSignature)
+
+  const mintSigner = await generateKeyPairSigner()
+  const mint = address(mintSigner.address)
+  // An empty list would size the account for an extension suffix, which a bare mint does not have.
+  const space = getMint2022Size(extensions.length > 0 ? extensions : undefined)
+  const mintRent = await rpc
+    .getMinimumBalanceForRentExemption(BigInt(space), { commitment: 'confirmed' })
+    .send()
+
+  await sendInstructions(sendAndConfirmTransaction, rpc, mintAuthority, [
+    getCreateAccountInstruction({
+      payer: mintAuthority,
+      newAccount: mintSigner,
+      lamports: mintRent,
+      space: BigInt(space),
+      programAddress: TOKEN_2022_PROGRAM_ADDRESS
+    }),
+    ...getPreInitializeInstructionsForMintExtensions(mint, extensions),
+    getInitializeMint2Instruction({
+      mint,
+      decimals: TEST_TOKEN_DECIMALS,
+      mintAuthority: mintAuthority.address,
+      freezeAuthority: mintAuthority.address
+    }),
+    ...getPostInitializeInstructionsForMintExtensions(mint, mintAuthority, extensions)
+  ])
+
+  return { mint, mintAuthority }
+}
+
 describe('@tetherto/wdk-wallet-solana', () => {
   const rpc = createSolanaRpc(TEST_RPC_URL)
   const rpcSubscriptions = createSolanaRpcSubscriptions(TEST_RPC_SUBSCRIPTIONS_URL)
@@ -218,7 +302,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
       (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
       (tx) => appendTransactionMessageInstructions([
         getCreateAssociatedTokenIdempotentInstruction({
-          payer: testToken.mintAuthority.address,
+          payer: testToken.mintAuthority,
           ata,
           owner,
           mint: testToken.mint
@@ -300,6 +384,31 @@ describe('@tetherto/wdk-wallet-solana', () => {
     const { fee } = await account.quoteSendTransaction(signedTx)
 
     expect(fee).toBe(5000n)
+  })
+
+  test('should send a transaction message carrying a placeholder signer for the account address', async () => {
+    const account0 = await wallet.getAccount(0)
+    const account1 = await wallet.getAccount(1)
+
+    const TRANSACTION_MESSAGE = appendTransactionMessageInstructions([
+      getTransferSolInstruction({
+        source: createNoopSigner(address(ACCOUNT_0.address)),
+        destination: address(ACCOUNT_1.address),
+        amount: 1_000n
+      })
+    ], createTransactionMessage({ version: 0 }))
+
+    const balanceAccount0Before = await account0.getBalance()
+    const balanceAccount1Before = await account1.getBalance()
+
+    const { hash, fee } = await account0.sendTransaction(TRANSACTION_MESSAGE)
+    await confirmTransaction(rpc, hash)
+    const receipt = await account0.getTransaction(hash)
+
+    expect(receipt.success).toBe(true)
+    expect(fee).toBe(5000n)
+    expect(await account0.getBalance()).toBe(balanceAccount0Before - fee - 1_000n)
+    expect(await account1.getBalance()).toBe(balanceAccount1Before + 1_000n)
   })
 
   test('should derive two accounts, send a tx from account 1 to 2 and get the correct balances', async () => {
@@ -459,5 +568,334 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
     await expect(account.transfer(TRANSFER))
       .rejects.toThrow('Exceeded maximum fee cost for transfer operation.')
+  })
+
+  describe('Token-2022', () => {
+    const TRANSFER_FEE_BASIS_POINTS = 50
+
+    async function getToken2022AccountAddress (token, owner) {
+      const [ata] = await findAssociatedToken2022Pda({
+        mint: token.mint,
+        owner: address(owner),
+        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
+      })
+
+      return ata
+    }
+
+    async function createToken2022Account (token, owner) {
+      const ata = await getToken2022AccountAddress(token, owner)
+
+      await sendInstructions(sendAndConfirmTransaction, rpc, token.mintAuthority, [
+        getCreateAssociatedToken2022IdempotentInstruction({
+          payer: token.mintAuthority,
+          ata,
+          owner: address(owner),
+          mint: token.mint
+        })
+      ])
+
+      return ata
+    }
+
+    async function sendToken2022To (token, to, value) {
+      const ata = await createToken2022Account(token, to)
+
+      await sendInstructions(sendAndConfirmTransaction, rpc, token.mintAuthority, [
+        getMintTo2022Instruction({
+          mint: token.mint,
+          token: ata,
+          mintAuthority: token.mintAuthority,
+          amount: value
+        })
+      ])
+    }
+
+    function transferFeeConfig (authority) {
+      const transferFee = { epoch: 0n, maximumFee: 1_000_000n, transferFeeBasisPoints: TRANSFER_FEE_BASIS_POINTS }
+
+      return {
+        __kind: 'TransferFeeConfig',
+        transferFeeConfigAuthority: authority,
+        withdrawWithheldAuthority: authority,
+        withheldAmount: 0n,
+        olderTransferFee: transferFee,
+        newerTransferFee: transferFee
+      }
+    }
+
+    test('should get the balance of a Token-2022 token', async () => {
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+
+      const account = await wallet.getAccount(0)
+
+      const tokenBalance = await account.getTokenBalance(token.mint)
+
+      expect(tokenBalance).toBe(INITIAL_TOKEN_BALANCE)
+    })
+
+    test('should get the balances of a classic and a Token-2022 token in a single call', async () => {
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
+      await sendToken2022To(token, ACCOUNT_0.address, 250n)
+
+      const account = await wallet.getAccount(0)
+
+      const tokenBalances = await account.getTokenBalances([testToken.mint, token.mint])
+
+      expect(tokenBalances).toEqual({
+        [testToken.mint]: INITIAL_TOKEN_BALANCE,
+        [token.mint]: 250n
+      })
+    })
+
+    test('should quote and transfer a Token-2022 token to an existing token account', async () => {
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+      await sendToken2022To(token, ACCOUNT_1.address, INITIAL_TOKEN_BALANCE)
+
+      const account0 = await wallet.getAccount(0)
+      const account1 = await wallet.getAccount(1)
+
+      const TRANSFER = { token: token.mint, recipient: ACCOUNT_1.address, amount: 100 }
+
+      const quote = await account0.quoteTransfer(TRANSFER)
+
+      expect(quote).toEqual({ fee: 5000n, rent: 0n, transferFee: 0n })
+
+      const { hash, fee } = await account0.transfer(TRANSFER)
+      await confirmTransaction(rpc, hash)
+      const receipt = await account0.getTransaction(hash)
+
+      expect(receipt.success).toBe(true)
+      expect(fee).toBe(quote.fee)
+      expect(await account0.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 100n)
+      expect(await account1.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE + 100n)
+    })
+
+    test('should quote the rent and transfer a Token-2022 token creating the recipient token account', async () => {
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+
+      const account = await wallet.getAccount(0)
+
+      const TRANSFER = { token: token.mint, recipient: TEST_RECIPIENT_ADDRESS, amount: 100 }
+
+      const quote = await account.quoteTransfer(TRANSFER)
+      const balanceBefore = await account.getBalance()
+
+      const { hash, fee } = await account.transfer(TRANSFER)
+      await confirmTransaction(rpc, hash)
+      const receipt = await account.getTransaction(hash)
+
+      const recipientAta = await getToken2022AccountAddress(token, TEST_RECIPIENT_ADDRESS)
+      const { value: recipientAtaInfo } = await rpc.getAccountInfo(recipientAta, { commitment: 'confirmed', encoding: 'base64' }).send()
+      const recipient = new WalletAccountReadOnlySolana(TEST_RECIPIENT_ADDRESS, { provider: TEST_RPC_URL })
+
+      expect(receipt.success).toBe(true)
+      expect(fee).toBe(quote.fee)
+      expect(quote.rent).toBe(recipientAtaInfo.lamports)
+      expect(await account.getBalance()).toBe(balanceBefore - receipt.fee - quote.rent)
+      expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 100n)
+      expect(await recipient.getTokenBalance(token.mint)).toBe(100n)
+    })
+
+    test('should transfer a fee-bearing Token-2022 token gross and quote the withheld fee and the larger rent', async () => {
+      const mintAuthority = await generateKeyPairSigner()
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction, [transferFeeConfig(mintAuthority.address)])
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+
+      const account = await wallet.getAccount(0)
+      const recipientAccount = await wallet.getAccount(1)
+
+      const TRANSFER = { token: token.mint, recipient: ACCOUNT_1.address, amount: 10_000 }
+
+      const EXPECTED_TRANSFER_FEE = 50n
+
+      const quote = await account.quoteTransfer(TRANSFER)
+
+      const { hash } = await account.transfer(TRANSFER)
+      await confirmTransaction(rpc, hash)
+      const receipt = await account.getTransaction(hash)
+
+      const recipientAta = await getToken2022AccountAddress(token, ACCOUNT_1.address)
+      const { value: recipientAtaInfo } = await rpc.getAccountInfo(recipientAta, { commitment: 'confirmed', encoding: 'base64' }).send()
+      const transferFeeAccountRent = await rpc.getMinimumBalanceForRentExemption(182n, { commitment: 'confirmed' }).send()
+
+      expect(receipt.success).toBe(true)
+      expect(quote.transferFee).toBe(EXPECTED_TRANSFER_FEE)
+      expect(quote.rent).toBe(recipientAtaInfo.lamports)
+      expect(quote.rent).toBe(transferFeeAccountRent)
+      expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 10_000n)
+      expect(await recipientAccount.getTokenBalance(token.mint)).toBe(10_000n - EXPECTED_TRANSFER_FEE)
+    })
+
+    test('should get the raw balance of an interest-bearing Token-2022 token and transfer its raw amount', async () => {
+      const rateAuthority = await generateKeyPairSigner()
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction, [{
+        __kind: 'InterestBearingConfig',
+        rateAuthority: rateAuthority.address,
+        initializationTimestamp: 0n,
+        preUpdateAverageRate: 0,
+        lastUpdateTimestamp: 0n,
+        currentRate: 32_767
+      }])
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+      await sendToken2022To(token, ACCOUNT_1.address, INITIAL_TOKEN_BALANCE)
+
+      const account0 = await wallet.getAccount(0)
+      const account1 = await wallet.getAccount(1)
+
+      expect(await account0.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE)
+
+      const { hash } = await account0.transfer({ token: token.mint, recipient: ACCOUNT_1.address, amount: 100 })
+      await confirmTransaction(rpc, hash)
+
+      expect(await account0.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 100n)
+      expect(await account1.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE + 100n)
+    })
+
+    test('should fail on chain without a memo and succeed with one when the recipient token account requires memos', async () => {
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+
+      const recipientOwner = await generateKeyPairSigner()
+      const recipientAta = await createToken2022Account(token, recipientOwner.address)
+
+      await sendInstructions(sendAndConfirmTransaction, rpc, token.mintAuthority, [
+        getReallocateInstruction({
+          token: recipientAta,
+          payer: token.mintAuthority,
+          owner: recipientOwner,
+          newExtensionTypes: [ExtensionType.MemoTransfer]
+        }),
+        getEnableMemoTransfersInstruction({ token: recipientAta, owner: recipientOwner })
+      ])
+
+      const account = await wallet.getAccount(0)
+
+      const TRANSFER = { token: token.mint, recipient: recipientOwner.address, amount: 100 }
+
+      const EXPECTED_NO_MEMO_LOG = `Program ${TOKEN_2022_PROGRAM_ADDRESS} failed: custom program error: 0x24`
+
+      await expect(account.transfer(TRANSFER)).rejects.toMatchObject({
+        context: { logs: expect.arrayContaining([EXPECTED_NO_MEMO_LOG]) }
+      })
+
+      expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE)
+
+      const { hash } = await account.transfer(TRANSFER, { memo: 'invoice 42' })
+      await confirmTransaction(rpc, hash)
+      const receipt = await account.getTransaction(hash)
+
+      expect(receipt.success).toBe(true)
+      expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 100n)
+    })
+
+    test.each([
+      ['non-transferable', () => [{ __kind: 'NonTransferable' }],
+        mint => new NonTransferableTokenError(`Token '${mint}' is non-transferable.`)],
+      ['carrying a transfer hook', (authority, hookProgram) => [{ __kind: 'TransferHook', authority, programId: hookProgram }],
+        mint => new TransferHookNotSupportedError(`Token '${mint}' carries a transfer hook, which is not supported.`)],
+      ['configured for confidential transfers', (authority) => [{ __kind: 'ConfidentialTransferMint', authority, autoApproveNewAccounts: true, auditorElgamalPubkey: null }],
+        mint => new ConfidentialTransferNotSupportedError(`Token '${mint}' is configured for confidential transfers, which are not supported.`)],
+      ['freezing new accounts by default', () => [{ __kind: 'DefaultAccountState', state: AccountState.Frozen }],
+        mint => new FrozenTokenAccountError(`Token '${mint}' freezes by default the accounts it creates, so '${ACCOUNT_1.address}' could not receive it.`)]
+    ])('should reject the transfer of a Token-2022 token %s without sending a transaction', async (_, extensionsFor, errorFor) => {
+      const authority = await generateKeyPairSigner()
+      const hookProgram = await generateKeyPairSigner()
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction, extensionsFor(authority.address, hookProgram.address))
+
+      const account = await wallet.getAccount(0)
+
+      const balanceBefore = await account.getBalance()
+
+      const TRANSFER = { token: token.mint, recipient: ACCOUNT_1.address, amount: 100 }
+
+      await expect(account.quoteTransfer(TRANSFER)).rejects.toThrow(errorFor(token.mint))
+      await expect(account.transfer(TRANSFER)).rejects.toThrow(errorFor(token.mint))
+
+      expect(await account.getBalance()).toBe(balanceBefore)
+    })
+
+    test('should quote the rent and transfer a Token-2022 token carrying a transfer hook with no hook program set', async () => {
+      const authority = await generateKeyPairSigner()
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction, [{
+        __kind: 'TransferHook',
+        authority: authority.address,
+        programId: address('11111111111111111111111111111111')
+      }])
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+
+      const account = await wallet.getAccount(0)
+
+      const TRANSFER = { token: token.mint, recipient: TEST_RECIPIENT_ADDRESS, amount: 100 }
+
+      const quote = await account.quoteTransfer(TRANSFER)
+
+      const { hash, fee } = await account.transfer(TRANSFER)
+      await confirmTransaction(rpc, hash)
+      const receipt = await account.getTransaction(hash)
+
+      const recipientAta = await getToken2022AccountAddress(token, TEST_RECIPIENT_ADDRESS)
+      const { value: recipientAtaInfo } = await rpc.getAccountInfo(recipientAta, { commitment: 'confirmed', encoding: 'base64' }).send()
+      const recipient = new WalletAccountReadOnlySolana(TEST_RECIPIENT_ADDRESS, { provider: TEST_RPC_URL })
+
+      expect(receipt.success).toBe(true)
+      expect(fee).toBe(quote.fee)
+      expect(quote.rent).toBe(recipientAtaInfo.lamports)
+      expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 100n)
+      expect(await recipient.getTokenBalance(token.mint)).toBe(100n)
+    })
+
+    test('should transfer a Token-2022 token freezing new accounts by default between thawed token accounts', async () => {
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction, [{ __kind: 'DefaultAccountState', state: AccountState.Frozen }])
+      const senderAta = await createToken2022Account(token, ACCOUNT_0.address)
+      const recipientAta = await createToken2022Account(token, ACCOUNT_1.address)
+
+      await sendInstructions(sendAndConfirmTransaction, rpc, token.mintAuthority, [
+        getThawAccountInstruction({ account: senderAta, mint: token.mint, owner: token.mintAuthority }),
+        getThawAccountInstruction({ account: recipientAta, mint: token.mint, owner: token.mintAuthority }),
+        getMintTo2022Instruction({ mint: token.mint, token: senderAta, mintAuthority: token.mintAuthority, amount: INITIAL_TOKEN_BALANCE })
+      ])
+
+      const account0 = await wallet.getAccount(0)
+      const account1 = await wallet.getAccount(1)
+
+      const TRANSFER = { token: token.mint, recipient: ACCOUNT_1.address, amount: 100 }
+
+      const quote = await account0.quoteTransfer(TRANSFER)
+
+      const { hash, fee } = await account0.transfer(TRANSFER)
+      await confirmTransaction(rpc, hash)
+      const receipt = await account0.getTransaction(hash)
+
+      expect(receipt.success).toBe(true)
+      expect(quote).toEqual({ fee: 5000n, rent: 0n, transferFee: 0n })
+      expect(fee).toBe(quote.fee)
+      expect(await account0.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 100n)
+      expect(await account1.getTokenBalance(token.mint)).toBe(100n)
+    })
+
+    test('should reject the transfer of a Token-2022 token to a frozen token account without sending a transaction', async () => {
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+      const recipientAta = await createToken2022Account(token, ACCOUNT_1.address)
+
+      await sendInstructions(sendAndConfirmTransaction, rpc, token.mintAuthority, [
+        getFreezeAccountInstruction({ account: recipientAta, mint: token.mint, owner: token.mintAuthority })
+      ])
+
+      const account = await wallet.getAccount(0)
+
+      const balanceBefore = await account.getBalance()
+
+      const TRANSFER = { token: token.mint, recipient: ACCOUNT_1.address, amount: 100 }
+
+      await expect(account.transfer(TRANSFER)).rejects.toThrow(new FrozenTokenAccountError(`The token account of '${ACCOUNT_1.address}' is frozen.`))
+
+      expect(await account.getBalance()).toBe(balanceBefore)
+      expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE)
+    })
   })
 })

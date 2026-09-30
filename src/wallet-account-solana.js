@@ -61,6 +61,7 @@ curve.hashes.sha512 = sha512
 /** @typedef {import('@solana/signers').KeyPairSigner} KeyPairSigner */
 
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaTransaction} SolanaTransaction */
+/** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaWalletConfig} SolanaWalletConfig */
 
 /** @typedef {import('@solana/transactions').FullySignedTransaction} FullySignedTransaction */
@@ -347,16 +348,62 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     return { hash, fee }
   }
 
-  /** @private */
-  async _sendTransactionMessage (transactionMessage) {
-    const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
-    return await this._broadcastSignedTransaction(signedTransaction)
+  /**
+   * Transfers a token to another address.
+   *
+   * @param {TransferOptions} options - The transfer's options.
+   * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
+   * @returns {Promise<TransferResult>} The transfer's result.
+   * @throws {AssertionError} If the wallet account has been disposed.
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
+   * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
+   * @note only SPL tokens - won't work for native SOL
+   */
+  async transfer (options, solanaOptions = {}) {
+    if (!this._rawPrivateKey) {
+      throw new AssertionError('The wallet account has been disposed.')
+    }
+
+    if (!this._rpc) {
+      throw new ProviderRequiredError('The wallet must be connected to a provider to transfer tokens.')
+    }
+
+    const { token, recipient, amount } = options
+
+    const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount, solanaOptions)
+    const fee = await this._getTransactionFee(transactionMessage)
+    if (this._config.transferMaxFee !== undefined && fee > this._config.transferMaxFee) {
+      throw new MaximumFeeExceededError('Exceeded maximum fee cost for transfer operation.')
+    }
+
+    const preparedMessage = await this._prepareTransactionMessage(transactionMessage)
+    const hash = await this._sendTransactionMessage(preparedMessage)
+
+    return { hash, fee }
   }
 
-  /** @private */
-  async _broadcastSignedTransaction (signedTransaction) {
-    const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
-    return await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
+  /**
+   * Returns a read-only copy of the account.
+   *
+   * @returns {Promise<WalletAccountReadOnlySolana>} The read-only account.
+   */
+  async toReadOnlyAccount () {
+    if (!this._solanaReadOnlyAccount) {
+      const address = await this.getAddress()
+      this._solanaReadOnlyAccount = new WalletAccountReadOnlySolana(address, { ...this._config, provider: this._rpc })
+    }
+
+    return this._solanaReadOnlyAccount
+  }
+
+  /**
+   * Disposes the wallet account, erasing the private key from the memory.
+   */
+  dispose () {
+    sodium_memzero(this._rawPrivateKey)
+    this._rawPrivateKey = undefined
+    this._signer = undefined
+    this._seed = undefined
   }
 
   /**
@@ -414,7 +461,39 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     return await this._getFeeForBase64Message(base64EncodedMessage)
   }
 
+  /**
+   * Returns the signer the instructions requiring this account's signature are built with:
+   * the account's own key pair signer.
+   *
+   * @protected
+   * @returns {Promise<KeyPairSigner>} The signer.
+   */
+  async _getTransactionSigner () {
+    return await this._getSigner()
+  }
+
   /** @private */
+  async _sendTransactionMessage (transactionMessage) {
+    const signedTransaction = await signTransactionMessageWithSigners(transactionMessage)
+    return await this._broadcastSignedTransaction(signedTransaction)
+  }
+
+  /** @private */
+  async _broadcastSignedTransaction (signedTransaction) {
+    const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
+    return await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
+  }
+
+  /**
+   * Prepares an unsigned transaction for signing: builds a native transfer object into a
+   * transaction message, sets its lifetime when missing, and installs the account's key pair
+   * signer as fee payer. Any signer that an instruction carries for this account's address is
+   * a placeholder, and is replaced by the account's own key pair signer.
+   *
+   * @private
+   * @param {SolanaTransaction} tx - The transaction: a native transfer object or a transaction message.
+   * @returns {Promise<TransactionMessage>} The transaction message, ready to be signed.
+   */
   async _prepareTransactionMessage (tx) {
     let transactionMessage = tx
 
@@ -427,67 +506,19 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
       transactionMessage = await this._ensureLifetime(transactionMessage)
       await this._assertFeePayer(transactionMessage)
       transactionMessage = setTransactionMessageFeePayerSigner(signer, transactionMessage)
+      transactionMessage = {
+        ...transactionMessage,
+        instructions: transactionMessage.instructions.map(instruction => instruction.accounts
+          ? {
+              ...instruction,
+              accounts: instruction.accounts.map(meta =>
+                meta.address === signer.address && 'signer' in meta ? { ...meta, signer } : meta)
+            }
+          : instruction)
+      }
     }
 
     return transactionMessage
-  }
-
-  /**
-   * Transfers a token to another address.
-   *
-   * @param {TransferOptions} options - The transfer's options.
-   * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
-   * @returns {Promise<TransferResult>} The transfer's result.
-   * @throws {AssertionError} If the wallet account has been disposed.
-   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
-   * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
-   * @note only SPL tokens - won't work for native SOL
-   */
-  async transfer (options, solanaOptions = {}) {
-    if (!this._rawPrivateKey) {
-      throw new AssertionError('The wallet account has been disposed.')
-    }
-
-    if (!this._rpc) {
-      throw new ProviderRequiredError('The wallet must be connected to a provider to transfer tokens.')
-    }
-
-    const { token, recipient, amount } = options
-
-    const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount, solanaOptions)
-    const fee = await this._getTransactionFee(transactionMessage)
-    if (this._config.transferMaxFee !== undefined && fee > this._config.transferMaxFee) {
-      throw new MaximumFeeExceededError('Exceeded maximum fee cost for transfer operation.')
-    }
-
-    const preparedMessage = await this._prepareTransactionMessage(transactionMessage)
-    const hash = await this._sendTransactionMessage(preparedMessage)
-
-    return { hash, fee }
-  }
-
-  /**
-   * Returns a read-only copy of the account.
-   *
-   * @returns {Promise<WalletAccountReadOnlySolana>} The read-only account.
-   */
-  async toReadOnlyAccount () {
-    if (!this._solanaReadOnlyAccount) {
-      const address = await this.getAddress()
-      this._solanaReadOnlyAccount = new WalletAccountReadOnlySolana(address, { ...this._config, provider: this._rpc })
-    }
-
-    return this._solanaReadOnlyAccount
-  }
-
-  /**
-   * Disposes the wallet account, erasing the private key from the memory.
-   */
-  dispose () {
-    sodium_memzero(this._rawPrivateKey)
-    this._rawPrivateKey = undefined
-    this._signer = undefined
-    this._seed = undefined
   }
 
   /**

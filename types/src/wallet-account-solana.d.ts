@@ -20,6 +20,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     constructor(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig);
     /**
+     * The wallet account configuration.
+     *
+     * @protected
+     * @type {SolanaWalletConfig}
+     */
+    protected _config: SolanaWalletConfig;
+    /**
      * @private
      */
     private _seed;
@@ -35,19 +42,19 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     private _signer;
     /**
-     * Raw Ed25519 public key bytes (32 bytes).
-     *
-     * @private
-     * @type {Uint8Array}
-     */
-    private _rawPublicKey;
-    /**
      * Raw Ed25519 private key bytes (32 bytes).
      *
      * @private
      * @type {Uint8Array | undefined}
      */
     private _rawPrivateKey;
+    /**
+     * Raw Ed25519 public key bytes (32 bytes).
+     *
+     * @private
+     * @type {Uint8Array}
+     */
+    private _rawPublicKey;
     /**
      * The derivation path's index of this account.
      *
@@ -106,10 +113,29 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
      */
     sendTransaction(tx: SolanaTransaction | FullySignedTransaction): Promise<TransactionResult>;
-    /** @private */
-    private _sendTransactionMessage;
-    /** @private */
-    private _broadcastSignedTransaction;
+    /**
+     * Transfers a token to another address.
+     *
+     * @param {TransferOptions} options - The transfer's options.
+     * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
+     * @returns {Promise<TransferResult>} The transfer's result.
+     * @throws {AssertionError} If the wallet account has been disposed.
+     * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
+     * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
+     * @note only SPL tokens - won't work for native SOL
+     */
+    transfer(options: TransferOptions, solanaOptions?: SolanaTransferOptions): Promise<TransferResult>;
+    /**
+     * Returns a read-only copy of the account.
+     *
+     * @returns {Promise<WalletAccountReadOnlySolana>} The read-only account.
+     */
+    toReadOnlyAccount(): Promise<WalletAccountReadOnlySolana>;
+    _solanaReadOnlyAccount: WalletAccountReadOnlySolana;
+    /**
+     * Disposes the wallet account, erasing the private key from the memory.
+     */
+    dispose(): void;
     /**
      * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
      * rather than an unsigned {@link SolanaTransaction}.
@@ -138,31 +164,29 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      * @returns {Promise<bigint>} The calculated transaction fee in lamports.
      */
     protected _getSignedTransactionFee(signedTransaction: FullySignedTransaction): Promise<bigint>;
+    /**
+     * Returns the signer the instructions requiring this account's signature are built with:
+     * the account's own key pair signer.
+     *
+     * @protected
+     * @returns {Promise<KeyPairSigner>} The signer.
+     */
+    protected _getTransactionSigner(): Promise<KeyPairSigner>;
     /** @private */
+    private _sendTransactionMessage;
+    /** @private */
+    private _broadcastSignedTransaction;
+    /**
+     * Prepares an unsigned transaction for signing: builds a native transfer object into a
+     * transaction message, sets its lifetime when missing, and installs the account's key pair
+     * signer as fee payer. Any signer that an instruction carries for this account's address is
+     * a placeholder, and is replaced by the account's own key pair signer.
+     *
+     * @private
+     * @param {SolanaTransaction} tx - The transaction: a native transfer object or a transaction message.
+     * @returns {Promise<TransactionMessage>} The transaction message, ready to be signed.
+     */
     private _prepareTransactionMessage;
-    /**
-     * Transfers a token to another address.
-     *
-     * @param {TransferOptions} options - The transfer's options.
-     * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
-     * @returns {Promise<TransferResult>} The transfer's result.
-     * @throws {AssertionError} If the wallet account has been disposed.
-     * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
-     * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
-     * @note only SPL tokens - won't work for native SOL
-     */
-    transfer(options: TransferOptions, solanaOptions?: SolanaTransferOptions): Promise<TransferResult>;
-    /**
-     * Returns a read-only copy of the account.
-     *
-     * @returns {Promise<WalletAccountReadOnlySolana>} The read-only account.
-     */
-    toReadOnlyAccount(): Promise<WalletAccountReadOnlySolana>;
-    _solanaReadOnlyAccount: WalletAccountReadOnlySolana;
-    /**
-     * Disposes the wallet account, erasing the private key from the memory.
-     */
-    dispose(): void;
     /**
      * Creates a new {@link KeyPairSigner} from a 32-bytes `Uint8Array` private key.
      *
@@ -180,6 +204,7 @@ export type SolanaTransferOptions = import("./wallet-account-read-only-solana.js
 export type SolanaError = import("@solana/errors").SolanaError;
 export type KeyPairSigner = import("@solana/signers").KeyPairSigner;
 export type SolanaTransaction = import("./wallet-account-read-only-solana.js").SolanaTransaction;
+export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
 export type SolanaWalletConfig = import("./wallet-account-read-only-solana.js").SolanaWalletConfig;
 export type FullySignedTransaction = import("@solana/transactions").FullySignedTransaction;
-import WalletAccountReadOnlySolana from "./wallet-account-read-only-solana.js";
+import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js';
