@@ -24,7 +24,11 @@ import {
   afterEach
 } from '@jest/globals'
 import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages'
-import { signTransactionMessageWithSigners } from '@solana/signers'
+import {
+  createKeyPairSignerFromPrivateKeyBytes,
+  setTransactionMessageFeePayerSigner,
+  signTransactionMessageWithSigners
+} from '@solana/signers'
 import { getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { getBase64Decoder, getBase64Encoder } from '@solana/codecs'
 import { MEMO_PROGRAM_ADDRESS } from '@solana-program/memo'
@@ -32,6 +36,8 @@ import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
 import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
+import SeedSignerSolana from '../src/signers/seed-signer-solana.js'
+import PrivateKeySignerSolana from '../src/signers/private-key-signer-solana.js'
 
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
@@ -41,8 +47,9 @@ const TEST_RPC_URL = 'https://mockurl.com'
 // without relying on the account's `signTransaction` method.
 async function buildSignedTransaction (account, tx) {
   const transactionMessage = await account._prepareTransactionMessage(tx)
+  const signer = await createKeyPairSignerFromPrivateKeyBytes(account.keyPair.privateKey)
 
-  return await signTransactionMessageWithSigners(transactionMessage)
+  return await signTransactionMessageWithSigners(setTransactionMessageFeePayerSigner(signer, transactionMessage))
 }
 
 describe('WalletAccountSolana', () => {
@@ -84,6 +91,54 @@ describe('WalletAccountSolana', () => {
 
         expect(account).toBeDefined()
         expect(account).toBeInstanceOf(WalletAccountSolana)
+      })
+    })
+
+    describe('signer', () => {
+      it('should match the seed-constructed account when built from a derived signer', async () => {
+        const signer = await new SeedSignerSolana(TEST_SEED_PHRASE).derive("0'/0'/0'")
+        const fromSigner = new WalletAccountSolana(signer, { provider: TEST_RPC_URL })
+        const fromSeed = new WalletAccountSolana(TEST_SEED_PHRASE, "0'/0'/0'", { provider: TEST_RPC_URL })
+
+        expect(fromSigner.path).toBe("m/44'/501'/0'/0'/0'")
+        expect(await fromSigner.getAddress()).toBe(await fromSeed.getAddress())
+        expect(await fromSigner.sign('Hello, Solana!')).toBe(await fromSeed.sign('Hello, Solana!'))
+      })
+
+      it('should derive the first account when no path is given', async () => {
+        const account = new WalletAccountSolana(TEST_SEED_PHRASE, { provider: TEST_RPC_URL })
+
+        expect(account.path).toBe("m/44'/501'/0'/0'")
+        expect(await account.getAddress()).toBe('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
+      })
+
+      it('should derive the first account when neither a path nor a config is given', async () => {
+        const account = new WalletAccountSolana(TEST_SEED_PHRASE)
+
+        expect(account.path).toBe("m/44'/501'/0'/0'")
+        expect(await account.getAddress()).toBe('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
+      })
+
+      it('should throw if the signer is missing', () => {
+        expect(() => new WalletAccountSolana(undefined, {})).toThrow('A signer is required.')
+      })
+
+      it('should accept a signer at the coin-type node', async () => {
+        const account = new WalletAccountSolana(new SeedSignerSolana(TEST_SEED_PHRASE), {})
+        const expected = new WalletAccountSolana(new SeedSignerSolana(TEST_SEED_PHRASE, "m/44'/501'"), {})
+
+        expect(account.path).toBe("m/44'/501'")
+        expect(await account.getAddress()).toBe(await expected.getAddress())
+      })
+
+      it('should throw if the signer path is not absolute', () => {
+        expect(() => new SeedSignerSolana(TEST_SEED_PHRASE, "44'/501'"))
+          .toThrow('The derivation path must be absolute')
+      })
+
+      it('should throw if the derivation path is not fully hardened', () => {
+        expect(() => new WalletAccountSolana(TEST_SEED_PHRASE, "0'/0/0'", {}))
+          .toThrow('In Solana, every child path in a derivation path must be hardened.')
       })
     })
 
@@ -188,25 +243,50 @@ describe('WalletAccountSolana', () => {
       })
     })
 
-    describe('index', () => {
-      it('should return correct index for account 0', async () => {
-        const account0 = await wallet.getAccount(0)
-        expect(account0.index).toBe(0)
+    describe('fromPrivateKey', () => {
+      it('should create the account of the private key', async () => {
+        const account = WalletAccountSolana.fromPrivateKey('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f', { provider: TEST_RPC_URL })
+
+        expect(account).toBeInstanceOf(WalletAccountSolana)
+        expect(account.path).toBeNull()
+        expect(await account.getAddress()).toBe('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
       })
 
-      it('should return correct index for account 999', async () => {
-        const account999 = await wallet.getAccount(999)
-        expect(account999.index).toBe(999)
+      it('should wipe the signer it created on dispose', () => {
+        const account = WalletAccountSolana.fromPrivateKey('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f')
+
+        account.dispose()
+
+        expect(account.keyPair.privateKey).toBeNull()
+      })
+    })
+
+    describe('signer ownership', () => {
+      it('should not wipe a signer supplied by the caller on dispose', async () => {
+        const signer = await new SeedSignerSolana(TEST_SEED_PHRASE).derive("0'/0'")
+        const account = new WalletAccountSolana(signer, {})
+
+        account.dispose()
+
+        expect(Buffer.from(signer.keyPair.privateKey).toString('hex')).toBe('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f')
+        await expect(account.sign('Hello, Solana!')).rejects.toThrow('The wallet account has been disposed.')
       })
 
-      it('should extract index correctly from custom paths', async () => {
-        const account1 = await wallet.getAccountByPath("0'/0'/7'")
-        const account2 = await wallet.getAccountByPath("1'/0'/15'")
-        const account3 = await wallet.getAccountByPath("0'/5'/123'")
+      it('should wipe a caller-supplied signer when asked to', async () => {
+        const signer = await new SeedSignerSolana(TEST_SEED_PHRASE).derive("0'/0'")
+        const account = new WalletAccountSolana(signer, { shouldWipeSignerOnDisposal: true })
 
-        expect(account1.index).toBe(0)
-        expect(account2.index).toBe(1)
-        expect(account3.index).toBe(0)
+        account.dispose()
+
+        expect(signer.keyPair.privateKey).toBeNull()
+      })
+
+      it('should wipe the signer it built from a seed', () => {
+        const account = new WalletAccountSolana(TEST_SEED_PHRASE)
+
+        account.dispose()
+
+        expect(account.keyPair.privateKey).toBeNull()
       })
     })
 

@@ -47,3 +47,5 @@ export {
   ValueError,
   WdkError
 } from '@tetherto/wdk-wallet'
+
+export { ISigner } from '@tetherto/wdk-wallet'

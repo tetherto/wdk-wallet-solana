@@ -24,6 +24,10 @@ import {
 } from '@jest/globals'
 import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
+import * as entry from '../index.js'
+import { ISigner } from '@tetherto/wdk-wallet'
+import SeedSignerSolana from '../src/signers/seed-signer-solana.js'
+import PrivateKeySignerSolana from '../src/signers/private-key-signer-solana.js'
 
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
@@ -51,13 +55,122 @@ describe('WalletManagerSolana', () => {
       })
       expect(newWallet).toBeInstanceOf(WalletManagerSolana)
     })
+
+    it('should derive the same accounts from a default signer as from the seed', async () => {
+      const signerWallet = new WalletManagerSolana(new SeedSignerSolana(TEST_SEED_PHRASE), {
+        provider: TEST_RPC_URL
+      })
+
+      const account = await signerWallet.getAccount(1)
+
+      expect(account.path).toBe("m/44'/501'/1'/0'")
+      expect(await account.getAddress()).toBe('CfGcujEkPVDx7yGyn1PUjxn2e353MXbLk8ixzwuJUktK')
+    })
+  })
+
+  describe('dispose', () => {
+    it('should wipe the default signer it built from the seed', () => {
+      const defaultSigner = wallet.getSigner()
+
+      wallet.dispose()
+
+      expect(defaultSigner.keyPair.privateKey).toBeNull()
+    })
+
+    it('should not derive accounts after dispose', async () => {
+      wallet.dispose()
+
+      await expect(wallet.getAccount(0)).rejects.toThrow()
+    })
+
+    it('should not keep the seed', () => {
+      expect(wallet.seed).toBeUndefined()
+    })
+
+    it('should not wipe a default signer supplied by the caller', async () => {
+      const signer = new SeedSignerSolana(TEST_SEED_PHRASE)
+      const privateKey = Buffer.from(signer.keyPair.privateKey).toString('hex')
+      const signerWallet = new WalletManagerSolana(signer, { provider: TEST_RPC_URL })
+      await signerWallet.getAccount(0)
+
+      signerWallet.dispose()
+
+      expect(Buffer.from(signer.keyPair.privateKey).toString('hex')).toBe(privateKey)
+    })
+  })
+
+  describe('package entry', () => {
+    it('should re-export ISigner', () => {
+      expect(entry.ISigner).toBe(ISigner)
+    })
+  })
+
+  describe('signers', () => {
+    const OTHER_SEED_PHRASE =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+
+    it('should derive the account from the named signer', async () => {
+      wallet.addSigner('other', new SeedSignerSolana(OTHER_SEED_PHRASE))
+
+      const account = await wallet.getAccount(0, { signerName: 'other' })
+      const expected = new WalletAccountSolana(OTHER_SEED_PHRASE, "0'/0'")
+
+      expect(await account.getAddress()).toBe(await expected.getAddress())
+    })
+
+    it('should cache accounts per signer', async () => {
+      wallet.addSigner('other', new SeedSignerSolana(OTHER_SEED_PHRASE))
+
+      const defaultAccount = await wallet.getAccount(0)
+      const otherAccount = await wallet.getAccount(0, { signerName: 'other' })
+
+      expect(otherAccount).not.toBe(defaultAccount)
+      expect(await wallet.getAccount(0, { signerName: 'other' })).toBe(otherAccount)
+    })
+
+    it('should return the account of a named private-key signer without deriving', async () => {
+      wallet.addSigner('treasury', new PrivateKeySignerSolana('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f'))
+
+      const account = await wallet.getAccount('treasury')
+
+      expect(account.path).toBeNull()
+      expect(await account.getAddress()).toBe('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
+      expect(await wallet.getAccount('treasury')).toBe(account)
+    })
+
+    it('should not wipe a registered signer on dispose', async () => {
+      const signer = new PrivateKeySignerSolana('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f')
+      wallet.addSigner('treasury', signer)
+      await wallet.getAccount('treasury')
+
+      wallet.dispose()
+
+      expect(Buffer.from(signer.keyPair.privateKey).toString('hex')).toBe('de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f')
+    })
+
+    it('should wipe the accounts it derived on dispose', async () => {
+      const account = await wallet.getAccount(0)
+
+      wallet.dispose()
+
+      expect(account.keyPair.privateKey).toBeNull()
+    })
+
+    it('should throw if no signer is registered with the given name', async () => {
+      await expect(wallet.getAccount(0, { signerName: 'missing' }))
+        .rejects.toThrow('No signer found with name "missing".')
+    })
+
+    it('should throw if no signer is registered with the given name (signer-name overload)', async () => {
+      await expect(wallet.getAccount('missing'))
+        .rejects.toThrow('No signer found with name "missing".')
+    })
   })
 
   describe('getAccount', () => {
     it('should return account at index 0', async () => {
       const account = await wallet.getAccount(0)
       expect(account).toBeInstanceOf(WalletAccountSolana)
-      expect(account.index).toBe(0)
       expect(account.path).toBe("m/44'/501'/0'/0'")
     })
 
@@ -70,7 +183,6 @@ describe('WalletManagerSolana', () => {
 
     it('should handle large index numbers', async () => {
       const account = await wallet.getAccount(999)
-      expect(account.index).toBe(999)
       expect(account.path).toBe("m/44'/501'/999'/0'")
     })
   })
