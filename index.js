@@ -31,6 +31,7 @@
 
 /** @typedef {import('./src/wallet-account-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./src/wallet-account-solana.js').SolanaWalletConfig} SolanaWalletConfig */
+/** @typedef {import('./src/wallet-account-solana.js').SignerOptions} SignerOptions */
 
 export { default } from './src/wallet-manager-solana.js'
 
@@ -40,10 +41,15 @@ export { default as WalletAccountSolana } from './src/wallet-account-solana.js'
 
 export {
   AssertionError,
+  DisposalError,
+  InvalidSignerError,
   MaximumFeeExceededError,
   NoSuchElementError,
   ProviderRequiredError,
   TimeoutError,
+  UnsupportedOperationError,
   ValueError,
   WdkError
 } from '@tetherto/wdk-wallet'
+
+export { ISigner } from '@tetherto/wdk-wallet'
