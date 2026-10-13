@@ -18,9 +18,8 @@
  *
  * These are the 16 bytes `0xff || "solana offchain"`, taken verbatim from the Solana
  * off-chain message specification as implemented by the Anza Solana SDK. The
- * specification applies them as a hidden prefix to the content that is signed, so that
- * an off-chain message signature and an on-chain transaction signature can never be
- * produced from the same preimage.
+ * specification applies them as a hidden prefix to the `OffchainMessage` structure, so
+ * that an off-chain message signature cannot be mistaken for a transaction signature.
  *
  * The same signing domain is used by the verified ecosystem implementations of Solana
  * off-chain message signing: the Anza Solana SDK (kit) and the Anza wallet-standard
