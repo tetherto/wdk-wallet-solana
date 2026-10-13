@@ -44,6 +44,8 @@ import {
 } from '@solana-program/token'
 import { isSignature, verifySignature } from '@solana/keys'
 
+import { getMessageSigningPayload } from './message-signing.js'
+
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet').TransferResult} TransferResult */
@@ -655,12 +657,16 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   /**
    * Verifies a message's signature.
    *
+   * The message is verified against the off-chain message signing domain, matching the
+   * transformation applied by `sign()`.
+   *
    * @param {string} message - The original message.
-   * @param {string} signature - The signature to verify.
+   * @param {string} signature - The signature to verify (hex-encoded).
    * @returns {Promise<boolean>} True if the signature is valid.
+   * @throws {TypeError} If the message is not a string.
    */
   async verify (message, signature) {
-    const messageBytes = Buffer.from(message, 'utf8')
+    const messageBytes = getMessageSigningPayload(message)
     const signatureBytes = Buffer.from(signature, 'hex')
 
     const addr = await this.getAddress()

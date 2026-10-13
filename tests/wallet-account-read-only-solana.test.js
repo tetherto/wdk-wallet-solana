@@ -23,6 +23,7 @@ import {
 } from '@solana/transactions'
 import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages'
 import { getBase64Encoder } from '@solana/codecs'
+import { signBytes } from '@solana/keys'
 import {
   ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
   findAssociatedTokenPda,
@@ -1528,6 +1529,81 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(isValid1).toBe(true)
       expect(isValid2).toBe(true)
       expect(isValid3).toBe(true)
+
+      account.dispose()
+    })
+
+    it('should reject a message that is not a string', async () => {
+      const account = new WalletAccountSolana(
+        TEST_SEED_PHRASE,
+        "0'/0'/0'",
+        {
+          provider: TEST_RPC_URL,
+          commitment: 'processed'
+        }
+      )
+      const signature = await account.sign('Test message')
+
+      const readOnlyAccount = new WalletAccountReadOnlySolana(
+        await account.getAddress(),
+        {}
+      )
+
+      await expect(readOnlyAccount.verify(Buffer.from('Test message'), signature)).rejects.toThrow(TypeError)
+      await expect(readOnlyAccount.verify(new Uint8Array([1, 2, 3]), signature)).rejects.toThrow(TypeError)
+
+      account.dispose()
+    })
+
+    it('should verify an empty message and a unicode message', async () => {
+      const account = new WalletAccountSolana(
+        TEST_SEED_PHRASE,
+        "0'/0'/0'",
+        {
+          provider: TEST_RPC_URL,
+          commitment: 'processed'
+        }
+      )
+
+      const readOnlyAccount = new WalletAccountReadOnlySolana(
+        await account.getAddress(),
+        {}
+      )
+
+      const emptySignature = await account.sign('')
+      const unicodeMessage = 'Héllo, 世界 🚀'
+      const unicodeSignature = await account.sign(unicodeMessage)
+
+      expect(await readOnlyAccount.verify('', emptySignature)).toBe(true)
+      expect(await readOnlyAccount.verify(unicodeMessage, unicodeSignature)).toBe(true)
+
+      account.dispose()
+    })
+
+    it('should not verify a signature produced over the raw message bytes', async () => {
+      const account = new WalletAccountSolana(
+        TEST_SEED_PHRASE,
+        "0'/0'/0'",
+        {
+          provider: TEST_RPC_URL,
+          commitment: 'processed'
+        }
+      )
+      const message = 'Test message'
+
+      const readOnlyAccount = new WalletAccountReadOnlySolana(
+        await account.getAddress(),
+        {}
+      )
+
+      // A transaction signature is a plain Ed25519 signature over the transaction
+      // message bytes. A signature over those same bytes must never be accepted here.
+      const signer = await account._getSigner()
+      const rawBytesSignature = Buffer.from(
+        await signBytes(signer.keyPair.privateKey, Buffer.from(message, 'utf8'))
+      ).toString('hex')
+
+      expect(await readOnlyAccount.verify(message, rawBytesSignature)).toBe(false)
 
       account.dispose()
     })

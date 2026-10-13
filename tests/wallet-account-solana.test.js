@@ -26,6 +26,7 @@ import {
 import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages'
 import { signTransactionMessageWithSigners } from '@solana/signers'
 import { getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
+import { signBytes } from '@solana/keys'
 import { getBase64Decoder, getBase64Encoder } from '@solana/codecs'
 import { MEMO_PROGRAM_ADDRESS } from '@solana-program/memo'
 import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
@@ -270,7 +271,7 @@ describe('WalletAccountSolana', () => {
         const signature = await account.sign(message)
 
         expect(signature).toBe(
-          '90d1d5dc7430f3efa9fa037ba2179458fad9a8bfdf42ba74fff4581ce9e0ac2fba1562483b072e9eee709ef8d59448b379d9a61e634b37a3c13858bab7754f08'
+          '798c984d8b275a3abe3ec24c53d1766db1e425b23f65227ea7ba1e528fe06ce5fea79b47b820ceb1eb113f220cf5d5ad5c1257afd61a083ca7a15205529c8401'
         )
       })
 
@@ -282,11 +283,50 @@ describe('WalletAccountSolana', () => {
         const signature2 = await account.sign(message2)
 
         expect(signature1).toBe(
-          '06f06d64f9a5338595410825aee9ae6b04bd0069fcd36afca765f75b3c4ebb42c2ee35a62961b8edc3afc1d10b50dcdb558d9904707326236598d0b7c0385204'
+          'c6dce387481d56b8e5174a15829945fe41bfaedeed256a6f80f0e15b632223c5e4435a491457800114717e4e7b9f7689421f5af75b5a1e60a481eb5928f59208'
         )
         expect(signature2).toBe(
-          'c4d4f624a1d7ba1992cdfd6ce5a8a3e7e2ac46ad342ef8b00b8c10f73633223a882ff8230b009691d57291aa6224a648371f9208c447ed695be47ec395a6ad0d'
+          '0a383e5f87a460dd84a066700451c7ae4aa6ab4919a395e4dc93c522d9b78ee9c8aa79023acd51801078057d6232ce9891ffad4ad35c8fd1ee548116e38afc0b'
         )
+      })
+
+      it('should reject a message that is not a string', async () => {
+        await expect(account.sign(Buffer.from('Test message'))).rejects.toThrow(TypeError)
+        await expect(account.sign(new Uint8Array([1, 2, 3]))).rejects.toThrow(TypeError)
+        await expect(account.sign(123)).rejects.toThrow(TypeError)
+        await expect(account.sign(null)).rejects.toThrow(TypeError)
+        await expect(account.sign(undefined)).rejects.toThrow(TypeError)
+      })
+
+      it('should sign and verify an empty message', async () => {
+        const signature = await account.sign('')
+
+        expect(signature).toBeDefined()
+        expect(await account.verify('', signature)).toBe(true)
+      })
+
+      it('should sign and verify a unicode message', async () => {
+        const message = 'Héllo, 世界 🚀'
+        const signature = await account.sign(message)
+
+        expect(await account.verify(message, signature)).toBe(true)
+        expect(await account.verify('Héllo, 世界', signature)).toBe(false)
+      })
+
+      it('should not sign so that the signature could be used for a transaction', async () => {
+        const message = 'Test message'
+
+        // A transaction signature is a plain Ed25519 signature over the transaction
+        // message bytes, so signing those same bytes directly is what must be prevented.
+        // This signature is byte-for-byte what a transaction carrying those bytes would
+        // produce, and it must never be accepted by verify().
+        const signer = await account._getSigner()
+        const rawBytesSignature = Buffer.from(
+          await signBytes(signer.keyPair.privateKey, Buffer.from(message, 'utf8'))
+        ).toString('hex')
+
+        expect(rawBytesSignature).not.toBe(await account.sign(message))
+        expect(await account.verify(message, rawBytesSignature)).toBe(false)
       })
 
       it('should throw error after account disposal', async () => {
