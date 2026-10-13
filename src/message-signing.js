@@ -22,9 +22,13 @@
  * an off-chain message signature and an on-chain transaction signature can never be
  * produced from the same preimage.
  *
- * The same domain is used by the ecosystem implementations of off-chain message
- * signing, for example Sign In With Solana and the Phantom, Backpack and OneKey
- * wallets.
+ * The same signing domain is used by the verified ecosystem implementations of Solana
+ * off-chain message signing: the Anza Solana SDK (kit) and the Anza wallet-standard
+ * package, Backpack, OneKey, Ledger Live and SoloKeys.
+ *
+ * This implementation uses the signing domain only. It does not encode the complete
+ * off-chain message envelope, and it does not establish interoperability with Sign In
+ * With Solana or with the wallet standard.
  *
  * A transaction message always starts with its message header, whose first byte is the
  * number of required signers, so it never begins with the 0xff byte that opens this
