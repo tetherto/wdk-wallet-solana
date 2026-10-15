@@ -45,11 +45,49 @@ wallet.dispose()
 - **SLIP-0010 Derivation Paths**: Standard Solana derivation support (`m/44'/501'`)
 - **Multi-Account Management**: Derive multiple accounts from a single seed phrase
 - **Native SOL Transactions**: Quote and send SOL transfers through a unified wallet API
-- **SPL Token Support**: Query balances and transfer SPL tokens
+- **SPL Token Support**: Query balances and transfer SPL tokens, under both the classic Token Program and the Token Extensions Program (Token-2022)
+- **Transfer Memos**: Attach a UTF-8 memo to a token transfer
 - **Message Signing**: Sign messages and verify signatures with Solana accounts
 - **Fee Estimation**: Retrieve current network fee rates and quote transaction costs
 - **Read-Only Accounts**: Monitor any Solana address without a private key
 - **Secure Memory Disposal**: Clear private keys from memory when done
+
+## Token-2022 Support
+
+Balances and transfers work the same way for classic SPL tokens and Token-2022 tokens: the
+wallet reads the mint to find which program owns it. A Token-2022 mint without extensions
+behaves exactly like a classic one. For mints with extensions, `transfer` and `quoteTransfer`
+apply the following rules.
+
+| Extension | Behaviour |
+| --- | --- |
+| Transfer fee | Supported. `amount` is gross: the sender is debited `amount` and the recipient receives `amount` less the fee. `quoteTransfer` reports the fee as `transferFee`. |
+| Interest-bearing | Supported. Balances are the raw amounts held, without accrued interest. |
+| Required memo (on the recipient's account) | Supported. Pass `{ memo }` as the second argument to `transfer`; without a memo, the token program rejects the transfer on chain. |
+| Default account state: initialized | Supported. |
+| Pausable | Supported. Transfers fail on chain while the mint is paused. |
+| Non-transferable | Rejected with `NonTransferableTokenError`: the token cannot move at all. |
+| Transfer hook | Supported when no hook program is set, since no hook runs. Rejected with `TransferHookNotSupportedError` when one is set: the wallet does not resolve the accounts a hook program needs. |
+| Confidential transfer | Rejected with `ConfidentialTransferNotSupportedError`: the wallet does not perform confidential transfers. |
+| Default account state: frozen | Supported between existing, thawed accounts. A transfer that would have to create the recipient's account is rejected with `FrozenTokenAccountError`, since the new account would be frozen and unable to receive. |
+
+A transfer to a recipient whose token account is frozen is also rejected with
+`FrozenTokenAccountError`. Other extensions need no special handling and are transferred
+unchanged. All four errors are exported from the package.
+
+`quoteTransfer` returns, next to the network `fee`:
+
+- `rent`: the lamports deposited to create the recipient's token account when it does not
+  exist yet, or `0n`. A Token-2022 account is larger than a classic one, and larger again
+  for a fee-bearing mint, so it costs more.
+- `transferFee`: the token amount withheld by a fee-bearing mint, or `0n`.
+
+```javascript
+const quote = await account.quoteTransfer({ token, recipient, amount: 1000000n }, { memo: 'invoice 42' })
+// { fee: 5000n, rent: 2157600n, transferFee: 5000n }
+
+await account.transfer({ token, recipient, amount: 1000000n }, { memo: 'invoice 42' })
+```
 
 ## Compatibility
 
