@@ -1,7 +1,8 @@
 export { default } from "./src/wallet-manager-solana.js";
 export { default as WalletAccountReadOnlySolana } from "./src/wallet-account-read-only-solana.js";
 export { default as WalletAccountSolana } from "./src/wallet-account-solana.js";
-export { AssertionError, MaximumFeeExceededError, NoSuchElementError, ProviderRequiredError, TimeoutError, ValueError, WdkError } from "@tetherto/wdk-wallet";
+export { AssertionError, DisposalError, InvalidSignerError, MaximumFeeExceededError, NoSuchElementError, ProviderRequiredError, TimeoutError, UnsupportedOperationError, ValueError, WdkError } from "@tetherto/wdk-wallet";
+export { ISigner } from "@tetherto/wdk-wallet";
 export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
@@ -17,3 +18,4 @@ export type SolanaTransactionDetails = import("./src/wallet-account-read-only-so
 export type SolanaTransferOptions = import("./src/wallet-account-read-only-solana.js").SolanaTransferOptions;
 export type SolanaTransaction = import("./src/wallet-account-solana.js").SolanaTransaction;
 export type SolanaWalletConfig = import("./src/wallet-account-solana.js").SolanaWalletConfig;
+export type SignerOptions = import("./src/wallet-account-solana.js").SignerOptions;

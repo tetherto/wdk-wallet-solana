@@ -11,8 +11,26 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     static at(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig): Promise<WalletAccountSolana>;
     /**
-     * Creates a new solana wallet account.
+     * Creates a new solana wallet account from a raw private key. The account owns the signer it creates
+     * and wipes it on {@link dispose}.
      *
+     * @param {string | Uint8Array} privateKey - A 32-byte Ed25519 private key (hex string or bytes), or a 64-byte secret key (base58 string or bytes).
+     * @param {SolanaWalletConfig} [config] - The configuration object.
+     * @returns {WalletAccountSolana} The wallet account.
+     */
+    static fromPrivateKey(privateKey: string | Uint8Array, config?: SolanaWalletConfig): WalletAccountSolana;
+    /**
+     * Creates a new solana wallet account from a signer.
+     *
+     * @overload
+     * @param {ISignerSolana} signer - The solana signer, derived to an account path.
+     * @param {SolanaWalletConfig & SignerOptions} [config] - The configuration object.
+     */
+    constructor(signer: ISignerSolana, config?: SolanaWalletConfig & SignerOptions);
+    /**
+     * Creates a new solana wallet account from a seed.
+     *
+     * @overload
      * @param {string | Uint8Array} seed - A [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
      * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
      * @param {SolanaWalletConfig} [config] - The configuration object.
@@ -20,62 +38,69 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      */
     constructor(seed: string | Uint8Array, path: string, config?: SolanaWalletConfig);
     /**
-     * @private
+     * Creates the first solana wallet account (m/44'/501'/0'/0') from a seed.
+     *
+     * @overload
+     * @param {string | Uint8Array} seed - A [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
+     * @param {SolanaWalletConfig} [config] - The configuration object.
+     * @throws {ValueError} If the seed phrase is not a valid BIP-39 seed phrase.
      */
-    private _seed;
+    constructor(seed: string | Uint8Array, config?: SolanaWalletConfig);
     /**
-     * @private
+     * The wallet account configuration.
+     *
+     * @protected
+     * @type {SolanaWalletConfig}
      */
-    private _path;
+    protected _config: SolanaWalletConfig;
     /**
-     * The Ed25519 key pair signer for signing transactions.
+     * The solana signer.
      *
      * @private
-     * @type {KeyPairSigner | undefined}
+     * @type {ISignerSolana}
      */
     private _signer;
     /**
-     * Raw Ed25519 public key bytes (32 bytes).
+     * If true, disposes the signer on calls to the 'dispose' method.
      *
+     * @protected
+     * @type {boolean}
+     */
+    protected _shouldWipeSignerOnDisposal: boolean;
+    /**
      * @private
-     * @type {Uint8Array}
      */
-    private _rawPublicKey;
+    private _disposed;
     /**
-     * Raw Ed25519 private key bytes (32 bytes).
+     * True if the wallet account has been disposed.
      *
-     * @private
-     * @type {Uint8Array | undefined}
+     * @type {boolean}
      */
-    private _rawPrivateKey;
+    get disposed(): boolean;
     /**
-     * The derivation path's index of this account.
+     * The derivation path of this account, or null for an account backed by a non-HD signer.
      *
-     * @type {number}
+     * @type {string | null}
      */
-    get index(): number;
-    /**
-     * The derivation path of this account.
-     *
-     * @type {string}
-     */
-    get path(): string;
+    get path(): string | null;
     /**
      * The account's key pair.
      *
-     * The uint8 arrays are bound to the wallet account, so any external change will reflect to the internal representation. For this reason,
+     * The uint8 arrays are the signer's own, so any external change will reflect to the signer's internal representation. For this reason,
      * it's strongly recommended to treat the key pair as a read-only view of the keys. While it's still technically possible to alter their
      * content, client code should never do so.
      *
-     * @type {KeyPair}
+     * Null if the account's signer does not expose key material.
+     *
+     * @type {KeyPair | null}
      */
-    get keyPair(): KeyPair;
+    get keyPair(): KeyPair | null;
     /**
      * Signs a message.
      *
      * @param {string} message - The message to sign.
      * @returns {Promise<string>} The message's signature.
-     * @throws {AssertionError} If the wallet account has been disposed.
+     * @throws {DisposalError} If the wallet account has been disposed.
      */
     sign(message: string): Promise<string>;
     /**
@@ -83,7 +108,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      *
      * @param {SolanaTransaction} tx - The transaction to sign: an unsigned transaction or a base64-encoded serialized transaction.
      * @returns {Promise<FullySignedTransaction>} The signed transaction.
-     * @throws {AssertionError} If the wallet account has been disposed.
+     * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
      */
@@ -101,13 +126,24 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      *
      * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction, an already-signed transaction, or a base64-encoded serialized transaction.
      * @returns {Promise<TransactionResult>} The transaction's result.
-     * @throws {AssertionError} If the wallet account has been disposed.
+     * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
      */
     sendTransaction(tx: SolanaTransaction | FullySignedTransaction): Promise<TransactionResult>;
     /** @private */
     private _sendTransactionMessage;
+    /** @private */
+    private _signTransactionMessage;
+    /**
+     * Has the signer add its signature to a compiled transaction.
+     *
+     * @private
+     * @param {Transaction} transaction - The compiled transaction.
+     * @returns {Promise<FullySignedTransaction>} The signed transaction.
+     * @throws {SolanaError} With code `SOLANA_ERROR__TRANSACTION__SIGNATURES_MISSING` if the transaction still misses signatures the account cannot provide.
+     */
+    private _signCompiledTransaction;
     /** @private */
     private _broadcastSignedTransaction;
     /**
@@ -121,7 +157,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
     protected _isSignedTransaction(tx: SolanaTransaction | FullySignedTransaction): boolean;
     /**
      * Signs a base64-encoded serialized transaction (e.g. a swap or bridge payload built
-     * by an external API) with the account's key pair.
+     * by an external API) with the account's signer.
      *
      * @protected
      * @param {string} serializedTransaction - The base64-encoded serialized transaction.
@@ -146,7 +182,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      * @param {TransferOptions} options - The transfer's options.
      * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
      * @returns {Promise<TransferResult>} The transfer's result.
-     * @throws {AssertionError} If the wallet account has been disposed.
+     * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
      * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
      * @note only SPL tokens - won't work for native SOL
@@ -160,16 +196,10 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
     toReadOnlyAccount(): Promise<WalletAccountReadOnlySolana>;
     _solanaReadOnlyAccount: WalletAccountReadOnlySolana;
     /**
-     * Disposes the wallet account, erasing the private key from the memory.
+     * Disposes the wallet account. The signer given at construction, and its private key, is wiped only if the
+     * account owns it (see {@link SignerOptions}); a caller-owned signer is left for the caller to dispose.
      */
     dispose(): void;
-    /**
-     * Creates a new {@link KeyPairSigner} from a 32-bytes `Uint8Array` private key.
-     *
-     * @private
-     * @returns {Promise<KeyPairSigner>} - The keypair signer
-     */
-    private _getSigner;
 }
 export type IWalletAccount<TSignedTransaction> = import("@tetherto/wdk-wallet").IWalletAccount<TSignedTransaction>;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
@@ -178,8 +208,15 @@ export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet").TransferResult;
 export type SolanaTransferOptions = import("./wallet-account-read-only-solana.js").SolanaTransferOptions;
 export type SolanaError = import("@solana/errors").SolanaError;
-export type KeyPairSigner = import("@solana/signers").KeyPairSigner;
 export type SolanaTransaction = import("./wallet-account-read-only-solana.js").SolanaTransaction;
 export type SolanaWalletConfig = import("./wallet-account-read-only-solana.js").SolanaWalletConfig;
+export type Transaction = import("@solana/transactions").Transaction;
 export type FullySignedTransaction = import("@solana/transactions").FullySignedTransaction;
+export type ISignerSolana = import("./signers/signer-solana.js").ISignerSolana;
+export type SignerOptions = {
+    /**
+     * - If true, wipes the signer given at construction on calls to the 'dispose' method.
+     */
+    shouldWipeSignerOnDisposal?: boolean;
+};
 import WalletAccountReadOnlySolana from "./wallet-account-read-only-solana.js";

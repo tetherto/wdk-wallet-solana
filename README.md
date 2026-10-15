@@ -40,6 +40,16 @@ console.log('Address:', address)
 wallet.dispose()
 ```
 
+The manager also accepts a signer in place of the seed phrase:
+
+```javascript
+import { SeedSignerSolana } from '@tetherto/wdk-wallet-solana/signers'
+
+const wallet = new WalletManagerSolana(new SeedSignerSolana(seedPhrase), {
+  provider: 'https://api.devnet.solana.com'
+})
+```
+
 ## Key Capabilities
 
 - **SLIP-0010 Derivation Paths**: Standard Solana derivation support (`m/44'/501'`)
