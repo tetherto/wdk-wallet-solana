@@ -42,6 +42,7 @@ import { sha512 } from '@noble/hashes/sha2.js'
 import { AssertionError, MaximumFeeExceededError, ProviderRequiredError, ValueError } from '@tetherto/wdk-wallet'
 
 import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
+import { getMessageSigningPayload } from './message-signing.js'
 
 // To enable @noble's synchronous methods
 curve.hashes.sha512 = sha512
@@ -215,9 +216,13 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
    * Signs a message.
    *
+   * The message is signed with the off-chain message signing domain, so the resulting
+   * signature cannot be used as a transaction signature.
+   *
    * @param {string} message - The message to sign.
    * @returns {Promise<string>} The message's signature.
    * @throws {AssertionError} If the wallet account has been disposed.
+   * @throws {TypeError} If the message is not a string.
    */
   async sign (message) {
     if (!this._rawPrivateKey) {
@@ -225,7 +230,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     }
 
     const signer = await this._getSigner()
-    const messageBytes = Buffer.from(message, 'utf8')
+    const messageBytes = getMessageSigningPayload(message)
     const signatureBytes = await signBytes(signer.keyPair.privateKey, messageBytes)
     const signature = Buffer.from(signatureBytes).toString('hex')
 
