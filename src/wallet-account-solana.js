@@ -43,6 +43,8 @@ import { AssertionError, MaximumFeeExceededError, ProviderRequiredError, ValueEr
 
 import WalletAccountReadOnlySolana from './wallet-account-read-only-solana.js'
 
+import { createOffchainMessage } from './offchain-message.js'
+
 // To enable @noble's synchronous methods
 curve.hashes.sha512 = sha512
 
@@ -215,17 +217,22 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
    * Signs a message.
    *
-   * @param {string} message - The message to sign.
+   * The message is signed as a [version 1 off-chain message](https://docs.anza.xyz/proposals/off-chain-message-signing),
+   * so its signature can never be a valid transaction signature.
+   *
+   * @param {string} message - The message to sign. It must be a non-empty string.
    * @returns {Promise<string>} The message's signature.
    * @throws {AssertionError} If the wallet account has been disposed.
+   * @throws {ValueError} If the message is not a non-empty string.
    */
   async sign (message) {
     if (!this._rawPrivateKey) {
       throw new AssertionError('The wallet account has been disposed.')
     }
 
+    const messageBytes = createOffchainMessage(message, this._rawPublicKey)
+
     const signer = await this._getSigner()
-    const messageBytes = Buffer.from(message, 'utf8')
     const signatureBytes = await signBytes(signer.keyPair.privateKey, messageBytes)
     const signature = Buffer.from(signatureBytes).toString('hex')
 

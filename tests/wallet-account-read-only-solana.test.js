@@ -22,6 +22,7 @@ import {
   getBase64EncodedWireTransaction
 } from '@solana/transactions'
 import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages'
+import { signBytes, createKeyPairFromPrivateKeyBytes } from '@solana/keys'
 import { getBase64Encoder } from '@solana/codecs'
 import {
   ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
@@ -1565,6 +1566,58 @@ describe('WalletAccountReadOnlySolana', () => {
       )
       expect(await readOnlyAccount.verify(message, invalidSignature)).toBe(
         false
+      )
+    })
+
+    it('should not verify a signature over the raw message bytes', async () => {
+      const account = new WalletAccountSolana(
+        TEST_SEED_PHRASE,
+        "0'/0'/0'",
+        {
+          provider: TEST_RPC_URL,
+          commitment: 'processed'
+        }
+      )
+      const message = 'Test message'
+
+      const { privateKey } = await createKeyPairFromPrivateKeyBytes(
+        account.keyPair.privateKey
+      )
+
+      const rawMessageSignature = Buffer.from(
+        await signBytes(privateKey, Buffer.from(message, 'utf8'))
+      ).toString('hex')
+
+      const readOnlyAccount = new WalletAccountReadOnlySolana(
+        await account.getAddress(),
+        {}
+      )
+      expect(await readOnlyAccount.verify(message, rawMessageSignature)).toBe(
+        false
+      )
+
+      account.dispose()
+    })
+
+    it('should throw error for non-string messages', async () => {
+      const readOnlyAccount = new WalletAccountReadOnlySolana(
+        TEST_ACCOUNT_ADDRESS,
+        {}
+      )
+
+      await expect(
+        readOnlyAccount.verify(new Uint8Array([1, 2, 3]), '00')
+      ).rejects.toThrow('The message must be a string.')
+    })
+
+    it('should throw error for empty messages', async () => {
+      const readOnlyAccount = new WalletAccountReadOnlySolana(
+        TEST_ACCOUNT_ADDRESS,
+        {}
+      )
+
+      await expect(readOnlyAccount.verify('', '00')).rejects.toThrow(
+        'The message must not be empty.'
       )
     })
   })

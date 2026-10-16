@@ -25,6 +25,7 @@ import {
 } from '@jest/globals'
 import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages'
 import { signTransactionMessageWithSigners } from '@solana/signers'
+import { signBytes, createKeyPairFromPrivateKeyBytes } from '@solana/keys'
 import { getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { getBase64Decoder, getBase64Encoder } from '@solana/codecs'
 import { MEMO_PROGRAM_ADDRESS } from '@solana-program/memo'
@@ -270,7 +271,7 @@ describe('WalletAccountSolana', () => {
         const signature = await account.sign(message)
 
         expect(signature).toBe(
-          '90d1d5dc7430f3efa9fa037ba2179458fad9a8bfdf42ba74fff4581ce9e0ac2fba1562483b072e9eee709ef8d59448b379d9a61e634b37a3c13858bab7754f08'
+          '58a135e322dd6eb6c5333ed66979e83ff06b9060c31b332c39e27a75c15b0419287dc36376793869316445e359528c87a1b5e046215e24756121765cfc756203'
         )
       })
 
@@ -282,10 +283,50 @@ describe('WalletAccountSolana', () => {
         const signature2 = await account.sign(message2)
 
         expect(signature1).toBe(
-          '06f06d64f9a5338595410825aee9ae6b04bd0069fcd36afca765f75b3c4ebb42c2ee35a62961b8edc3afc1d10b50dcdb558d9904707326236598d0b7c0385204'
+          '0402c1ccf94f1654c539153e1001a416d321a519f5516ef82c65f3a628216cfcd6cbaa0421c5d6d397766e3a3c24afeb434bcdcf1de3202055ba9a8d2a39100a'
         )
         expect(signature2).toBe(
-          'c4d4f624a1d7ba1992cdfd6ce5a8a3e7e2ac46ad342ef8b00b8c10f73633223a882ff8230b009691d57291aa6224a648371f9208c447ed695be47ec395a6ad0d'
+          'a653140a64d22c32119799dff34d32f8ba7b111c4e634954a5b574d30b30cf98f4a387a0764f6bf3274008621d0edd0cfbb2206a82d335c329cc6cf308a0330d'
+        )
+      })
+
+      it('should sign a version 1 off-chain message instead of the raw message bytes', async () => {
+        const message = 'Test message'
+
+        const signature = await account.sign(message)
+
+        const offchainMessage = Buffer.concat([
+          Buffer.from('ff736f6c616e61206f6666636861696e', 'hex'),
+          Buffer.from([0x01, 0x01]),
+          Buffer.from(account.keyPair.publicKey),
+          Buffer.from(message, 'utf8')
+        ])
+
+        const { privateKey } = await createKeyPairFromPrivateKeyBytes(
+          account.keyPair.privateKey
+        )
+
+        const expectedSignature = Buffer.from(
+          await signBytes(privateKey, offchainMessage)
+        ).toString('hex')
+
+        const rawMessageSignature = Buffer.from(
+          await signBytes(privateKey, Buffer.from(message, 'utf8'))
+        ).toString('hex')
+
+        expect(signature).toBe(expectedSignature)
+        expect(signature).not.toBe(rawMessageSignature)
+      })
+
+      it('should throw error for non-string messages', async () => {
+        await expect(account.sign(new Uint8Array([1, 2, 3]))).rejects.toThrow(
+          'The message must be a string.'
+        )
+      })
+
+      it('should throw error for empty messages', async () => {
+        await expect(account.sign('')).rejects.toThrow(
+          'The message must not be empty.'
         )
       })
 
