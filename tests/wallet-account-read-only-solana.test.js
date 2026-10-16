@@ -1532,6 +1532,17 @@ describe('WalletAccountReadOnlySolana', () => {
       account.dispose()
     })
 
+    it('should verify a signature over a message containing non-ASCII characters', async () => {
+      const readOnlyAccount = new WalletAccountReadOnlySolana('DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM', {})
+
+      const isValid = await readOnlyAccount.verify(
+        'Héllo WDK ✓',
+        'd507ca4adb8a4dc454689f6853863918d7b59d7ba7f3d71d42031c4c63822955e4e0a863056545ec7d83b2f20de438ce9818056e716cea17f5098693827e9901'
+      )
+
+      expect(isValid).toBe(true)
+    })
+
     it('should reject signature for different message', async () => {
       const account = new WalletAccountSolana(
         TEST_SEED_PHRASE,

@@ -27,7 +27,7 @@ import {
 import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages'
 import { signBytes } from '@solana/keys'
 import { getAddressDecoder } from '@solana/addresses'
-import { getBase64Decoder } from '@solana/codecs'
+import { getBase64Decoder, getUtf8Encoder } from '@solana/codecs'
 
 import HDKey from 'micro-key-producer/slip10.js'
 
@@ -225,7 +225,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     }
 
     const signer = await this._getSigner()
-    const messageBytes = Buffer.from(message, 'utf8')
+    const messageBytes = getUtf8Encoder().encode(message)
     const signatureBytes = await signBytes(signer.keyPair.privateKey, messageBytes)
     const signature = Buffer.from(signatureBytes).toString('hex')
 
