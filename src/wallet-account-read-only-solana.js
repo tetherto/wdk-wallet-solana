@@ -18,7 +18,7 @@ import { WalletAccountReadOnly, NoSuchElementError, ProviderRequiredError, Value
 
 import FailoverProvider from '@tetherto/wdk-failover-provider'
 
-import { address, getPublicKeyFromAddress } from '@solana/addresses'
+import { address, getAddressEncoder, getPublicKeyFromAddress } from '@solana/addresses'
 import { createSolanaRpc } from '@solana/rpc'
 import { pipe } from '@solana/functional'
 import {
@@ -33,7 +33,7 @@ import {
   isTransactionMessageWithDurableNonceLifetime
 } from '@solana/transaction-messages'
 import { getTransactionDecoder, getTransactionMessageSize, TRANSACTION_SIZE_LIMIT } from '@solana/transactions'
-import { getBase64Decoder, getBase64Encoder, getUtf8Encoder } from '@solana/codecs'
+import { getBase64Decoder, getBase64Encoder } from '@solana/codecs'
 import { getTransferSolInstruction } from '@solana-program/system'
 import { getAddMemoInstruction } from '@solana-program/memo'
 import {
@@ -43,6 +43,8 @@ import {
   TOKEN_PROGRAM_ADDRESS
 } from '@solana-program/token'
 import { isSignature, verifySignature } from '@solana/keys'
+
+import { createOffchainMessage } from './offchain-message.js'
 
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
 /** @typedef {import('@tetherto/wdk-wallet').TransferOptions} TransferOptions */
@@ -655,15 +657,19 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   /**
    * Verifies a message's signature.
    *
-   * @param {string} message - The original message.
+   * Signatures are verified over [version 1 off-chain messages](https://docs.anza.xyz/proposals/off-chain-message-signing).
+   *
+   * @param {string} message - The original message. It must be a non-empty string.
    * @param {string} signature - The signature to verify.
    * @returns {Promise<boolean>} True if the signature is valid.
+   * @throws {ValueError} If the message is not a non-empty string.
    */
   async verify (message, signature) {
-    const messageBytes = getUtf8Encoder().encode(message)
+    const addr = await this.getAddress()
+
+    const messageBytes = createOffchainMessage(message, getAddressEncoder().encode(address(addr)))
     const signatureBytes = Buffer.from(signature, 'hex')
 
-    const addr = await this.getAddress()
     const publicKey = await getPublicKeyFromAddress(address(addr))
 
     const isValid = await verifySignature(publicKey, signatureBytes, messageBytes)
