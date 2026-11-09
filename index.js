@@ -54,4 +54,4 @@ export {
   WdkError
 } from '@tetherto/wdk-wallet'
 
-export { ISigner } from '@tetherto/wdk-wallet'
+export { ISigner, IWalletAccount, IWalletAccountReadOnly } from '@tetherto/wdk-wallet'
