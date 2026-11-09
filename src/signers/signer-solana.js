@@ -69,8 +69,6 @@ export function assertFullHardenedPath (path, options = {}) {
 /**
  * Signs a message with a raw Ed25519 private key.
  *
- * The key is used in place: no `CryptoKey`, PKCS#8 or JWK copy of it is ever created.
- *
  * @internal
  * @param {Uint8Array} privateKey - The raw Ed25519 private key (32 bytes).
  * @param {string} message - The message to sign.
@@ -119,7 +117,7 @@ export function signTransactionBytes (privateKey, unsignedTx) {
 }
 
 /**
- * Interface for Solana signers, extending the base `ISigner` from `@tetherto/wdk-wallet`.
+ * Interface for Solana signers.
  *
  * @interface
  */

@@ -1,5 +1,5 @@
 /**
- * Interface for Solana signers, extending the base `ISigner` from `@tetherto/wdk-wallet`.
+ * Interface for Solana signers.
  *
  * @interface
  */
