@@ -55,7 +55,6 @@ function scrub (node) {
  * @param {HDKey} node - The starting HD node.
  * @param {string[]} segments - The path segments to derive.
  * @returns {HDKey} The HD node at the end of the path.
- * @throws {Error} If a segment's index is out of range (2^31 or greater).
  */
 function deriveAndScrub (node, segments) {
   for (const segment of segments) {
