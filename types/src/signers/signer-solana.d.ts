@@ -19,8 +19,7 @@ export class ISignerSolana extends ISigner {
      *
      * @param {string | Uint8Array} unsignedTx - The wire-encoded transaction, as bytes or a base58 string.
      * @returns {Promise<Uint8Array>} The wire-encoded transaction with this signer's signature added.
-     * @throws {ValueError} If the transaction is a string that is not base58.
-     * @throws {InvalidSignerError} If the signer is not one of the transaction's signers.
+     * @throws {ValueError} If the transaction is a string that is not base58, or if it doesn't include this signer among its signatures.
      * @throws {DisposalError} If the signer has been disposed.
      */
     signTransaction(unsignedTx: string | Uint8Array): Promise<Uint8Array>;

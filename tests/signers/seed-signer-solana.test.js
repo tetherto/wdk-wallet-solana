@@ -28,7 +28,7 @@ import {
 import { compileTransaction, getTransactionDecoder, getTransactionEncoder } from '@solana/transactions'
 import { getBase58Decoder } from '@solana/codecs'
 import { getTransferSolInstruction } from '@solana-program/system'
-import { DisposalError, InvalidSignerError, ValueError } from '@tetherto/wdk-wallet'
+import { DisposalError, ValueError } from '@tetherto/wdk-wallet'
 
 import SeedSignerSolana from '../../src/signers/seed-signer-solana.js'
 
@@ -61,7 +61,7 @@ const COSIGNED_TRANSACTION_SIGNATURES = {
   cosigner: '90bf1639c43d2999be39dfc75dc442fa6ac9ef9a47d57687664d3d51aad590ff5dd0ff3dd56691c0a2024ddc342835cf1988707d010968abdd7ec72571763803'
 }
 
-const NOT_A_SIGNER_MESSAGE = 'The signer is not one of the transaction\'s signers.'
+const NOT_A_SIGNER_MESSAGE = 'The transaction does not include this signer among its signatures.'
 
 const INVALID_TRANSACTION_MESSAGE = 'The transaction must be wire-encoded bytes or a base58 string.'
 
@@ -224,10 +224,10 @@ describe('SeedSignerSolana', () => {
       expect(Buffer.from(signed.signatures[ACCOUNT_0.address]).toString('hex')).toBe(COSIGNED_TRANSACTION_SIGNATURES.feePayer)
     })
 
-    it('should throw if the key is not one of the transaction signers', async () => {
+    it('should throw if the transaction does not include the signer among its signatures', async () => {
       const signer = new SeedSignerSolana(TEST_SEED_PHRASE, ACCOUNT_0.path)
 
-      await expect(signer.signTransaction(buildUnsignedTransaction(ACCOUNT_1_ADDRESS))).rejects.toThrow(new InvalidSignerError(NOT_A_SIGNER_MESSAGE))
+      await expect(signer.signTransaction(buildUnsignedTransaction(ACCOUNT_1_ADDRESS))).rejects.toThrow(new ValueError(NOT_A_SIGNER_MESSAGE))
     })
 
     it('should accept a base58 string', async () => {

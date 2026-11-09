@@ -21,7 +21,7 @@ import { assertValidBaseString, getBase58Encoder, getUtf8Encoder } from '@solana
 import * as curve from '@noble/ed25519'
 import { sha512 } from '@noble/hashes/sha2.js'
 
-import { ISigner, InvalidSignerError, NotImplementedError, ValueError } from '@tetherto/wdk-wallet'
+import { ISigner, NotImplementedError, ValueError } from '@tetherto/wdk-wallet'
 
 /** @typedef {import('@tetherto/wdk-wallet').DisposalError} DisposalError */
 /** @typedef {import('@tetherto/wdk-wallet').UnsupportedOperationError} UnsupportedOperationError */
@@ -88,8 +88,7 @@ export function signMessage (privateKey, message) {
  * @param {Uint8Array} privateKey - The raw Ed25519 private key (32 bytes).
  * @param {string | Uint8Array} unsignedTx - The wire-encoded transaction, as bytes or a base58 string.
  * @returns {Uint8Array} The wire-encoded transaction with the key's signature added.
- * @throws {ValueError} If the transaction is a string that is not base58.
- * @throws {InvalidSignerError} If the key's address is not one of the transaction's signers.
+ * @throws {ValueError} If the transaction is a string that is not base58, or if it doesn't include the key's address among its signatures.
  */
 export function signTransactionBytes (privateKey, unsignedTx) {
   if (typeof unsignedTx === 'string') {
@@ -105,7 +104,7 @@ export function signTransactionBytes (privateKey, unsignedTx) {
   const transaction = getTransactionDecoder().decode(bytes)
 
   if (transaction.signatures[address] === undefined) {
-    throw new InvalidSignerError('The signer is not one of the transaction\'s signers.')
+    throw new ValueError('The transaction does not include this signer among its signatures.')
   }
 
   const signedTransaction = {
@@ -143,8 +142,7 @@ export class ISignerSolana extends ISigner {
    *
    * @param {string | Uint8Array} unsignedTx - The wire-encoded transaction, as bytes or a base58 string.
    * @returns {Promise<Uint8Array>} The wire-encoded transaction with this signer's signature added.
-   * @throws {ValueError} If the transaction is a string that is not base58.
-   * @throws {InvalidSignerError} If the signer is not one of the transaction's signers.
+   * @throws {ValueError} If the transaction is a string that is not base58, or if it doesn't include this signer among its signatures.
    * @throws {DisposalError} If the signer has been disposed.
    */
   async signTransaction (unsignedTx) {

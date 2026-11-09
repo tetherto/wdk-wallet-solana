@@ -27,7 +27,7 @@ import {
 import { compileTransaction, getTransactionDecoder, getTransactionEncoder } from '@solana/transactions'
 import { getBase58Decoder } from '@solana/codecs'
 import { getTransferSolInstruction } from '@solana-program/system'
-import { DisposalError, InvalidSignerError, UnsupportedOperationError, ValueError } from '@tetherto/wdk-wallet'
+import { DisposalError, UnsupportedOperationError, ValueError } from '@tetherto/wdk-wallet'
 
 import PrivateKeySignerSolana from '../../src/signers/private-key-signer-solana.js'
 
@@ -43,7 +43,7 @@ const BLOCKHASH = '11111111111111111111111111111111'
 
 const TRANSACTION_SIGNATURE = 'a66ef08d2cb62b13a6ff2e5f6ebe8a46b58590489dd1905754e00fbfa400da51ca6fc87bd8ebb1800d5a8d87e470b5269db4e6c04c031135ef40e238c4539909'
 
-const NOT_A_SIGNER_MESSAGE = 'The signer is not one of the transaction\'s signers.'
+const NOT_A_SIGNER_MESSAGE = 'The transaction does not include this signer among its signatures.'
 
 const INVALID_TRANSACTION_MESSAGE = 'The transaction must be wire-encoded bytes or a base58 string.'
 
@@ -154,11 +154,11 @@ describe('PrivateKeySignerSolana', () => {
       expect(Buffer.from(signed.signatures[ADDRESS]).toString('hex')).toBe(TRANSACTION_SIGNATURE)
     })
 
-    it('should throw if the key is not one of the transaction signers', async () => {
+    it('should throw if the transaction does not include the signer among its signatures', async () => {
       const signer = new PrivateKeySignerSolana(PRIVATE_KEY)
       const unsignedTx = buildUnsignedTransaction(ACCOUNT_1_ADDRESS)
 
-      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(new InvalidSignerError(NOT_A_SIGNER_MESSAGE))
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(new ValueError(NOT_A_SIGNER_MESSAGE))
     })
 
     it('should accept a base58 string', async () => {
