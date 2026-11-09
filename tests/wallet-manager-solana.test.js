@@ -50,6 +50,8 @@ const ACCOUNT_1 = {
 
 const PATH_100_ADDRESS = '57hwCai22XueypvXcXKotkuAQYj2eukFcY5ymWB7Arvg'
 
+const INVALID_INDEX_MESSAGE = 'The index must be an integer between 0 and 2^31 - 1.'
+
 const UNSUPPORTED_DERIVATION_MESSAGE = 'The signer does not support account derivation.'
 
 const NON_DERIVABLE_SIGNER_MESSAGE = 'The default signer must be derivable. Non-derivable signers (e.g. private-key signers) can only be registered by name via addSigner.'
@@ -292,6 +294,24 @@ describe('WalletManagerSolana', () => {
     it('should handle large index numbers', async () => {
       const account = await wallet.getAccount(999)
       expect(account.path).toBe("m/44'/501'/999'/0'")
+    })
+
+    it('should return the account at the highest index', async () => {
+      const account = await wallet.getAccount(2 ** 31 - 1)
+
+      expect(account.path).toBe("m/44'/501'/2147483647'/0'")
+    })
+
+    it('should throw if the index is negative', async () => {
+      await expect(wallet.getAccount(-1)).rejects.toThrow(new ValueError(INVALID_INDEX_MESSAGE))
+    })
+
+    it('should throw if the index is 2^31 or higher', async () => {
+      await expect(wallet.getAccount(2 ** 31)).rejects.toThrow(new ValueError(INVALID_INDEX_MESSAGE))
+    })
+
+    it('should throw if the index is not an integer', async () => {
+      await expect(wallet.getAccount(1.5)).rejects.toThrow(new ValueError(INVALID_INDEX_MESSAGE))
     })
   })
 

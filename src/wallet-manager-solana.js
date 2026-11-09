@@ -14,7 +14,7 @@
 
 'use strict'
 
-import WalletManager, { DisposalError, InvalidSignerError, ProviderRequiredError } from '@tetherto/wdk-wallet'
+import WalletManager, { DisposalError, InvalidSignerError, ProviderRequiredError, ValueError } from '@tetherto/wdk-wallet'
 
 import WalletAccountSolana from './wallet-account-solana.js'
 import SeedSignerSolana from './signers/seed-signer-solana.js'
@@ -122,6 +122,7 @@ export default class WalletManagerSolana extends WalletManager {
    * @param {Object} [options] - Account options.
    * @param {string} [options.signerName] - The name of a signer registered via `addSigner`. Omit to use the default signer.
    * @returns {Promise<WalletAccountSolana>} The account.
+   * @throws {ValueError} If the index is not valid.
    * @throws {NoSuchElementError} If a signer name is given but no signer exists with that name.
    * @throws {InvalidSignerError} If the signer doesn't support account derivation.
    * @throws {DisposalError} If the wallet manager or the given signer has been disposed.
@@ -160,6 +161,10 @@ export default class WalletManagerSolana extends WalletManager {
       }
 
       return this._accounts[signerName]
+    }
+
+    if (!Number.isInteger(indexOrSignerName) || indexOrSignerName < 0 || indexOrSignerName >= 2 ** 31) {
+      throw new ValueError('The index must be an integer between 0 and 2^31 - 1.')
     }
 
     return await this.getAccountByPath(`${indexOrSignerName}'/0'`, options)
