@@ -28,6 +28,8 @@
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransactionReceipt} SolanaTransactionReceipt */
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransactionDetails} SolanaTransactionDetails */
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransferOptions} SolanaTransferOptions */
+/** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaRpc} SolanaRpc */
+/** @typedef {import('./src/wallet-account-read-only-solana.js').Commitment} Commitment */
 
 /** @typedef {import('./src/wallet-account-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./src/wallet-account-solana.js').SolanaWalletConfig} SolanaWalletConfig */
