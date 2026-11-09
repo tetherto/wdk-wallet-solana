@@ -122,8 +122,8 @@ describe('SeedSignerSolana', () => {
     it('should throw if the seed bytes have an invalid length', () => {
       const construct = () => new SeedSignerSolana(new Uint8Array(15), ACCOUNT_0.path)
 
-      expect(construct).toThrow(ValueError)
-      expect(construct).toThrow('The seed must be between 16 and 64 bytes.')
+      expect(construct)
+        .toThrow(expect.objectContaining({ constructor: ValueError, message: 'The seed must be between 16 and 64 bytes.' }))
     })
 
     it('should throw if the path is not absolute', () => {
@@ -248,16 +248,16 @@ describe('SeedSignerSolana', () => {
       const signer = new SeedSignerSolana(TEST_SEED_PHRASE, ACCOUNT_0.path)
       const unsignedTx = Buffer.from(buildUnsignedTransaction(ACCOUNT_0.address)).toString('base64')
 
-      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(ValueError)
-      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(INVALID_TRANSACTION_MESSAGE)
+      await expect(signer.signTransaction(unsignedTx))
+        .rejects.toThrow(expect.objectContaining({ constructor: ValueError, message: INVALID_TRANSACTION_MESSAGE }))
     })
 
     it('should throw if the transaction is a hex string', async () => {
       const signer = new SeedSignerSolana(TEST_SEED_PHRASE, ACCOUNT_0.path)
       const unsignedTx = Buffer.from(buildUnsignedTransaction(ACCOUNT_0.address)).toString('hex')
 
-      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(ValueError)
-      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(INVALID_TRANSACTION_MESSAGE)
+      await expect(signer.signTransaction(unsignedTx))
+        .rejects.toThrow(expect.objectContaining({ constructor: ValueError, message: INVALID_TRANSACTION_MESSAGE }))
     })
   })
 

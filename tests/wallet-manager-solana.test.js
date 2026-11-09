@@ -102,8 +102,8 @@ describe('WalletManagerSolana', () => {
     it('should throw if the seed bytes have an invalid length', () => {
       const construct = () => new WalletManagerSolana(new Uint8Array(15))
 
-      expect(construct).toThrow(ValueError)
-      expect(construct).toThrow('The seed must be between 16 and 64 bytes.')
+      expect(construct)
+        .toThrow(expect.objectContaining({ constructor: ValueError, message: 'The seed must be between 16 and 64 bytes.' }))
     })
 
     it('should throw if the default signer is not derivable', () => {
