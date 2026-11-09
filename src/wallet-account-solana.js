@@ -71,8 +71,9 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
    * Creates a new solana wallet account from a seed.
    *
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
    * @overload
-   * @param {string | Uint8Array} seed - A [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
+   * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
    * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
    * @param {SolanaWalletConfig} [config] - The configuration object.
    * @throws {ValueError} If the seed phrase is not a valid BIP-39 seed phrase.
@@ -81,8 +82,9 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
    * Creates the first solana wallet account (m/44'/501'/0'/0') from a seed.
    *
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
    * @overload
-   * @param {string | Uint8Array} seed - A [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
+   * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
    * @param {SolanaWalletConfig} [config] - The configuration object.
    * @throws {ValueError} If the seed phrase is not a valid BIP-39 seed phrase.
    */
@@ -136,8 +138,9 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   /**
    * Creates a new solana wallet account.
    *
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
    * @deprecated
-   * @param {string | Uint8Array} seed - A [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
+   * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
    * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
    * @param {SolanaWalletConfig} [config] - The configuration object.
    * @returns {Promise<WalletAccountSolana>} The wallet account.

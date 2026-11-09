@@ -60,8 +60,9 @@ export default class WalletManagerSolana extends WalletManager {
    * The manager wraps the seed in a {@link SeedSignerSolana} at "m/44'/501'", owns it, and wipes it on
    * {@link dispose}. The seed itself is not kept.
    *
+   * @see https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
    * @overload
-   * @param {string | Uint8Array} seed - A [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
+   * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
    * @param {SolanaWalletConfig} [config] - The configuration object.
    * @throws {ValueError} If the seed is not a valid seed or BIP-39 seed phrase.
    */
@@ -107,13 +108,14 @@ export default class WalletManagerSolana extends WalletManager {
   }
 
   /**
-   * Returns the wallet account at a specific index (see [SLIP-0010](https://slips.readthedocs.io/en/latest/slip-0010/)).
+   * Returns the wallet account at a specific index (see SLIP-0010).
    *
    * **Warning:** derivation is relative to the signer's own path. If the signer sits at a leaf
    * (e.g. m/44'/501'/0'/0'), getAccount(1) derives m/44'/501'/0'/0'/1'/0', probably not what
    * you want; use a signer at the coin-type node (m/44'/501'), which is where
    * `SeedSignerSolana` sits by default.
    *
+   * @see https://slips.readthedocs.io/en/latest/slip-0010/
    * @example
    * // Returns the account with derivation path m/44'/501'/index'/0'
    * const account = await wallet.getAccount(1);
