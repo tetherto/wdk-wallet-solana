@@ -20,7 +20,6 @@ export { default as PrivateKeySignerSolana } from './private-key-signer-solana.j
 
 export {
   DisposalError,
-  InvalidSignerError,
   UnsupportedOperationError,
   ValueError
 } from '@tetherto/wdk-wallet'
