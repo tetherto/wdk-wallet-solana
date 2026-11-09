@@ -317,7 +317,6 @@ describe('WalletAccountSolana', () => {
         account.dispose()
 
         expect(Buffer.from(signer.keyPair.privateKey).toString('hex')).toBe(ACCOUNT_0.privateKey)
-        await expect(account.sign('Hello, Solana!')).rejects.toThrow(new DisposalError('The wallet account has been disposed.'))
       })
 
       it('should wipe a caller-supplied signer when asked to', async () => {
@@ -461,6 +460,15 @@ describe('WalletAccountSolana', () => {
         tempAccount.dispose()
 
         await expect(tempAccount.sign('test message')).rejects.toThrow()
+      })
+
+      it('should throw if the account is disposed, even when it does not own its signer', async () => {
+        const signer = await new SeedSignerSolana(TEST_SEED_PHRASE).derive("0'/0'")
+        const account = new WalletAccountSolana(signer, {})
+
+        account.dispose()
+
+        await expect(account.sign('Hello, Solana!')).rejects.toThrow(new DisposalError('The wallet account has been disposed.'))
       })
     })
   })
