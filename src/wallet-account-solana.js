@@ -181,9 +181,9 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
   }
 
   /**
-   * The address of this account.
+   * Returns the account's address.
    *
-   * @returns {Promise<string>} The address.
+   * @returns {Promise<string>} The account's address.
    */
   async getAddress () {
     return await this._signer.getAddress()

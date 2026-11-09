@@ -146,7 +146,7 @@ export default class SeedSignerSolana {
   }
 
   /**
-   * Whether this signer can derive child signers.
+   * Whether the signer supports account derivation via {@link derive}.
    *
    * @type {true}
    */
@@ -155,7 +155,8 @@ export default class SeedSignerSolana {
   }
 
   /**
-   * The signer's absolute derivation path.
+   * The BIP 0032 derivation path, or null if the signer is not bound to a derivation position (e.g. private-key signers).
+   * A seed signer's path is always absolute (e.g. "m/44'/501'/0'/0'").
    *
    * @type {string}
    */
@@ -173,11 +174,8 @@ export default class SeedSignerSolana {
   }
 
   /**
-   * The account's key pair.
-   *
-   * Returns the raw key pair bytes in standard Solana format.
-   * - privateKey: 32-byte Ed25519 secret key (Uint8Array), or null once disposed
-   * - publicKey: 32-byte Ed25519 public key (Uint8Array)
+   * The signer's key pair, or null if the signer does not allow retrieving key material (e.g. hardware signers).
+   * A Solana signer always exposes its key pair; the private key is null once the signer is disposed.
    *
    * @type {KeyPair}
    */
@@ -189,8 +187,8 @@ export default class SeedSignerSolana {
   }
 
   /**
-   * Derives a child signer relative to this signer's own path (e.g. calling derive("0'/0'") on
-   * a signer at "m/44'/501'" yields a child at "m/44'/501'/0'/0'").
+   * Derive a child signer using a relative path (e.g., "0'/0'"). The path is relative to this signer's own
+   * path: calling derive("0'/0'") on a signer at "m/44'/501'" yields a child at "m/44'/501'/0'/0'".
    *
    * @param {string} relPath - The path segment to derive, relative to this signer's own path.
    * @returns {Promise<SeedSignerSolana>} The derived child signer.
@@ -218,9 +216,9 @@ export default class SeedSignerSolana {
   }
 
   /**
-   * Returns the account's derived address.
+   * Returns the signer's address.
    *
-   * @returns {Promise<string>} The account's address.
+   * @returns {Promise<string>} The signer's address.
    */
   async getAddress () {
     return this._address

@@ -39,13 +39,13 @@ export default class PrivateKeySignerSolana implements ISignerSolana {
     /** @private */
     private _disposed;
     /**
-     * Whether this signer can derive child signers.
+     * Whether the signer supports account derivation via {@link derive}.
      *
      * @type {false}
      */
     get isDerivable(): false;
     /**
-     * The derivation path. Always null for private-key signers.
+     * The BIP 0032 derivation path, or null if the signer is not bound to a derivation position (e.g. private-key signers).
      *
      * @type {null}
      */
@@ -57,7 +57,8 @@ export default class PrivateKeySignerSolana implements ISignerSolana {
      */
     get disposed(): boolean;
     /**
-     * The account's key pair.
+     * The signer's key pair, or null if the signer does not allow retrieving key material (e.g. hardware signers).
+     * A Solana signer always exposes its key pair; the private key is null once the signer is disposed.
      *
      * @type {KeyPair}
      */
@@ -71,9 +72,9 @@ export default class PrivateKeySignerSolana implements ISignerSolana {
      */
     derive(path: string): Promise<never>;
     /**
-     * Returns the account's address.
+     * Returns the signer's address.
      *
-     * @returns {Promise<string>} The account's address.
+     * @returns {Promise<string>} The signer's address.
      */
     getAddress(): Promise<string>;
     /**
