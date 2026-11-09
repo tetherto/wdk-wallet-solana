@@ -69,6 +69,8 @@ const ACCOUNT_1 = {
 
 const ACCOUNT_2_ADDRESS = 'Grwp8oDHgAD8PVSS51pWGCY5QRM3hqiH8QcbPRAEUABq'
 
+const ACCOUNT_2_PRIVATE_KEY = '2134fafcef38e950147d1b8f396a6f0f0a4bf3993a073eb497ae1b335037f692'
+
 const COIN_NODE_PATH = "m/44'/501'"
 
 const COIN_NODE_ADDRESS = 'Ccy4BT4c7QRNJCpu2q3uuDgktB5kZqifuRCiueuajKL1'
@@ -383,10 +385,10 @@ describe('WalletAccountSolana', () => {
           provider: TEST_RPC_URL,
           commitment: 'confirmed'
         })
-        const tempAccount = await tempWallet.getAccount(99)
+        const tempAccount = await tempWallet.getAccount(0)
 
         const keyPairBefore = tempAccount.keyPair
-        expect(keyPairBefore.privateKey).toBeTruthy()
+        expect(Buffer.from(keyPairBefore.privateKey).toString('hex')).toBe(ACCOUNT_0.privateKey)
 
         tempAccount.dispose()
         const keyPairAfter = tempAccount.keyPair
@@ -403,9 +405,9 @@ describe('WalletAccountSolana', () => {
         const account1 = await tempWallet.getAccount(1)
         const account2 = await tempWallet.getAccount(2)
 
-        expect(account0.keyPair.privateKey).toBeTruthy()
-        expect(account1.keyPair.privateKey).toBeTruthy()
-        expect(account2.keyPair.privateKey).toBeTruthy()
+        expect(Buffer.from(account0.keyPair.privateKey).toString('hex')).toBe(ACCOUNT_0.privateKey)
+        expect(Buffer.from(account1.keyPair.privateKey).toString('hex')).toBe(ACCOUNT_1.privateKey)
+        expect(Buffer.from(account2.keyPair.privateKey).toString('hex')).toBe(ACCOUNT_2_PRIVATE_KEY)
 
         tempWallet.dispose()
 
@@ -419,13 +421,13 @@ describe('WalletAccountSolana', () => {
           provider: TEST_RPC_URL,
           commitment: 'confirmed'
         })
-        const tempAccount = await tempWallet.getAccount(98)
+        const tempAccount = await tempWallet.getAccount(0)
 
         tempAccount.dispose()
 
         const publicKeyAfter = tempAccount.keyPair.publicKey
 
-        expect(publicKeyAfter).toBeDefined()
+        expect(Buffer.from(publicKeyAfter).toString('hex')).toBe(ACCOUNT_0.publicKey)
       })
     })
   })
