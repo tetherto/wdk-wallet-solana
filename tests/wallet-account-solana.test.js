@@ -228,7 +228,7 @@ describe('WalletAccountSolana', () => {
     describe('getAddress', () => {
       it('should return a valid Solana address', async () => {
         const address = await account.getAddress()
-        expect(address).toMatch(ACCOUNT_0.address)
+        expect(address).toBe(ACCOUNT_0.address)
       })
 
       it('should return different addresses for different account indices', async () => {
@@ -240,9 +240,9 @@ describe('WalletAccountSolana', () => {
         const address1 = await account1.getAddress()
         const address2 = await account2.getAddress()
 
-        expect(address0).toMatch(ACCOUNT_0.address)
-        expect(address1).toMatch(ACCOUNT_1.address)
-        expect(address2).toMatch(ACCOUNT_2_ADDRESS)
+        expect(address0).toBe(ACCOUNT_0.address)
+        expect(address1).toBe(ACCOUNT_1.address)
+        expect(address2).toBe(ACCOUNT_2_ADDRESS)
       })
 
       it('should return different addresses for different derivation paths', async () => {
@@ -254,9 +254,9 @@ describe('WalletAccountSolana', () => {
         const address2 = await accountPath2.getAddress()
         const address3 = await accountPath3.getAddress()
 
-        expect(address1).toMatch(PATH_ADDRESSES["0'/0'/0'"])
-        expect(address2).toMatch(PATH_ADDRESSES["0'/0'/1'"])
-        expect(address3).toMatch(PATH_ADDRESSES["1'/0'/0'"])
+        expect(address1).toBe(PATH_ADDRESSES["0'/0'/0'"])
+        expect(address2).toBe(PATH_ADDRESSES["0'/0'/1'"])
+        expect(address3).toBe(PATH_ADDRESSES["1'/0'/0'"])
       })
     })
 
@@ -285,7 +285,7 @@ describe('WalletAccountSolana', () => {
       it('should follow SLIP-0010 Solana derivation path format', () => {
         const path = account.path
 
-        expect(path).toMatch(ACCOUNT_0.path)
+        expect(path).toBe(ACCOUNT_0.path)
       })
 
       it('should have correct path for account index 0', async () => {
