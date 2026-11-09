@@ -38,7 +38,7 @@ import {
 import { getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { getBase58Decoder, getBase64Decoder, getBase64Encoder } from '@solana/codecs'
 import { MEMO_PROGRAM_ADDRESS, getAddMemoInstruction } from '@solana-program/memo'
-import { SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system'
+import { SYSTEM_PROGRAM_ADDRESS, getTransferSolInstruction } from '@solana-program/system'
 import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
 import { DisposalError } from '@tetherto/wdk-wallet'
 import * as bip39 from 'bip39'
@@ -112,13 +112,24 @@ const FOREIGN_FEE_PAYER_ADDRESS = 'DifferentAddress11111111111111111111111'
 
 const USDT_MINT_ADDRESS = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 
-// Manually builds a fully-signed transaction using the Solana SDK directly,
-// without relying on the account's `signTransaction` method.
+// Builds and signs, with the Solana SDK only, the native transfer the account builds for `tx`
+// against the mocked RPC's blockhash.
 async function buildSignedTransaction (account, tx) {
-  const transactionMessage = await account._prepareTransactionMessage(tx)
   const signer = await createKeyPairSignerFromPrivateKeyBytes(account.keyPair.privateKey)
 
-  return await signTransactionMessageWithSigners(setTransactionMessageFeePayerSigner(signer, transactionMessage))
+  let transactionMessage = createTransactionMessage({ version: 0 })
+  transactionMessage = setTransactionMessageFeePayerSigner(signer, transactionMessage)
+  transactionMessage = setTransactionMessageLifetimeUsingBlockhash({
+    blockhash: MOCK_BLOCKHASH,
+    lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
+  }, transactionMessage)
+  transactionMessage = appendTransactionMessageInstruction(getTransferSolInstruction({
+    source: { address: signer.address },
+    destination: tx.to,
+    amount: tx.value
+  }), transactionMessage)
+
+  return await signTransactionMessageWithSigners(transactionMessage)
 }
 
 describe('WalletAccountSolana', () => {
