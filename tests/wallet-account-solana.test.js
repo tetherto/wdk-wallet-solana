@@ -81,7 +81,7 @@ const PATH_ADDRESSES = {
   "1'/0'/0'": '57hwCai22XueypvXcXKotkuAQYj2eukFcY5ymWB7Arvg'
 }
 
-const PATH_000_SIGNATURE = 'ed1cc68bc191ed6c24b22654ee42d7a2b782e67b75f188a987fcc3037ee3bb0f0990c28c1b32d04da89f1be8d0a2f0da45d91ddb2f3613c8cb79263dba4c8906'
+const PATH_000_PRIVATE_KEY = '6f7ecf6854e8dca10ae11e01d81e3680fa1c073e74e7104591a1fcfd1b1cbbb1'
 
 const MESSAGE_SIGNATURES = {
   'Test message': '90d1d5dc7430f3efa9fa037ba2179458fad9a8bfdf42ba74fff4581ce9e0ac2fba1562483b072e9eee709ef8d59448b379d9a61e634b37a3c13858bab7754f08',
@@ -183,7 +183,7 @@ describe('WalletAccountSolana', () => {
 
         expect(account.path).toBe("m/44'/501'/0'/0'/0'")
         expect(await account.getAddress()).toBe(PATH_ADDRESSES["0'/0'/0'"])
-        expect(await account.sign('Hello, Solana!')).toBe(PATH_000_SIGNATURE)
+        expect(Buffer.from(account.keyPair.privateKey).toString('hex')).toBe(PATH_000_PRIVATE_KEY)
       })
 
       it('should derive the first account when no path is given', async () => {
