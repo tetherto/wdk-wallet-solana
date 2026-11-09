@@ -45,6 +45,8 @@ const TRANSACTION_SIGNATURE = 'a66ef08d2cb62b13a6ff2e5f6ebe8a46b58590489dd190575
 
 const NOT_A_SIGNER_MESSAGE = 'The signer is not one of the transaction\'s signers.'
 
+const INVALID_TRANSACTION_MESSAGE = 'The transaction must be wire-encoded bytes or a base58 string.'
+
 const INVALID_PRIVATE_KEY_MESSAGE = 'The private key must be a 32-byte key (hex or bytes) or a 64-byte secret key (base58 or bytes).'
 
 const SECRET_KEY = Buffer.concat([Buffer.from(PRIVATE_KEY, 'hex'), Buffer.from(PUBLIC_KEY, 'hex')])
@@ -157,6 +159,31 @@ describe('PrivateKeySignerSolana', () => {
       const unsignedTx = buildUnsignedTransaction(ACCOUNT_1_ADDRESS)
 
       await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(new InvalidSignerError(NOT_A_SIGNER_MESSAGE))
+    })
+
+    it('should accept a base58 string', async () => {
+      const signer = new PrivateKeySignerSolana(PRIVATE_KEY)
+      const unsignedTx = getBase58Decoder().decode(buildUnsignedTransaction(ADDRESS))
+
+      const signed = getTransactionDecoder().decode(await signer.signTransaction(unsignedTx))
+
+      expect(Buffer.from(signed.signatures[ADDRESS]).toString('hex')).toBe(TRANSACTION_SIGNATURE)
+    })
+
+    it('should throw if the transaction is a base64 string', async () => {
+      const signer = new PrivateKeySignerSolana(PRIVATE_KEY)
+      const unsignedTx = Buffer.from(buildUnsignedTransaction(ADDRESS)).toString('base64')
+
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(ValueError)
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(INVALID_TRANSACTION_MESSAGE)
+    })
+
+    it('should throw if the transaction is a hex string', async () => {
+      const signer = new PrivateKeySignerSolana(PRIVATE_KEY)
+      const unsignedTx = Buffer.from(buildUnsignedTransaction(ADDRESS)).toString('hex')
+
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(ValueError)
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(INVALID_TRANSACTION_MESSAGE)
     })
   })
 

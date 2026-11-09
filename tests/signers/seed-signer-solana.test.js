@@ -26,6 +26,7 @@ import {
   setTransactionMessageLifetimeUsingBlockhash
 } from '@solana/transaction-messages'
 import { compileTransaction, getTransactionDecoder, getTransactionEncoder } from '@solana/transactions'
+import { getBase58Decoder } from '@solana/codecs'
 import { getTransferSolInstruction } from '@solana-program/system'
 import { DisposalError, InvalidSignerError, ValueError } from '@tetherto/wdk-wallet'
 
@@ -61,6 +62,8 @@ const COSIGNED_TRANSACTION_SIGNATURES = {
 }
 
 const NOT_A_SIGNER_MESSAGE = 'The signer is not one of the transaction\'s signers.'
+
+const INVALID_TRANSACTION_MESSAGE = 'The transaction must be wire-encoded bytes or a base58 string.'
 
 const HARDENED_PATH_MESSAGE = 'In Solana, every child path in a derivation path must be hardened.'
 
@@ -225,6 +228,31 @@ describe('SeedSignerSolana', () => {
       const signer = new SeedSignerSolana(TEST_SEED_PHRASE, ACCOUNT_0.path)
 
       await expect(signer.signTransaction(buildUnsignedTransaction(ACCOUNT_1_ADDRESS))).rejects.toThrow(new InvalidSignerError(NOT_A_SIGNER_MESSAGE))
+    })
+
+    it('should accept a base58 string', async () => {
+      const signer = new SeedSignerSolana(TEST_SEED_PHRASE, ACCOUNT_0.path)
+      const unsignedTx = getBase58Decoder().decode(buildUnsignedTransaction(ACCOUNT_0.address))
+
+      const signed = getTransactionDecoder().decode(await signer.signTransaction(unsignedTx))
+
+      expect(Buffer.from(signed.signatures[ACCOUNT_0.address]).toString('hex')).toBe(TRANSACTION_SIGNATURE)
+    })
+
+    it('should throw if the transaction is a base64 string', async () => {
+      const signer = new SeedSignerSolana(TEST_SEED_PHRASE, ACCOUNT_0.path)
+      const unsignedTx = Buffer.from(buildUnsignedTransaction(ACCOUNT_0.address)).toString('base64')
+
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(ValueError)
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(INVALID_TRANSACTION_MESSAGE)
+    })
+
+    it('should throw if the transaction is a hex string', async () => {
+      const signer = new SeedSignerSolana(TEST_SEED_PHRASE, ACCOUNT_0.path)
+      const unsignedTx = Buffer.from(buildUnsignedTransaction(ACCOUNT_0.address)).toString('hex')
+
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(ValueError)
+      await expect(signer.signTransaction(unsignedTx)).rejects.toThrow(INVALID_TRANSACTION_MESSAGE)
     })
   })
 

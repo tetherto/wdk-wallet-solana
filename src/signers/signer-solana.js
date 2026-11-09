@@ -16,7 +16,7 @@
 
 import { getTransactionDecoder, getTransactionEncoder } from '@solana/transactions'
 import { getAddressDecoder } from '@solana/addresses'
-import { getUtf8Encoder } from '@solana/codecs'
+import { assertValidBaseString, getBase58Encoder, getUtf8Encoder } from '@solana/codecs'
 
 import * as curve from '@noble/ed25519'
 import { sha512 } from '@noble/hashes/sha2.js'
@@ -28,6 +28,10 @@ import { ISigner, InvalidSignerError, NotImplementedError, ValueError } from '@t
 
 // To enable @noble's synchronous methods
 curve.hashes.sha512 = sha512
+
+const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+
+const INVALID_TRANSACTION_MESSAGE = 'The transaction must be wire-encoded bytes or a base58 string.'
 
 /**
  * Asserts that every child path in the derivation path is hardened.
@@ -82,13 +86,23 @@ export function signMessage (privateKey, message) {
  *
  * @internal
  * @param {Uint8Array} privateKey - The raw Ed25519 private key (32 bytes).
- * @param {Uint8Array} unsignedTx - The wire-encoded transaction.
+ * @param {string | Uint8Array} unsignedTx - The wire-encoded transaction, as bytes or a base58 string.
  * @returns {Uint8Array} The wire-encoded transaction with the key's signature added.
+ * @throws {ValueError} If the transaction is a string that is not base58.
  * @throws {InvalidSignerError} If the key's address is not one of the transaction's signers.
  */
 export function signTransactionBytes (privateKey, unsignedTx) {
+  if (typeof unsignedTx === 'string') {
+    try {
+      assertValidBaseString(BASE58_ALPHABET, unsignedTx)
+    } catch (error) {
+      throw new ValueError(INVALID_TRANSACTION_MESSAGE, { cause: error })
+    }
+  }
+
+  const bytes = typeof unsignedTx === 'string' ? getBase58Encoder().encode(unsignedTx) : unsignedTx
   const address = getAddressDecoder().decode(curve.getPublicKey(privateKey))
-  const transaction = getTransactionDecoder().decode(unsignedTx)
+  const transaction = getTransactionDecoder().decode(bytes)
 
   if (transaction.signatures[address] === undefined) {
     throw new InvalidSignerError('The signer is not one of the transaction\'s signers.')
@@ -127,8 +141,9 @@ export class ISignerSolana extends ISigner {
   /**
    * Signs a transaction, keeping any signatures it already carries.
    *
-   * @param {Uint8Array} unsignedTx - The wire-encoded transaction.
+   * @param {string | Uint8Array} unsignedTx - The wire-encoded transaction, as bytes or a base58 string.
    * @returns {Promise<Uint8Array>} The wire-encoded transaction with this signer's signature added.
+   * @throws {ValueError} If the transaction is a string that is not base58.
    * @throws {InvalidSignerError} If the signer is not one of the transaction's signers.
    * @throws {DisposalError} If the signer has been disposed.
    */

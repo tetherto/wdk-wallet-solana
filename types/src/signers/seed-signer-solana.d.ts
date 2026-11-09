@@ -85,11 +85,11 @@ export default class SeedSignerSolana implements ISignerSolana {
     /**
      * Signs a transaction, keeping any signatures it already carries.
      *
-     * @param {Uint8Array} unsignedTx - The wire-encoded transaction.
+     * @param {string | Uint8Array} unsignedTx - The wire-encoded transaction, as bytes or a base58 string.
      * @returns {Promise<Uint8Array>} The wire-encoded transaction with this signer's signature added.
      * @throws {DisposalError} If the signer has been disposed.
      */
-    signTransaction(unsignedTx: Uint8Array): Promise<Uint8Array>;
+    signTransaction(unsignedTx: string | Uint8Array): Promise<Uint8Array>;
     /**
      * Disposes the signer, securely erasing its private key and chain code from memory.
      */
