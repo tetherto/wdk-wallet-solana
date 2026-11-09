@@ -108,7 +108,11 @@ export default class SeedSignerSolana {
       try {
         master = HDKey.fromMasterSeed(seed)
       } catch (error) {
-        throw new ValueError('The seed must be between 16 and 64 bytes.', { cause: error })
+        if (error.message.startsWith('HDKey: wrong seed length=')) {
+          throw new ValueError('The seed must be between 16 and 64 bytes.', { cause: error })
+        }
+
+        throw error
       }
     } finally {
       if (ownsSeed) {
