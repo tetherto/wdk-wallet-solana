@@ -166,7 +166,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
     /** @private */
     private _prepareTransactionMessage;
     /**
-     * Transfers a token to another address.
+     * Transfers a token to another address. Only SPL tokens are supported; to send native SOL, use
+     * {@link sendTransaction} with a `{ to, value }` transaction.
      *
      * @param {TransferOptions} options - The transfer's options.
      * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
@@ -174,7 +175,6 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
      * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
-     * @note only SPL tokens - won't work for native SOL
      */
     transfer(options: TransferOptions, solanaOptions?: SolanaTransferOptions): Promise<TransferResult>;
     /**
