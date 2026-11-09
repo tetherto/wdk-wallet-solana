@@ -43,16 +43,16 @@ const INVALID_TRANSACTION_MESSAGE = 'The transaction must be wire-encoded bytes 
  * @throws {ValueError} If the path is required to be absolute and is not, if it is not a valid BIP-32 path, or if any child path is not hardened.
  */
 export function assertFullHardenedPath (path, options = {}) {
+  if (path === 'm') {
+    return
+  }
+
   const { requireAbsolute = false } = options
 
-  const isAbsolute = path === 'm' || path.startsWith('m/')
+  const isAbsolute = path.startsWith('m/')
 
   if (requireAbsolute && !isAbsolute) {
     throw new ValueError('The derivation path must be absolute (e.g. "m/44\'/501\'").')
-  }
-
-  if (path === 'm') {
-    return
   }
 
   const segments = (isAbsolute ? path.slice(2) : path).split('/')
