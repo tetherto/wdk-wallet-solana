@@ -27,9 +27,7 @@ import { DisposalError, ValueError } from '@tetherto/wdk-wallet'
 
 import { assertFullHardenedPath, signMessage, signTransactionBytes } from './signer-solana.js'
 
-/**
- * @typedef {import("./signer-solana.js").ISignerSolana} ISignerSolana
- */
+/** @typedef {import('./signer-solana.js').ISignerSolana} ISignerSolana */
 
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
 /** @typedef {import('micro-key-producer/slip10.js').HDKey} HDKey */
