@@ -47,7 +47,6 @@ import PrivateKeySignerSolana from './signers/private-key-signer-solana.js'
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./wallet-account-read-only-solana.js').SolanaWalletConfig} SolanaWalletConfig */
 
-/** @typedef {import('@solana/transactions').Transaction} Transaction */
 /** @typedef {import('@solana/transactions').FullySignedTransaction} FullySignedTransaction */
 
 /** @typedef {import('./signers/signer-solana.js').ISignerSolana} ISignerSolana */

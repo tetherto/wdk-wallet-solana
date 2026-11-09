@@ -197,7 +197,6 @@ export type SolanaTransferOptions = import("./wallet-account-read-only-solana.js
 export type SolanaError = import("@solana/errors").SolanaError;
 export type SolanaTransaction = import("./wallet-account-read-only-solana.js").SolanaTransaction;
 export type SolanaWalletConfig = import("./wallet-account-read-only-solana.js").SolanaWalletConfig;
-export type Transaction = import("@solana/transactions").Transaction;
 export type FullySignedTransaction = import("@solana/transactions").FullySignedTransaction;
 export type ISignerSolana = import("./signers/signer-solana.js").ISignerSolana;
 export type SignerOptions = {
