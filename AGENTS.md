@@ -11,8 +11,8 @@ This repository is part of the Tether WDK (Wallet Development Kit) ecosystem. It
 
 - **Language:** JavaScript (ES2015+).
 - **Module System:** ES Modules (`"type": "module"` in package.json).
-- **Type Checking:** TypeScript is used purely for generating type declarations (`.d.ts`). The source code remains JavaScript.
-  - Command: `npm run build:types`
+- **Type Checking:** The source code is JavaScript; its type declarations (`.d.ts`) in `types/` are maintained by hand.
+  - Do not run `npm run build:types`. On this JavaScript source, `stripInternal` does not strip `@internal` symbols, and `tsc` drops members redeclared from inherited signatures, so the emit would publish internal helpers and lose public members.
 - **Linting:** `standard` (JavaScript Standard Style).
   - Command: `npm run lint` / `npm run lint:fix`
 - **Testing:** `jest` (configured with `experimental-vm-modules` for ESM support).
@@ -29,7 +29,7 @@ This repository is part of the Tether WDK (Wallet Development Kit) ecosystem. It
 
 ## Documentation (JSDoc)
 
-Source code must be strictly typed using JSDoc comments to support the `build:types` process.
+Source code must be strictly typed using JSDoc comments, which the hand-maintained declarations in `types/` mirror.
 
 - **Types:** Use `@typedef` to define or import types.
 - **Methods:** Use `@param`, `@returns`, `@throws`.
@@ -40,14 +40,14 @@ Source code must be strictly typed using JSDoc comments to support the `build:ty
 1.  **Install:** `npm install`
 2.  **Lint:** `npm run lint`
 3.  **Test:** `npm test`
-4.  **Build Types:** `npm run build:types`
+4.  **Update Types:** hand-edit the affected declarations in `types/` (never `npm run build:types`).
 
 ## Key Files
 
 - `index.js`: Main entry point.
 - `bare.js`: Entry point for Bare runtime optimization.
 - `src/`: Core logic.
-- `types/`: Generated type definitions (do not edit manually).
+- `types/`: Type definitions, edited by hand alongside every JSDoc change.
 
 ## Repository Specifics
 
