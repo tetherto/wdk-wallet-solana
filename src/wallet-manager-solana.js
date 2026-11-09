@@ -180,6 +180,7 @@ export default class WalletManagerSolana extends WalletManager {
    * @param {Object} [options] - Account options.
    * @param {string} [options.signerName] - The name of a signer registered via `addSigner`. Omit to use the default signer.
    * @returns {Promise<WalletAccountSolana>} The account.
+   * @throws {ValueError} If the path is not valid.
    * @throws {NoSuchElementError} If a signer name is given but no signer exists with that name.
    * @throws {InvalidSignerError} If the signer doesn't support account derivation.
    * @throws {DisposalError} If the wallet manager or the given signer has been disposed.

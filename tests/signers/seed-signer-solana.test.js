@@ -189,6 +189,11 @@ describe('SeedSignerSolana', () => {
         .rejects.toThrow(new ValueError(RELATIVE_PATH_MESSAGE))
     })
 
+    it('should throw if a relative path segment is 2^31 or higher', async () => {
+      await expect(new SeedSignerSolana(TEST_SEED_PHRASE).derive("2147483648'"))
+        .rejects.toThrow(new ValueError(INVALID_PATH_MESSAGE))
+    })
+
     it('should report an invalid path before a non-hardened one', async () => {
       await expect(new SeedSignerSolana(TEST_SEED_PHRASE).derive('a/b/0'))
         .rejects.toThrow(new ValueError(INVALID_PATH_MESSAGE))

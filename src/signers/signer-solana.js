@@ -57,7 +57,7 @@ export function assertFullHardenedPath (path, options = {}) {
 
   const segments = (isAbsolute ? path.slice(2) : path).split('/')
 
-  if (!segments.every((segment) => /^\d+'?$/.test(segment))) {
+  if (!segments.every((segment) => /^\d+'?$/.test(segment) && parseInt(segment) < 2 ** 31)) {
     throw new ValueError('The derivation path is not a valid BIP-32 path.')
   }
 

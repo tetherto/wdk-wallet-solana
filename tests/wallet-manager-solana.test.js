@@ -50,6 +50,10 @@ const ACCOUNT_1 = {
 
 const PATH_100_ADDRESS = '57hwCai22XueypvXcXKotkuAQYj2eukFcY5ymWB7Arvg'
 
+const INVALID_PATH_MESSAGE = 'The derivation path is not a valid BIP-32 path.'
+
+const HARDENED_PATH_MESSAGE = 'In Solana, every child path in a derivation path must be hardened.'
+
 const INVALID_INDEX_MESSAGE = 'The index must be an integer between 0 and 2^31 - 1.'
 
 const UNSUPPORTED_DERIVATION_MESSAGE = 'The signer does not support account derivation.'
@@ -316,6 +320,18 @@ describe('WalletManagerSolana', () => {
   })
 
   describe('getAccountByPath', () => {
+    it('should throw if the path is not a valid BIP-32 path', async () => {
+      await expect(wallet.getAccountByPath('a/b')).rejects.toThrow(new ValueError(INVALID_PATH_MESSAGE))
+    })
+
+    it('should throw if a path segment is 2^31 or higher', async () => {
+      await expect(wallet.getAccountByPath("2147483648'/0'")).rejects.toThrow(new ValueError(INVALID_PATH_MESSAGE))
+    })
+
+    it('should throw if the path is not fully hardened', async () => {
+      await expect(wallet.getAccountByPath("0'/1")).rejects.toThrow(new ValueError(HARDENED_PATH_MESSAGE))
+    })
+
     it('should throw if the wallet manager has been disposed', async () => {
       const signerWallet = new WalletManagerSolana(new SeedSignerSolana(TEST_SEED_PHRASE))
 
