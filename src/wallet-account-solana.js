@@ -32,7 +32,7 @@ import SeedSignerSolana, { BIP_44_SOL_DERIVATION_PATH_PREFIX } from './signers/s
 import PrivateKeySignerSolana from './signers/private-key-signer-solana.js'
 
 /**
- * @template TSignedTransaction
+ * @template {unknown} TSignedTransaction
  * @typedef {import('@tetherto/wdk-wallet').IWalletAccount<TSignedTransaction>} IWalletAccount
  */
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
