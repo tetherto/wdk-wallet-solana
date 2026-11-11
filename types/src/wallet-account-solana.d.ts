@@ -190,6 +190,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana imp
      * Calling it again has no effect.
      */
     dispose(): void;
+    /** @private */
+    private _guardDisposed;
 }
 export type IWalletAccount<TSignedTransaction> = import("@tetherto/wdk-wallet").IWalletAccount<TSignedTransaction>;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;

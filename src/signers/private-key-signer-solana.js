@@ -210,9 +210,7 @@ export default class PrivateKeySignerSolana {
    * @throws {DisposalError} If the signer has been disposed.
    */
   async sign (message) {
-    if (this._disposed) {
-      throw new DisposalError('The signer has been disposed.')
-    }
+    this._guardDisposed()
 
     return signMessage(this._rawPrivateKey, message)
   }
@@ -225,9 +223,7 @@ export default class PrivateKeySignerSolana {
    * @throws {DisposalError} If the signer has been disposed.
    */
   async signTransaction (unsignedTx) {
-    if (this._disposed) {
-      throw new DisposalError('The signer has been disposed.')
-    }
+    this._guardDisposed()
 
     return signTransactionBytes(this._rawPrivateKey, unsignedTx)
   }
@@ -242,5 +238,12 @@ export default class PrivateKeySignerSolana {
 
     this._rawPrivateKey = undefined
     this._disposed = true
+  }
+
+  /** @private */
+  _guardDisposed () {
+    if (this.disposed) {
+      throw new DisposalError('The signer has been disposed.')
+    }
   }
 }
