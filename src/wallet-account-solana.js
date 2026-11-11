@@ -199,9 +199,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @throws {DisposalError} If the wallet account has been disposed.
    */
   async sign (message) {
-    if (this._disposed) {
-      throw new DisposalError('The wallet account has been disposed.')
-    }
+    this._guardDisposed()
 
     return await this._signer.sign(message)
   }
@@ -216,9 +214,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
    */
   async signTransaction (tx) {
-    if (this._disposed) {
-      throw new DisposalError('The wallet account has been disposed.')
-    }
+    this._guardDisposed()
 
     if (!this._rpc) {
       throw new ProviderRequiredError('The wallet must be connected to a provider to sign transactions.')
@@ -284,9 +280,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
    */
   async sendTransaction (tx) {
-    if (this._disposed) {
-      throw new DisposalError('The wallet account has been disposed.')
-    }
+    this._guardDisposed()
 
     if (!this._rpc) {
       throw new ProviderRequiredError('The wallet must be connected to a provider to send transactions.')
@@ -430,9 +424,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
    * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
    */
   async transfer (options, solanaOptions = {}) {
-    if (this._disposed) {
-      throw new DisposalError('The wallet account has been disposed.')
-    }
+    this._guardDisposed()
 
     if (!this._rpc) {
       throw new ProviderRequiredError('The wallet must be connected to a provider to transfer tokens.')
@@ -481,5 +473,12 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
     }
 
     this._disposed = true
+  }
+
+  /** @private */
+  _guardDisposed () {
+    if (this.disposed) {
+      throw new DisposalError('The wallet account has been disposed.')
+    }
   }
 }
