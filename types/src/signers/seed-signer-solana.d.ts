@@ -93,6 +93,8 @@ export default class SeedSignerSolana implements ISignerSolana {
      * Disposes the signer, securely erasing its private key and chain code from memory.
      */
     dispose(): void;
+    /** @private */
+    private _guardDisposed;
 }
 export type ISignerSolana = import("./signer-solana.js").ISignerSolana;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
