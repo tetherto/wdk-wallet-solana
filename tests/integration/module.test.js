@@ -232,6 +232,9 @@ async function sendInstructions (sendAndConfirmTransaction, rpc, feePayer, instr
 }
 
 /**
+ * Deploys a Token-2022 mint with the given extensions. A mint without extensions is sized as a
+ * bare mint, since an empty extension list would size it for an extension suffix it does not have.
+ *
  * @param {ReturnType<typeof createSolanaRpc>} rpc
  * @param {ReturnType<typeof sendAndConfirmTransactionFactory>} sendAndConfirmTransaction
  * @param {import('@solana-program/token-2022').ExtensionArgs[]} [extensions]
@@ -246,7 +249,6 @@ async function deployTestToken2022 (rpc, sendAndConfirmTransaction, extensions =
 
   const mintSigner = await generateKeyPairSigner()
   const mint = address(mintSigner.address)
-  // An empty list would size the account for an extension suffix, which a bare mint does not have.
   const space = getMint2022Size(extensions.length > 0 ? extensions : undefined)
   const mintRent = await rpc
     .getMinimumBalanceForRentExemption(BigInt(space), { commitment: 'confirmed' })
