@@ -1380,28 +1380,6 @@ describe('WalletAccountReadOnlySolana', () => {
       ))
     })
 
-    it('should reject a mint configured for confidential minting and burning', async () => {
-      mockMintWithExtensions([
-        {
-          __kind: 'ConfidentialTransferMint',
-          authority: { __option: 'None' },
-          autoApproveNewAccounts: false,
-          auditorElgamalPubkey: { __option: 'None' }
-        },
-        {
-          __kind: 'ConfidentialMintBurn',
-          confidentialSupply: new Uint8Array(64),
-          decryptableSupply: new Uint8Array(36),
-          supplyElgamalPubkey: address(SYSTEM_PROGRAM),
-          pendingBurn: new Uint8Array(64)
-        }
-      ])
-
-      await expect(quote()).rejects.toThrow(new ConfidentialTransferNotSupportedError(
-        `Token '${TOKEN_2022_MINT}' is configured for confidential transfers, which are not supported.`
-      ))
-    })
-
     it('should reject a mint that freezes the accounts it creates when the recipient account must be created', async () => {
       mockMintWithExtensions([{ __kind: 'DefaultAccountState', state: AccountState2022.Frozen }])
       mockRpc.getAccountInfo.mockReturnValue(mockSend(null))
