@@ -108,7 +108,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @param {Omit<SolanaWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
    */
   constructor (addr, config = {}) {
-    super(addr)
+    super(addr, config)
 
     /**
      * The read-only wallet account configuration.
