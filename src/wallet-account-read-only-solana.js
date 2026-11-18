@@ -730,7 +730,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @throws {NonTransferableTokenError} If the mint is non-transferable.
    * @throws {TransferHookNotSupportedError} If the mint carries a transfer hook with a hook program set.
    * @throws {ConfidentialTransferNotSupportedError} If the mint is configured for confidential transfers.
-   * @throws {FrozenTokenAccountError} If the recipient has no token account yet and the mint freezes by default the accounts it creates, or if the recipient's Token-2022 account is frozen.
+   * @throws {FrozenTokenAccountError} If the recipient has no token account yet and the mint freezes by default the accounts it creates, or if the recipient's token account is frozen.
    */
   async _buildSPLTransferTransactionMessage (token, recipient, amount, solanaOptions = {}) {
     const { memo } = solanaOptions ?? {}
@@ -753,7 +753,6 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     const recipientPublicKey = address(recipient)
 
     const { tokenProgram, decimals, extensions: mintExtensions } = await this._fetchMintAccount(token)
-    const isToken2022 = tokenProgram === TOKEN_2022_PROGRAM_ADDRESS
 
     for (const extension of mintExtensions) {
       const rejection = REJECTED_MINT_EXTENSIONS[extension.__kind]
@@ -780,7 +779,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     const recipientTokenAccount = await fetchMaybeToken(this._rpc, toATA, { commitment: this._commitment })
 
-    if (recipientTokenAccount.exists && isToken2022 && recipientTokenAccount.data.state === AccountState.Frozen) {
+    if (recipientTokenAccount.exists && recipientTokenAccount.data.state === AccountState.Frozen) {
       throw new FrozenTokenAccountError(`The token account of '${recipient}' is frozen.`)
     }
 

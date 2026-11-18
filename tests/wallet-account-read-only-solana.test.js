@@ -1462,13 +1462,11 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(quotedPrograms()).toEqual([TOKEN_PROGRAM_ADDRESS])
     })
 
-    it('should quote a transfer of a classic SPL mint to a frozen recipient account', async () => {
+    it('should reject a classic SPL mint transfer to a frozen recipient account', async () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(TOKEN_PROGRAM_ADDRESS, { decimals: 6 })]))
       mockRpc.getAccountInfo.mockReturnValue(mockSend(createTokenAccount(0, TOKEN_PROGRAM_ADDRESS, { state: AccountState2022.Frozen })))
 
-      await quote(CLASSIC_MINT)
-
-      expect(quotedPrograms()).toEqual([TOKEN_PROGRAM_ADDRESS])
+      await expect(quote(CLASSIC_MINT)).rejects.toThrow(new FrozenTokenAccountError(`The token account of '${RECIPIENT}' is frozen.`))
     })
   })
 

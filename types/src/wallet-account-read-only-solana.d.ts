@@ -208,7 +208,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * @throws {NonTransferableTokenError} If the mint is non-transferable.
      * @throws {TransferHookNotSupportedError} If the mint carries a transfer hook with a hook program set.
      * @throws {ConfidentialTransferNotSupportedError} If the mint is configured for confidential transfers.
-     * @throws {FrozenTokenAccountError} If the recipient has no token account yet and the mint freezes by default the accounts it creates, or if the recipient's Token-2022 account is frozen.
+     * @throws {FrozenTokenAccountError} If the recipient has no token account yet and the mint freezes by default the accounts it creates, or if the recipient's token account is frozen.
      */
     protected _buildSPLTransferTransactionMessage(token: string, recipient: string, amount: number | bigint, solanaOptions?: SolanaTransferOptions): Promise<TransactionMessage>;
     /**
