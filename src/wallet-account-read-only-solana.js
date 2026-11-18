@@ -148,8 +148,7 @@ const BASIS_POINTS_PER_WHOLE = 10000n
 
 /**
  * The account extensions the Token Extensions Program adds to every token account of a
- * mint carrying the given mint extension, sized with zeroed fields. The associated token
- * account program also adds `ImmutableOwner` to every account it creates.
+ * mint carrying the given mint extension, sized with zeroed fields.
  */
 const REQUIRED_ACCOUNT_EXTENSIONS = {
   TransferFeeConfig: { __kind: 'TransferFeeAmount', withheldAmount: 0n },
@@ -160,8 +159,7 @@ const REQUIRED_ACCOUNT_EXTENSIONS = {
 /**
  * The mint extensions a transfer is refused for, each mapped to the error it raises.
  * An entry returns `null` when the extension is present but harmless in its current
- * configuration, such as a transfer hook with no hook program set. Every other extension,
- * including the transfer fee and interest-bearing ones, is transferred through unchanged.
+ * configuration, such as a transfer hook with no hook program set.
  */
 const REJECTED_MINT_EXTENSIONS = {
   NonTransferable: token =>
