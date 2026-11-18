@@ -121,7 +121,7 @@ const FOREIGN_FEE_PAYER_ADDRESS = 'DifferentAddress11111111111111111111111'
 
 const USDT_MINT_ADDRESS = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 
-const TOKEN_2022_MINT_ADDRESS = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+const TOKEN_2022_MINT_ADDRESS = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo'
 
 /** Creates a mock SPL mint account with the given decimals, as returned by the RPC. */
 function createMintAccount (decimals = 6) {

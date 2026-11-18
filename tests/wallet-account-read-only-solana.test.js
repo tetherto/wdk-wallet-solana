@@ -49,6 +49,7 @@ import WalletAccountSolana from '../src/wallet-account-solana.js'
 
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
 const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
+const TOKEN_2022_MINT_ADDRESS = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo'
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mockurl.com'
@@ -223,7 +224,6 @@ describe('WalletAccountReadOnlySolana', () => {
 
   describe('getTokenBalance', () => {
     const MOCK_TOKEN_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
-    const MOCK_TOKEN_2022_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
 
     beforeEach(() => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount()]))
@@ -249,10 +249,10 @@ describe('WalletAccountReadOnlySolana', () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS, { size: 278, accountType: 1 })]))
       mockRpc.getAccountInfo.mockReturnValueOnce(mockSend(createTokenAccount(2500000, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
 
-      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
 
       const [ata] = await findAssociatedTokenPda({
-        mint: address(MOCK_TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
@@ -328,11 +328,11 @@ describe('WalletAccountReadOnlySolana', () => {
         .mockReturnValueOnce(mockSend(null))
         .mockReturnValueOnce(mockSend(createTokenAccount(500)))
 
-      await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
-      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+      await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
 
       const [classicAta] = await findAssociatedTokenPda({
-        mint: address(MOCK_TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_PROGRAM_ADDRESS
       })
@@ -350,24 +350,24 @@ describe('WalletAccountReadOnlySolana', () => {
         .mockReturnValueOnce(mockSend(createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
         .mockReturnValueOnce(mockSend(createTokenAccount(500)))
 
-      await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
-      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+      await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
 
       const [token2022Ata] = await findAssociatedTokenPda({
-        mint: address(MOCK_TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
       const [classicAta] = await findAssociatedTokenPda({
-        mint: address(MOCK_TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_PROGRAM_ADDRESS
       })
 
       expect(balance).toBe(500n)
       expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_2022_MINT)], { commitment: 'confirmed', encoding: 'base64' })
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [address(MOCK_TOKEN_2022_MINT)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(TOKEN_2022_MINT_ADDRESS)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [address(TOKEN_2022_MINT_ADDRESS)], { commitment: 'confirmed', encoding: 'base64' })
       expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(3)
       expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(1, token2022Ata, { commitment: 'confirmed', encoding: 'base64' })
       expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(2, token2022Ata, { commitment: 'confirmed', encoding: 'base64' })
@@ -383,12 +383,12 @@ describe('WalletAccountReadOnlySolana', () => {
         .mockReturnValueOnce(mockSend(null))
         .mockReturnValue(mockSend(createTokenAccount(500)))
 
-      await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
-      await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
-      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+      await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
+      await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
 
       const [classicAta] = await findAssociatedTokenPda({
-        mint: address(MOCK_TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_PROGRAM_ADDRESS
       })
@@ -405,20 +405,20 @@ describe('WalletAccountReadOnlySolana', () => {
         .mockReturnValueOnce(mockSend([null]))
       mockRpc.getAccountInfo.mockReturnValue(mockSend(null))
 
-      await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+      await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
 
-      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
 
       const [ata] = await findAssociatedTokenPda({
-        mint: address(MOCK_TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
 
       expect(balance).toBe(0n)
       expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_2022_MINT)], { commitment: 'confirmed', encoding: 'base64' })
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [address(MOCK_TOKEN_2022_MINT)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(TOKEN_2022_MINT_ADDRESS)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [address(TOKEN_2022_MINT_ADDRESS)], { commitment: 'confirmed', encoding: 'base64' })
       expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(2)
       expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(1, ata, { commitment: 'confirmed', encoding: 'base64' })
       expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(2, ata, { commitment: 'confirmed', encoding: 'base64' })
@@ -436,10 +436,10 @@ describe('WalletAccountReadOnlySolana', () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)]))
       mockRpc.getAccountInfo.mockReturnValueOnce(mockSend(null))
 
-      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
 
       const [ata] = await findAssociatedTokenPda({
-        mint: address(MOCK_TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
@@ -461,8 +461,8 @@ describe('WalletAccountReadOnlySolana', () => {
         createMintAccount(TOKEN_2022_PROGRAM_ADDRESS, { size: 278, accountType: ACCOUNT_TYPE_TOKEN })
       ]))
 
-      await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)).rejects.toThrow(new ValueError(
-        `'${MOCK_TOKEN_2022_MINT}' is not a mint account.`
+      await expect(readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)).rejects.toThrow(new ValueError(
+        `'${TOKEN_2022_MINT_ADDRESS}' is not a mint account.`
       ))
     })
 
@@ -1275,7 +1275,6 @@ describe('WalletAccountReadOnlySolana', () => {
 
   describe('quoteTransfer transaction construction', () => {
     const CLASSIC_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
-    const TOKEN_2022_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
     const RECIPIENT = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
 
     beforeEach(() => {
@@ -1325,15 +1324,15 @@ describe('WalletAccountReadOnlySolana', () => {
       ]))
       mockRpc.getAccountInfo.mockReturnValue(mockSend(createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
 
-      await quote(TOKEN_2022_MINT, 5n)
+      await quote(TOKEN_2022_MINT_ADDRESS, 5n)
 
       const [fromAta] = await findAssociatedTokenPda({
-        mint: address(TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
       const [toAta] = await findAssociatedTokenPda({
-        mint: address(TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(RECIPIENT),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
@@ -1343,7 +1342,7 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(instructions).toHaveLength(1)
       const [transfer] = instructions
       expect(transfer.programAddress).toBe(TOKEN_2022_PROGRAM_ADDRESS)
-      expect(transfer.accounts).toEqual([fromAta, address(TOKEN_2022_MINT), toAta, address(TEST_ADDRESS)])
+      expect(transfer.accounts).toEqual([fromAta, address(TOKEN_2022_MINT_ADDRESS), toAta, address(TEST_ADDRESS)])
       expect(transfer.data).toEqual(getTransferChecked2022InstructionDataEncoder().encode({ amount: 5n, decimals: 9 }))
     })
 
@@ -1353,10 +1352,10 @@ describe('WalletAccountReadOnlySolana', () => {
       ]))
       mockRpc.getAccountInfo.mockReturnValue(mockSend(null))
 
-      await quote(TOKEN_2022_MINT, 5n)
+      await quote(TOKEN_2022_MINT_ADDRESS, 5n)
 
       const [toAta] = await findAssociatedTokenPda({
-        mint: address(TOKEN_2022_MINT),
+        mint: address(TOKEN_2022_MINT_ADDRESS),
         owner: address(RECIPIENT),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
@@ -1370,7 +1369,7 @@ describe('WalletAccountReadOnlySolana', () => {
         address(TEST_ADDRESS),
         toAta,
         address(RECIPIENT),
-        address(TOKEN_2022_MINT),
+        address(TOKEN_2022_MINT_ADDRESS),
         '11111111111111111111111111111111',
         TOKEN_2022_PROGRAM_ADDRESS
       ])
@@ -1396,7 +1395,6 @@ describe('WalletAccountReadOnlySolana', () => {
   })
 
   describe('quoteTransfer token extension policy', () => {
-    const TOKEN_2022_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
     const CLASSIC_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
     const RECIPIENT = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
     const SYSTEM_PROGRAM = '11111111111111111111111111111111'
@@ -1417,7 +1415,7 @@ describe('WalletAccountReadOnlySolana', () => {
       ]))
     }
 
-    function quote (mint = TOKEN_2022_MINT, solanaOptions) {
+    function quote (mint = TOKEN_2022_MINT_ADDRESS, solanaOptions) {
       return readOnlyAccount.quoteTransfer({ token: mint, recipient: RECIPIENT, amount: 1000n }, solanaOptions)
     }
 
@@ -1428,7 +1426,7 @@ describe('WalletAccountReadOnlySolana', () => {
     it('should reject a non-transferable mint', async () => {
       mockMintWithExtensions([{ __kind: 'NonTransferable' }])
 
-      await expect(quote()).rejects.toThrow(new NonTransferableTokenError(`Token '${TOKEN_2022_MINT}' is non-transferable.`))
+      await expect(quote()).rejects.toThrow(new NonTransferableTokenError(`Token '${TOKEN_2022_MINT_ADDRESS}' is non-transferable.`))
     })
 
     it('should reject a mint carrying a transfer hook with a hook program set', async () => {
@@ -1437,7 +1435,7 @@ describe('WalletAccountReadOnlySolana', () => {
       ])
 
       await expect(quote()).rejects.toThrow(new TransferHookNotSupportedError(
-        `Token '${TOKEN_2022_MINT}' carries a transfer hook, which is not supported.`
+        `Token '${TOKEN_2022_MINT_ADDRESS}' carries a transfer hook, which is not supported.`
       ))
       expect(mockRpc.getFeeForMessage).not.toHaveBeenCalled()
     })
@@ -1463,7 +1461,7 @@ describe('WalletAccountReadOnlySolana', () => {
       ])
 
       await expect(quote()).rejects.toThrow(new ConfidentialTransferNotSupportedError(
-        `Token '${TOKEN_2022_MINT}' is configured for confidential transfers, which are not supported.`
+        `Token '${TOKEN_2022_MINT_ADDRESS}' is configured for confidential transfers, which are not supported.`
       ))
     })
 
@@ -1472,7 +1470,7 @@ describe('WalletAccountReadOnlySolana', () => {
       mockRpc.getAccountInfo.mockReturnValue(mockSend(null))
 
       await expect(quote()).rejects.toThrow(new FrozenTokenAccountError(
-        `Token '${TOKEN_2022_MINT}' freezes by default the accounts it creates, so '${RECIPIENT}' could not receive it.`
+        `Token '${TOKEN_2022_MINT_ADDRESS}' freezes by default the accounts it creates, so '${RECIPIENT}' could not receive it.`
       ))
       expect(mockRpc.getFeeForMessage).not.toHaveBeenCalled()
     })
@@ -1545,7 +1543,7 @@ describe('WalletAccountReadOnlySolana', () => {
         })
       ))
 
-      await quote(TOKEN_2022_MINT, { memo: 'wdk memo' })
+      await quote(TOKEN_2022_MINT_ADDRESS, { memo: 'wdk memo' })
 
       expect(quotedPrograms()).toEqual([LEGACY_MEMO_PROGRAM_ADDRESS_V3, TOKEN_2022_PROGRAM_ADDRESS])
     })
@@ -1989,7 +1987,6 @@ describe('WalletAccountReadOnlySolana', () => {
   })
 
   describe('quoteTransfer of a Token-2022 mint', () => {
-    const TOKEN_2022_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
     const RECIPIENT = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
     const CURRENT_EPOCH = 500n
 
@@ -2017,7 +2014,7 @@ describe('WalletAccountReadOnlySolana', () => {
     }
 
     function quote (amount = 1000000n) {
-      return readOnlyAccount.quoteTransfer({ token: TOKEN_2022_MINT, recipient: RECIPIENT, amount })
+      return readOnlyAccount.quoteTransfer({ token: TOKEN_2022_MINT_ADDRESS, recipient: RECIPIENT, amount })
     }
 
     beforeEach(() => {
@@ -2159,7 +2156,7 @@ describe('WalletAccountReadOnlySolana', () => {
       mockMint([{ ...unsetHook, programId: LEGACY_MEMO_PROGRAM_ADDRESS_V3 }])
 
       await expect(quote()).rejects.toThrow(new TransferHookNotSupportedError(
-        `Token '${TOKEN_2022_MINT}' carries a transfer hook, which is not supported.`
+        `Token '${TOKEN_2022_MINT_ADDRESS}' carries a transfer hook, which is not supported.`
       ))
     })
   })
