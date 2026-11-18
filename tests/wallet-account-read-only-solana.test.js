@@ -26,9 +26,15 @@ import { getBase64Encoder } from '@solana/codecs'
 import {
   ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
   findAssociatedTokenPda,
+  getTransferCheckedInstructionDataEncoder,
   TOKEN_PROGRAM_ADDRESS
 } from '@solana-program/token'
-import { AccountState as AccountState2022, getExtensionEncoder, TOKEN_2022_PROGRAM_ADDRESS } from '@solana-program/token-2022'
+import {
+  AccountState as AccountState2022,
+  getExtensionEncoder,
+  getTransferCheckedInstructionDataEncoder as getTransferChecked2022InstructionDataEncoder,
+  TOKEN_2022_PROGRAM_ADDRESS
+} from '@solana-program/token-2022'
 import { LEGACY_MEMO_PROGRAM_ADDRESS_V3 } from '@solana-program/memo'
 
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
@@ -1184,7 +1190,6 @@ describe('WalletAccountReadOnlySolana', () => {
     const CLASSIC_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
     const TOKEN_2022_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
     const RECIPIENT = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
-    const TRANSFER_CHECKED_DISCRIMINATOR = 12
 
     beforeEach(() => {
       mockRpc.getLatestBlockhash.mockReturnValue(mockSend({
@@ -1224,8 +1229,7 @@ describe('WalletAccountReadOnlySolana', () => {
       const [transfer] = instructions
       expect(transfer.programAddress).toBe(TOKEN_PROGRAM_ADDRESS)
       expect(transfer.accounts).toEqual([fromAta, address(CLASSIC_MINT), toAta, address(TEST_ADDRESS)])
-      expect(transfer.data[0]).toBe(TRANSFER_CHECKED_DISCRIMINATOR)
-      expect(transfer.data[transfer.data.length - 1]).toBe(6)
+      expect(transfer.data).toEqual(getTransferCheckedInstructionDataEncoder().encode({ amount: 1000000n, decimals: 6 }))
     })
 
     it('should quote the transfer against the token extensions program for a Token-2022 mint', async () => {
@@ -1253,7 +1257,7 @@ describe('WalletAccountReadOnlySolana', () => {
       const [transfer] = instructions
       expect(transfer.programAddress).toBe(TOKEN_2022_PROGRAM_ADDRESS)
       expect(transfer.accounts).toEqual([fromAta, address(TOKEN_2022_MINT), toAta, address(TEST_ADDRESS)])
-      expect(transfer.data[transfer.data.length - 1]).toBe(9)
+      expect(transfer.data).toEqual(getTransferChecked2022InstructionDataEncoder().encode({ amount: 5n, decimals: 9 }))
     })
 
     it('should quote the creation of the recipient ATA under the mint own token program', async () => {
@@ -1448,7 +1452,7 @@ describe('WalletAccountReadOnlySolana', () => {
       await quote()
 
       const [transfer] = decodeQuotedInstructions(mockRpc.getFeeForMessage)
-      expect(Buffer.from(transfer.data).readBigUInt64LE(1)).toBe(1000n)
+      expect(transfer.data).toEqual(getTransferChecked2022InstructionDataEncoder().encode({ amount: 1000n, decimals: 6 }))
     })
 
     it('should accept an interest-bearing mint', async () => {
