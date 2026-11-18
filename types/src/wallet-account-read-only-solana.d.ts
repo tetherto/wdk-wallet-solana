@@ -265,28 +265,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * @returns {Promise<TransactionSigner>} The signer.
      */
     protected _getTransactionSigner(): Promise<TransactionSigner>;
-    /**
-     * Reads the amount held by an owner in its associated token account of a mint, derived
-     * under the given token program.
-     *
-     * @private
-     * @param {string} ownerAddress - The owner's address (base58-encoded public key).
-     * @param {string} tokenAddress - The mint's address (base58-encoded public key).
-     * @param {TokenProgramAddress} tokenProgram - The token program to derive the account under.
-     * @returns {Promise<bigint | null>} The amount held, or null if the token account does not exist.
-     */
+    /** @private */
     private _fetchTokenAmount;
-    /**
-     * Reads the amounts held by an owner in its associated token accounts of the given mints,
-     * each derived under the given token program, batching them within the
-     * `getMultipleAccounts` limit.
-     *
-     * @private
-     * @param {string} ownerAddress - The owner's address (base58-encoded public key).
-     * @param {string[]} tokenAddresses - The mints' addresses (base58-encoded public keys), without duplicates.
-     * @param {Record<string, TokenProgramAddress>} tokenPrograms - A mapping of mint addresses to the token programs to derive the accounts under.
-     * @returns {Promise<Record<string, bigint | null>>} A mapping of mint addresses to the amounts held, or null where the token account does not exist.
-     */
+    /** @private */
     private _fetchTokenAmounts;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;

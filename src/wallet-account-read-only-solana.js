@@ -975,16 +975,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     return createNoopSigner(address(addr))
   }
 
-  /**
-   * Reads the amount held by an owner in its associated token account of a mint, derived
-   * under the given token program.
-   *
-   * @private
-   * @param {string} ownerAddress - The owner's address (base58-encoded public key).
-   * @param {string} tokenAddress - The mint's address (base58-encoded public key).
-   * @param {TokenProgramAddress} tokenProgram - The token program to derive the account under.
-   * @returns {Promise<bigint | null>} The amount held, or null if the token account does not exist.
-   */
+  /** @private */
   async _fetchTokenAmount (ownerAddress, tokenAddress, tokenProgram) {
     const [ata] = await findAssociatedTokenPda({
       mint: address(tokenAddress),
@@ -997,17 +988,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     return tokenAccount.exists ? tokenAccount.data.amount : null
   }
 
-  /**
-   * Reads the amounts held by an owner in its associated token accounts of the given mints,
-   * each derived under the given token program, batching them within the
-   * `getMultipleAccounts` limit.
-   *
-   * @private
-   * @param {string} ownerAddress - The owner's address (base58-encoded public key).
-   * @param {string[]} tokenAddresses - The mints' addresses (base58-encoded public keys), without duplicates.
-   * @param {Record<string, TokenProgramAddress>} tokenPrograms - A mapping of mint addresses to the token programs to derive the accounts under.
-   * @returns {Promise<Record<string, bigint | null>>} A mapping of mint addresses to the amounts held, or null where the token account does not exist.
-   */
+  /** @private */
   async _fetchTokenAmounts (ownerAddress, tokenAddresses, tokenPrograms) {
     const atas = await Promise.all(
       tokenAddresses.map(tokenAddress =>
