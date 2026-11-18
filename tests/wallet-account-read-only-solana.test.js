@@ -201,7 +201,7 @@ describe('WalletAccountReadOnlySolana', () => {
       )
 
       await expect(disconnectedAccount.getBalance()).rejects.toThrow(
-        'The wallet must be connected to a provider to retrieve balances.'
+        new ProviderRequiredError('The wallet must be connected to a provider to retrieve balances.')
       )
     })
 
@@ -488,7 +488,7 @@ describe('WalletAccountReadOnlySolana', () => {
       await expect(
         disconnectedAccount.getTokenBalance(MOCK_TOKEN_MINT)
       ).rejects.toThrow(
-        'The wallet must be connected to a provider to retrieve token balances.'
+        new ProviderRequiredError('The wallet must be connected to a provider to retrieve token balances.')
       )
     })
 
@@ -827,7 +827,7 @@ describe('WalletAccountReadOnlySolana', () => {
       const disconnectedAccount = new WalletAccountReadOnlySolana(TEST_ADDRESS, {})
 
       await expect(disconnectedAccount.getTokenBalances([MOCK_TOKEN_MINT_1])).rejects.toThrow(
-        'The wallet must be connected to a provider to retrieve token balances.'
+        new ProviderRequiredError('The wallet must be connected to a provider to retrieve token balances.')
       )
     })
 
@@ -1272,7 +1272,7 @@ describe('WalletAccountReadOnlySolana', () => {
         await expect(
           disconnectedAccount.quoteSendTransaction(tx)
         ).rejects.toThrow(
-          'The wallet must be connected to a provider to quote transactions.'
+          new ProviderRequiredError('The wallet must be connected to a provider to quote transactions.')
         )
       })
     })
@@ -1946,7 +1946,7 @@ describe('WalletAccountReadOnlySolana', () => {
           amount: 1000000n
         })
       ).rejects.toThrow(
-        'The wallet must be connected to a provider to quote transfer operations.'
+        new ProviderRequiredError('The wallet must be connected to a provider to quote transfer operations.')
       )
     })
 
@@ -2239,7 +2239,7 @@ describe('WalletAccountReadOnlySolana', () => {
       await expect(
         disconnectedAccount.getTransactionReceipt(MOCK_TX_SIGNATURE)
       ).rejects.toThrow(
-        'The wallet must be connected to a provider to fetch transaction receipts.'
+        new ProviderRequiredError('The wallet must be connected to a provider to fetch transaction receipts.')
       )
     })
 
@@ -2364,7 +2364,7 @@ describe('WalletAccountReadOnlySolana', () => {
       await expect(
         disconnectedAccount.getTransaction(MOCK_TX_SIGNATURE)
       ).rejects.toThrow(
-        'The wallet must be connected to a provider to fetch transactions.'
+        new ProviderRequiredError('The wallet must be connected to a provider to fetch transactions.')
       )
     })
 
