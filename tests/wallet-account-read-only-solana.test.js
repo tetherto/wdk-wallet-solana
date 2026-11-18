@@ -653,10 +653,16 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_1])
 
-      expect(Object.keys(balances)).toHaveLength(1)
-      expect(balances[MOCK_TOKEN_MINT_1]).toBe(1000000n)
-      expect(mockRpc.getMultipleAccounts.mock.calls[0][0]).toHaveLength(1)
-      expect(mockRpc.getMultipleAccounts.mock.calls[1][0]).toHaveLength(1)
+      const [ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_MINT_1),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_1]: 1000000n })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_MINT_1)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [ata], { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should handle single token address', async () => {
@@ -828,8 +834,16 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
 
+      const [ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_MINT_1),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
       expect(balances).toEqual({ [MOCK_TOKEN_MINT_1]: 1000000n, [MOCK_TOKEN_MINT_2]: 0n })
-      expect(mockRpc.getMultipleAccounts.mock.calls[1][0]).toHaveLength(1)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_MINT_1), address(MOCK_TOKEN_MINT_2)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [ata], { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should return 0n for an address that is not a mint next to the balances of the others', async () => {
