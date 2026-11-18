@@ -2010,7 +2010,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const result = await quote()
 
-      expect(result.rent).toBe(rentFor(182))
+      expect(result).toEqual({ fee: 5000n, rent: rentFor(182), transferFee: 5000n })
     })
 
     it('should quote the rent of the transfer hook account extension when creating the recipient account of a mint with an unset transfer hook', async () => {
@@ -2029,7 +2029,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const result = await quote()
 
-      expect(result.rent).toBe(rentFor(174))
+      expect(result).toEqual({ fee: 5000n, rent: rentFor(174), transferFee: 0n })
     })
 
     it('should quote the transfer fee at the newer rate once its epoch is reached', async () => {
@@ -2054,7 +2054,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const result = await quote(1000000n)
 
-      expect(result.transferFee).toBe(1000n)
+      expect(result).toEqual({ fee: 5000n, rent: 0n, transferFee: 1000n })
     })
 
     it('should round the transfer fee up', async () => {
@@ -2063,7 +2063,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const result = await quote(1001n)
 
-      expect(result.transferFee).toBe(6n)
+      expect(result).toEqual({ fee: 5000n, rent: 0n, transferFee: 6n })
     })
 
     it('should cap the transfer fee at the maximum fee', async () => {
@@ -2072,7 +2072,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const result = await quote(1000000n)
 
-      expect(result.transferFee).toBe(2500n)
+      expect(result).toEqual({ fee: 5000n, rent: 0n, transferFee: 2500n })
     })
 
     it('should accept a number amount when quoting the transfer fee', async () => {
@@ -2081,7 +2081,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const result = await quote(1000000)
 
-      expect(result.transferFee).toBe(5000n)
+      expect(result).toEqual({ fee: 5000n, rent: 0n, transferFee: 5000n })
     })
 
     it('should resolve the token program of a quoted mint from the cache on a later balance read', async () => {
@@ -2114,8 +2114,8 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const after = await quote(1000000n)
 
-      expect(before.transferFee).toBe(5000n)
-      expect(after.transferFee).toBe(50000n)
+      expect(before).toEqual({ fee: 5000n, rent: 0n, transferFee: 5000n })
+      expect(after).toEqual({ fee: 5000n, rent: 0n, transferFee: 50000n })
     })
 
     it('should reject a transfer once the mint authority sets a hook program after an earlier quote', async () => {
