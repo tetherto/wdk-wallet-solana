@@ -714,7 +714,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
       const quote = await account.quoteTransfer(TRANSFER)
 
-      const { hash } = await account.transfer(TRANSFER)
+      const { hash, fee } = await account.transfer(TRANSFER)
       await confirmTransaction(rpc, hash)
       const receipt = await account.getTransaction(hash)
 
@@ -723,6 +723,8 @@ describe('@tetherto/wdk-wallet-solana', () => {
       const transferFeeAccountRent = await rpc.getMinimumBalanceForRentExemption(182n, { commitment: 'confirmed' }).send()
 
       expect(receipt.success).toBe(true)
+      expect(fee).toBe(5000n)
+      expect(quote.fee).toBe(fee)
       expect(quote.transferFee).toBe(EXPECTED_TRANSFER_FEE)
       expect(quote.rent).toBe(recipientAtaInfo.lamports)
       expect(quote.rent).toBe(transferFeeAccountRent)
@@ -748,9 +750,12 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
       expect(await account0.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE)
 
-      const { hash } = await account0.transfer({ token: token.mint, recipient: ACCOUNT_1.address, amount: 100 })
+      const { hash, fee } = await account0.transfer({ token: token.mint, recipient: ACCOUNT_1.address, amount: 100 })
       await confirmTransaction(rpc, hash)
+      const receipt = await account0.getTransaction(hash)
 
+      expect(receipt.success).toBe(true)
+      expect(fee).toBe(5000n)
       expect(await account0.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 100n)
       expect(await account1.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE + 100n)
     })
