@@ -293,7 +293,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     const uniqueTokenAddresses = [...new Set(tokenAddresses)]
     const cachedTokenAddresses = uniqueTokenAddresses.filter(tokenAddress => this._tokenProgramCache.has(tokenAddress))
     const tokenPrograms = await this._resolveTokenPrograms(uniqueTokenAddresses)
-    const mintTokenAddresses = uniqueTokenAddresses.filter(tokenAddress => tokenPrograms[tokenAddress] !== undefined)
+    const mintTokenAddresses = uniqueTokenAddresses.filter(tokenAddress => tokenPrograms[tokenAddress] !== null)
 
     const amounts = await this._fetchTokenAmounts(ownerAddress, mintTokenAddresses, tokenPrograms)
 
@@ -555,7 +555,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     const tokenPrograms = await this._resolveTokenPrograms([mintAddress])
     const tokenProgram = tokenPrograms[mintAddress]
 
-    if (tokenProgram === undefined) {
+    if (tokenProgram === null) {
       throw new ValueError(`'${mintAddress}' is not a mint account.`)
     }
 
@@ -568,7 +568,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    *
    * @protected
    * @param {string[]} mintAddresses - The mints' addresses (base58-encoded public keys).
-   * @returns {Promise<Record<string, TokenProgramAddress | undefined>>} A mapping of mint addresses to the addresses of their owning token programs, or to undefined for an address that holds no mint.
+   * @returns {Promise<Record<string, TokenProgramAddress | null>>} A mapping of mint addresses to the addresses of their owning token programs, or to null for an address that holds no mint.
    */
   async _resolveTokenPrograms (mintAddresses) {
     const uniqueMintAddresses = [...new Set(mintAddresses)]
@@ -580,7 +580,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     const tokenPrograms = {}
     for (const mintAddress of uniqueMintAddresses) {
-      tokenPrograms[mintAddress] = this._tokenProgramCache.get(mintAddress)
+      tokenPrograms[mintAddress] = this._tokenProgramCache.get(mintAddress) ?? null
     }
 
     return tokenPrograms

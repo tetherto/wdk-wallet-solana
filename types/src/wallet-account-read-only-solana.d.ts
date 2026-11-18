@@ -144,9 +144,9 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      *
      * @protected
      * @param {string[]} mintAddresses - The mints' addresses (base58-encoded public keys).
-     * @returns {Promise<Record<string, TokenProgramAddress | undefined>>} A mapping of mint addresses to the addresses of their owning token programs, or to undefined for an address that holds no mint.
+     * @returns {Promise<Record<string, TokenProgramAddress | null>>} A mapping of mint addresses to the addresses of their owning token programs, or to null for an address that holds no mint.
      */
-    protected _resolveTokenPrograms(mintAddresses: string[]): Promise<Record<string, TokenProgramAddress | undefined>>;
+    protected _resolveTokenPrograms(mintAddresses: string[]): Promise<Record<string, TokenProgramAddress | null>>;
     /**
      * Fetches the mint account at the given address from the chain.
      *
