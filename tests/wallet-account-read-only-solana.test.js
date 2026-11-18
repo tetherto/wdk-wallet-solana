@@ -328,6 +328,21 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(mockRpc.getAccountInfo).toHaveBeenLastCalledWith(classicAta, { commitment: 'confirmed', encoding: 'base64' })
     })
 
+    it('should read the classic ATA once a cached Token-2022 mint is re-created under the classic program while its Token-2022 ATA is empty', async () => {
+      mockRpc.getMultipleAccounts
+        .mockReturnValueOnce(mockSend([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)]))
+        .mockReturnValueOnce(mockSend([createMintAccount(TOKEN_PROGRAM_ADDRESS)]))
+      mockRpc.getAccountInfo
+        .mockReturnValueOnce(mockSend(createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
+        .mockReturnValueOnce(mockSend(createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
+        .mockReturnValueOnce(mockSend(createTokenAccount(500)))
+
+      await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+
+      expect(balance).toBe(500n)
+    })
+
     it('should read the classic ATA directly once a re-created mint has been fetched again', async () => {
       mockRpc.getMultipleAccounts
         .mockReturnValueOnce(mockSend([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)]))
@@ -654,6 +669,20 @@ describe('WalletAccountReadOnlySolana', () => {
 
       expect(balances).toEqual({ [MOCK_TOKEN_MINT_2]: 500n })
       expect(mockRpc.getMultipleAccounts.mock.calls[4][0]).toEqual([classicAta])
+    })
+
+    it('should read the classic ATA of a cached Token-2022 mint re-created under the classic program while its Token-2022 ATA is empty', async () => {
+      const emptyToken2022Account = createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })
+      mockMintsThenAtas([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)], [emptyToken2022Account])
+      mockRpc.getMultipleAccounts
+        .mockReturnValueOnce(mockSend([emptyToken2022Account]))
+        .mockReturnValueOnce(mockSend([createMintAccount(TOKEN_PROGRAM_ADDRESS)]))
+        .mockReturnValueOnce(mockSend([createTokenAccount(500)]))
+
+      await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
+
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_2]: 500n })
     })
 
     it('should read the classic ATA directly once a re-created mint has been fetched again', async () => {
@@ -2052,6 +2081,7 @@ describe('WalletAccountReadOnlySolana', () => {
       await quote()
       const mintRequestsAfterQuote = mockRpc.getMultipleAccounts.mock.calls.length
 
+      mockRpc.getAccountInfo.mockReturnValue(mockSend(createTokenAccount(1000, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
       await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT)
 
       const [ata] = await findAssociatedTokenPda({

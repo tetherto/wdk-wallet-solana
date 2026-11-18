@@ -216,8 +216,8 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     /**
      * The token program owning each mint already fetched by this instance, keyed by mint
      * address. A Token-2022 mint can be closed and its address initialized again, so an entry
-     * is only trusted while the account's token account exists under it; a balance read that
-     * finds none fetches the mint again.
+     * is only trusted while the account's token account under it holds a balance; a balance read
+     * that finds none, or an empty one, fetches the mint again.
      *
      * @private
      * @type {Map<string, TokenProgramAddress>}
@@ -261,7 +261,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     const amount = await this._fetchTokenAmount(ownerAddress, tokenAddress, tokenProgram)
 
-    if (amount !== null || !isCached) {
+    if (!isCached || (amount !== null && amount !== 0n)) {
       return amount ?? 0n
     }
 
@@ -305,7 +305,8 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     const amounts = await this._fetchTokenAmounts(ownerAddress, mintTokenAddresses, tokenPrograms)
 
-    const unheldCachedTokenAddresses = cachedTokenAddresses.filter(tokenAddress => amounts[tokenAddress] === null)
+    const unheldCachedTokenAddresses = cachedTokenAddresses
+      .filter(tokenAddress => amounts[tokenAddress] === null || amounts[tokenAddress] === 0n)
 
     if (unheldCachedTokenAddresses.length > 0) {
       const mintAccounts = await this._fetchMaybeMintAccounts(unheldCachedTokenAddresses)
