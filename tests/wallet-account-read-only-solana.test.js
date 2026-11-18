@@ -126,8 +126,6 @@ describe('WalletAccountReadOnlySolana', () => {
   let mockRpc
 
   beforeEach(() => {
-    readOnlyAccount = new WalletAccountReadOnlySolana(TEST_ADDRESS, {})
-
     mockRpc = {
       getBalance: jest.fn(),
       getAccountInfo: jest.fn(),
@@ -140,8 +138,7 @@ describe('WalletAccountReadOnlySolana', () => {
       getEpochInfo: jest.fn()
     }
 
-    readOnlyAccount._rpc = mockRpc
-    readOnlyAccount._commitment = 'confirmed'
+    readOnlyAccount = new WalletAccountReadOnlySolana(TEST_ADDRESS, { provider: mockRpc })
   })
 
   describe('Constructor', () => {
