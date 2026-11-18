@@ -1301,6 +1301,16 @@ describe('WalletAccountReadOnlySolana', () => {
     it('should throw ValueError when a number amount exceeds the safe integer range', async () => {
       await expect(quote(CLASSIC_MINT, Number.MAX_SAFE_INTEGER + 2)).rejects.toThrow(new ValueError('Amount exceeds safe integer range'))
     })
+
+    it('should throw NoSuchElementError when the token is not a mint', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue(mockSend([null]))
+
+      await expect(quote(CLASSIC_MINT, 1n)).rejects.toThrow(new NoSuchElementError(
+        `No mint account found for '${CLASSIC_MINT}'.`
+      ))
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledWith([address(CLASSIC_MINT)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getFeeForMessage).not.toHaveBeenCalled()
+    })
   })
 
   describe('quoteTransfer token extension policy', () => {
