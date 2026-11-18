@@ -94,7 +94,7 @@ import { createNoopSigner } from '@solana/signers'
  * The Solana-specific options of a transfer operation, next to the chain-agnostic {@link TransferOptions}.
  *
  * @typedef {Object} SolanaTransferOptions
- * @property {string} [memo] - A UTF-8 memo to attach to the transfer, ignored when empty. It has to be short enough for the transfer to stay within the maximum transaction size. A Token-2022 recipient account enabling the memo transfer extension rejects transfers that carry none.
+ * @property {string} [memo] - A UTF-8 memo to attach to the transfer, ignored when empty. It has to be short enough for the transfer to stay within the maximum transaction size.
  */
 
 /**
