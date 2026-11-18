@@ -624,6 +624,36 @@ describe('@tetherto/wdk-wallet-solana', () => {
       }
     }
 
+    async function deployInterestBearingToken () {
+      const rateAuthority = await generateKeyPairSigner()
+
+      return await deployTestToken2022(rpc, sendAndConfirmTransaction, [{
+        __kind: 'InterestBearingConfig',
+        rateAuthority: rateAuthority.address,
+        initializationTimestamp: 0n,
+        preUpdateAverageRate: 0,
+        lastUpdateTimestamp: 0n,
+        currentRate: 32_767
+      }])
+    }
+
+    async function createMemoRequiringToken2022Account (token) {
+      const owner = await generateKeyPairSigner()
+      const ata = await createToken2022Account(token, owner.address)
+
+      await sendInstructions(sendAndConfirmTransaction, rpc, token.mintAuthority, [
+        getReallocateInstruction({
+          token: ata,
+          payer: token.mintAuthority,
+          owner,
+          newExtensionTypes: [ExtensionType.MemoTransfer]
+        }),
+        getEnableMemoTransfersInstruction({ token: ata, owner })
+      ])
+
+      return owner.address
+    }
+
     test('should get the balance of a Token-2022 token', async () => {
       const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
       await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
@@ -732,23 +762,24 @@ describe('@tetherto/wdk-wallet-solana', () => {
       expect(await recipientAccount.getTokenBalance(token.mint)).toBe(10_000n - EXPECTED_TRANSFER_FEE)
     })
 
-    test('should get the raw balance of an interest-bearing Token-2022 token and transfer its raw amount', async () => {
-      const rateAuthority = await generateKeyPairSigner()
-      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction, [{
-        __kind: 'InterestBearingConfig',
-        rateAuthority: rateAuthority.address,
-        initializationTimestamp: 0n,
-        preUpdateAverageRate: 0,
-        lastUpdateTimestamp: 0n,
-        currentRate: 32_767
-      }])
+    test('should get the raw balance of an interest-bearing Token-2022 token', async () => {
+      const token = await deployInterestBearingToken()
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+
+      const account = await wallet.getAccount(0)
+
+      const tokenBalance = await account.getTokenBalance(token.mint)
+
+      expect(tokenBalance).toBe(INITIAL_TOKEN_BALANCE)
+    })
+
+    test('should transfer the raw amount of an interest-bearing Token-2022 token', async () => {
+      const token = await deployInterestBearingToken()
       await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
       await sendToken2022To(token, ACCOUNT_1.address, INITIAL_TOKEN_BALANCE)
 
       const account0 = await wallet.getAccount(0)
       const account1 = await wallet.getAccount(1)
-
-      expect(await account0.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE)
 
       const { hash, fee } = await account0.transfer({ token: token.mint, recipient: ACCOUNT_1.address, amount: 100 })
       await confirmTransaction(rpc, hash)
@@ -760,26 +791,14 @@ describe('@tetherto/wdk-wallet-solana', () => {
       expect(await account1.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE + 100n)
     })
 
-    test('should fail on chain without a memo and succeed with one when the recipient token account requires memos', async () => {
+    test('should fail on chain without a memo when the recipient token account requires memos', async () => {
       const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
       await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
-
-      const recipientOwner = await generateKeyPairSigner()
-      const recipientAta = await createToken2022Account(token, recipientOwner.address)
-
-      await sendInstructions(sendAndConfirmTransaction, rpc, token.mintAuthority, [
-        getReallocateInstruction({
-          token: recipientAta,
-          payer: token.mintAuthority,
-          owner: recipientOwner,
-          newExtensionTypes: [ExtensionType.MemoTransfer]
-        }),
-        getEnableMemoTransfersInstruction({ token: recipientAta, owner: recipientOwner })
-      ])
+      const recipient = await createMemoRequiringToken2022Account(token)
 
       const account = await wallet.getAccount(0)
 
-      const TRANSFER = { token: token.mint, recipient: recipientOwner.address, amount: 100 }
+      const TRANSFER = { token: token.mint, recipient, amount: 100 }
 
       const EXPECTED_NO_MEMO_LOG = `Program ${TOKEN_2022_PROGRAM_ADDRESS} failed: custom program error: 0x24`
 
@@ -788,12 +807,23 @@ describe('@tetherto/wdk-wallet-solana', () => {
       })
 
       expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE)
+    })
 
-      const { hash } = await account.transfer(TRANSFER, { memo: 'invoice 42' })
+    test('should transfer with a memo when the recipient token account requires memos', async () => {
+      const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
+      await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
+      const recipient = await createMemoRequiringToken2022Account(token)
+
+      const account = await wallet.getAccount(0)
+
+      const TRANSFER = { token: token.mint, recipient, amount: 100 }
+
+      const { hash, fee } = await account.transfer(TRANSFER, { memo: 'invoice 42' })
       await confirmTransaction(rpc, hash)
       const receipt = await account.getTransaction(hash)
 
       expect(receipt.success).toBe(true)
+      expect(fee).toBe(5000n)
       expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 100n)
     })
 
