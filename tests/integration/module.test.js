@@ -740,7 +740,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
       const TRANSFER = { token: token.mint, recipient: ACCOUNT_1.address, amount: 10_000 }
 
-      const EXPECTED_TRANSFER_FEE = 50n
+      const TRANSFER_FEE = 50n
 
       const quote = await account.quoteTransfer(TRANSFER)
 
@@ -755,11 +755,11 @@ describe('@tetherto/wdk-wallet-solana', () => {
       expect(receipt.success).toBe(true)
       expect(fee).toBe(5000n)
       expect(quote.fee).toBe(fee)
-      expect(quote.transferFee).toBe(EXPECTED_TRANSFER_FEE)
+      expect(quote.transferFee).toBe(TRANSFER_FEE)
       expect(quote.rent).toBe(recipientAtaInfo.lamports)
       expect(quote.rent).toBe(transferFeeAccountRent)
       expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE - 10_000n)
-      expect(await recipientAccount.getTokenBalance(token.mint)).toBe(10_000n - EXPECTED_TRANSFER_FEE)
+      expect(await recipientAccount.getTokenBalance(token.mint)).toBe(10_000n - TRANSFER_FEE)
     })
 
     test('should get the raw balance of an interest-bearing Token-2022 token', async () => {
@@ -800,10 +800,10 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
       const TRANSFER = { token: token.mint, recipient, amount: 100 }
 
-      const EXPECTED_NO_MEMO_LOG = `Program ${TOKEN_2022_PROGRAM_ADDRESS} failed: custom program error: 0x24`
+      const NO_MEMO_LOG = `Program ${TOKEN_2022_PROGRAM_ADDRESS} failed: custom program error: 0x24`
 
       await expect(account.transfer(TRANSFER)).rejects.toMatchObject({
-        context: { logs: expect.arrayContaining([EXPECTED_NO_MEMO_LOG]) }
+        context: { logs: expect.arrayContaining([NO_MEMO_LOG]) }
       })
 
       expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE)
