@@ -307,9 +307,19 @@ describe('WalletAccountReadOnlySolana', () => {
       await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
       const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
 
+      const [ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_MINT),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
       expect(balance).toBe(0n)
       expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_MINT)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [address(MOCK_TOKEN_MINT)], { commitment: 'confirmed', encoding: 'base64' })
       expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(1, ata, { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(2, ata, { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should read the classic ATA once a cached Token-2022 mint is re-created under the classic program', async () => {
@@ -346,7 +356,25 @@ describe('WalletAccountReadOnlySolana', () => {
       await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
       const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
 
+      const [token2022Ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_2022_MINT),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
+      })
+      const [classicAta] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_2022_MINT),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
       expect(balance).toBe(500n)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_2022_MINT)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [address(MOCK_TOKEN_2022_MINT)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(3)
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(1, token2022Ata, { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(2, token2022Ata, { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(3, classicAta, { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should read the classic ATA directly once a re-created mint has been fetched again', async () => {
@@ -384,8 +412,19 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
 
+      const [ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_2022_MINT),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
+      })
+
       expect(balance).toBe(0n)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_2022_MINT)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [address(MOCK_TOKEN_2022_MINT)], { commitment: 'confirmed', encoding: 'base64' })
       expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(1, ata, { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(2, ata, { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should throw ValueError when the mint does not exist', async () => {
@@ -688,7 +727,24 @@ describe('WalletAccountReadOnlySolana', () => {
       await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
       const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
 
+      const [token2022Ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_MINT_2),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
+      })
+      const [classicAta] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_MINT_2),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
       expect(balances).toEqual({ [MOCK_TOKEN_MINT_2]: 500n })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(5)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_MINT_2)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [token2022Ata], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(3, [token2022Ata], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(4, [address(MOCK_TOKEN_MINT_2)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(5, [classicAta], { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should read the classic ATA directly once a re-created mint has been fetched again', async () => {
@@ -738,7 +794,18 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
 
+      const [ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_MINT_2),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
+      })
+
       expect(balances).toEqual({ [MOCK_TOKEN_MINT_2]: 0n })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(4)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_MINT_2)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [ata], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(3, [ata], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(4, [address(MOCK_TOKEN_MINT_2)], { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should handle empty token addresses array', async () => {
@@ -770,7 +837,16 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
 
+      const [ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_MINT_1),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
       expect(balances).toEqual({ [MOCK_TOKEN_MINT_1]: 1000000n, [MOCK_TOKEN_MINT_2]: 0n })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_MINT_1), address(MOCK_TOKEN_MINT_2)], { commitment: 'confirmed', encoding: 'base64' })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [ata], { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should handle RPC error from getMultipleAccounts', async () => {
