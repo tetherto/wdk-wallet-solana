@@ -36,6 +36,7 @@ import {
   TOKEN_2022_PROGRAM_ADDRESS
 } from '@solana-program/token-2022'
 import { LEGACY_MEMO_PROGRAM_ADDRESS_V3 } from '@solana-program/memo'
+import { SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system'
 
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
 import {
@@ -50,9 +51,13 @@ import WalletAccountSolana from '../src/wallet-account-solana.js'
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
 const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
 const TOKEN_2022_MINT_ADDRESS = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo'
+const RECIPIENT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mockurl.com'
+
+const MOCK_BLOCKHASH = 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T'
+const MOCK_LAST_VALID_BLOCK_HEIGHT = 100000n
 
 const ACCOUNT_TYPE_MINT = 1
 const ACCOUNT_TYPE_TOKEN = 2
@@ -467,7 +472,7 @@ describe('WalletAccountReadOnlySolana', () => {
     })
 
     it('should throw ValueError when the address is owned by neither token program', async () => {
-      mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount('11111111111111111111111111111111')]))
+      mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(SYSTEM_PROGRAM_ADDRESS)]))
 
       await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(new ValueError(
         `'${MOCK_TOKEN_MINT}' is not a mint account.`
@@ -897,8 +902,8 @@ describe('WalletAccountReadOnlySolana', () => {
         mockRpc.getLatestBlockhash.mockReturnValue({
           send: jest.fn().mockResolvedValue({
             value: {
-              blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-              lastValidBlockHeight: 100000n
+              blockhash: MOCK_BLOCKHASH,
+              lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
             }
           })
         })
@@ -1016,8 +1021,8 @@ describe('WalletAccountReadOnlySolana', () => {
         mockRpc.getLatestBlockhash.mockReturnValue({
           send: jest.fn().mockResolvedValue({
             value: {
-              blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-              lastValidBlockHeight: 100000n
+              blockhash: MOCK_BLOCKHASH,
+              lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
             }
           })
         })
@@ -1045,8 +1050,8 @@ describe('WalletAccountReadOnlySolana', () => {
         mockRpc.getLatestBlockhash.mockReturnValue({
           send: jest.fn().mockResolvedValue({
             value: {
-              blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-              lastValidBlockHeight: 100000n
+              blockhash: MOCK_BLOCKHASH,
+              lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
             }
           })
         })
@@ -1061,14 +1066,14 @@ describe('WalletAccountReadOnlySolana', () => {
           version: 0,
           instructions: [
             {
-              programAddress: '11111111111111111111111111111111',
+              programAddress: SYSTEM_PROGRAM_ADDRESS,
               accounts: [],
               data: new Uint8Array([])
             }
           ],
           lifetimeConstraint: {
-            blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-            lastValidBlockHeight: 100000n
+            blockhash: MOCK_BLOCKHASH,
+            lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
           }
         }
 
@@ -1084,7 +1089,7 @@ describe('WalletAccountReadOnlySolana', () => {
           version: 0,
           instructions: [
             {
-              programAddress: '11111111111111111111111111111111',
+              programAddress: SYSTEM_PROGRAM_ADDRESS,
               accounts: [],
               data: new Uint8Array([])
             }
@@ -1107,15 +1112,15 @@ describe('WalletAccountReadOnlySolana', () => {
           version: 0,
           instructions: [
             {
-              programAddress: '11111111111111111111111111111111',
+              programAddress: SYSTEM_PROGRAM_ADDRESS,
               accounts: [],
               data: new Uint8Array([])
             }
           ],
           feePayer: TEST_ADDRESS,
           lifetimeConstraint: {
-            blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-            lastValidBlockHeight: 100000n
+            blockhash: MOCK_BLOCKHASH,
+            lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
           }
         }
 
@@ -1131,15 +1136,15 @@ describe('WalletAccountReadOnlySolana', () => {
           version: 0,
           instructions: [
             {
-              programAddress: '11111111111111111111111111111111',
+              programAddress: SYSTEM_PROGRAM_ADDRESS,
               accounts: [],
               data: new Uint8Array([])
             }
           ],
           feePayer: differentAddress,
           lifetimeConstraint: {
-            blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-            lastValidBlockHeight: 100000n
+            blockhash: MOCK_BLOCKHASH,
+            lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
           }
         }
 
@@ -1157,14 +1162,14 @@ describe('WalletAccountReadOnlySolana', () => {
           version: 0,
           instructions: [
             {
-              programAddress: '11111111111111111111111111111111',
+              programAddress: SYSTEM_PROGRAM_ADDRESS,
               accounts: [],
               data: new Uint8Array([])
             }
           ],
           lifetimeConstraint: {
-            blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-            lastValidBlockHeight: 100000n
+            blockhash: MOCK_BLOCKHASH,
+            lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
           }
         }
 
@@ -1186,7 +1191,7 @@ describe('WalletAccountReadOnlySolana', () => {
           version: 0,
           instructions: [
             {
-              programAddress: '11111111111111111111111111111111',
+              programAddress: SYSTEM_PROGRAM_ADDRESS,
               accounts: [],
               data: new Uint8Array([])
             }
@@ -1209,15 +1214,15 @@ describe('WalletAccountReadOnlySolana', () => {
           version: 0,
           instructions: [
             {
-              programAddress: '11111111111111111111111111111111',
+              programAddress: SYSTEM_PROGRAM_ADDRESS,
               accounts: [],
               data: new Uint8Array([])
             }
           ],
           feePayer: TEST_ADDRESS,
           lifetimeConstraint: {
-            blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-            lastValidBlockHeight: 100000n
+            blockhash: MOCK_BLOCKHASH,
+            lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
           }
         }
 
@@ -1235,15 +1240,15 @@ describe('WalletAccountReadOnlySolana', () => {
           version: 0,
           instructions: [
             {
-              programAddress: '11111111111111111111111111111111',
+              programAddress: SYSTEM_PROGRAM_ADDRESS,
               accounts: [],
               data: new Uint8Array([])
             }
           ],
           feePayer: TEST_ADDRESS,
           lifetimeConstraint: {
-            blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-            lastValidBlockHeight: 100000n
+            blockhash: MOCK_BLOCKHASH,
+            lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
           }
         }
 
@@ -1275,12 +1280,11 @@ describe('WalletAccountReadOnlySolana', () => {
 
   describe('quoteTransfer transaction construction', () => {
     const CLASSIC_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
-    const RECIPIENT = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
 
     beforeEach(() => {
       mockRpc.getLatestBlockhash.mockReturnValue(mockSend({
-        blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-        lastValidBlockHeight: 100000n
+        blockhash: MOCK_BLOCKHASH,
+        lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
       }))
       mockRpc.getFeeForMessage.mockReturnValue(mockSend(5000n))
       mockRpc.getMinimumBalanceForRentExemption.mockImplementation(size => ({
@@ -1289,7 +1293,7 @@ describe('WalletAccountReadOnlySolana', () => {
     })
 
     function quote (token, amount) {
-      return readOnlyAccount.quoteTransfer({ token, recipient: RECIPIENT, amount })
+      return readOnlyAccount.quoteTransfer({ token, recipient: RECIPIENT_ADDRESS, amount })
     }
 
     it('should quote a transferChecked instruction for a classic SPL mint', async () => {
@@ -1305,7 +1309,7 @@ describe('WalletAccountReadOnlySolana', () => {
       })
       const [toAta] = await findAssociatedTokenPda({
         mint: address(CLASSIC_MINT),
-        owner: address(RECIPIENT),
+        owner: address(RECIPIENT_ADDRESS),
         tokenProgram: TOKEN_PROGRAM_ADDRESS
       })
 
@@ -1333,7 +1337,7 @@ describe('WalletAccountReadOnlySolana', () => {
       })
       const [toAta] = await findAssociatedTokenPda({
         mint: address(TOKEN_2022_MINT_ADDRESS),
-        owner: address(RECIPIENT),
+        owner: address(RECIPIENT_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
 
@@ -1356,7 +1360,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
       const [toAta] = await findAssociatedTokenPda({
         mint: address(TOKEN_2022_MINT_ADDRESS),
-        owner: address(RECIPIENT),
+        owner: address(RECIPIENT_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
 
@@ -1368,9 +1372,9 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(createAta.accounts).toEqual([
         address(TEST_ADDRESS),
         toAta,
-        address(RECIPIENT),
+        address(RECIPIENT_ADDRESS),
         address(TOKEN_2022_MINT_ADDRESS),
-        '11111111111111111111111111111111',
+        SYSTEM_PROGRAM_ADDRESS,
         TOKEN_2022_PROGRAM_ADDRESS
       ])
     })
@@ -1396,13 +1400,11 @@ describe('WalletAccountReadOnlySolana', () => {
 
   describe('quoteTransfer token extension policy', () => {
     const CLASSIC_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
-    const RECIPIENT = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
-    const SYSTEM_PROGRAM = '11111111111111111111111111111111'
 
     beforeEach(() => {
       mockRpc.getLatestBlockhash.mockReturnValue(mockSend({
-        blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-        lastValidBlockHeight: 100000n
+        blockhash: MOCK_BLOCKHASH,
+        lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
       }))
       mockRpc.getFeeForMessage.mockReturnValue(mockSend(5000n))
       mockRpc.getEpochInfo.mockReturnValue({ send: jest.fn().mockResolvedValue({ epoch: 0n }) })
@@ -1416,7 +1418,7 @@ describe('WalletAccountReadOnlySolana', () => {
     }
 
     function quote (mint = TOKEN_2022_MINT_ADDRESS, solanaOptions) {
-      return readOnlyAccount.quoteTransfer({ token: mint, recipient: RECIPIENT, amount: 1000n }, solanaOptions)
+      return readOnlyAccount.quoteTransfer({ token: mint, recipient: RECIPIENT_ADDRESS, amount: 1000n }, solanaOptions)
     }
 
     function quotedPrograms () {
@@ -1431,7 +1433,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
     it('should reject a mint carrying a transfer hook with a hook program set', async () => {
       mockMintWithExtensions([
-        { __kind: 'TransferHook', authority: address(SYSTEM_PROGRAM), programId: LEGACY_MEMO_PROGRAM_ADDRESS_V3 }
+        { __kind: 'TransferHook', authority: SYSTEM_PROGRAM_ADDRESS, programId: LEGACY_MEMO_PROGRAM_ADDRESS_V3 }
       ])
 
       await expect(quote()).rejects.toThrow(new TransferHookNotSupportedError(
@@ -1442,7 +1444,7 @@ describe('WalletAccountReadOnlySolana', () => {
 
     it('should accept a mint carrying a transfer hook with no hook program set', async () => {
       mockMintWithExtensions([
-        { __kind: 'TransferHook', authority: address(SYSTEM_PROGRAM), programId: address(SYSTEM_PROGRAM) }
+        { __kind: 'TransferHook', authority: SYSTEM_PROGRAM_ADDRESS, programId: SYSTEM_PROGRAM_ADDRESS }
       ])
 
       await quote()
@@ -1470,7 +1472,7 @@ describe('WalletAccountReadOnlySolana', () => {
       mockRpc.getAccountInfo.mockReturnValue(mockSend(null))
 
       await expect(quote()).rejects.toThrow(new FrozenTokenAccountError(
-        `Token '${TOKEN_2022_MINT_ADDRESS}' freezes by default the accounts it creates, so '${RECIPIENT}' could not receive it.`
+        `Token '${TOKEN_2022_MINT_ADDRESS}' freezes by default the accounts it creates, so '${RECIPIENT_ADDRESS}' could not receive it.`
       ))
       expect(mockRpc.getFeeForMessage).not.toHaveBeenCalled()
     })
@@ -1495,8 +1497,8 @@ describe('WalletAccountReadOnlySolana', () => {
       mockMintWithExtensions([
         {
           __kind: 'TransferFeeConfig',
-          transferFeeConfigAuthority: address(SYSTEM_PROGRAM),
-          withdrawWithheldAuthority: address(SYSTEM_PROGRAM),
+          transferFeeConfigAuthority: SYSTEM_PROGRAM_ADDRESS,
+          withdrawWithheldAuthority: SYSTEM_PROGRAM_ADDRESS,
           withheldAmount: 0n,
           olderTransferFee: { epoch: 0n, maximumFee: 100n, transferFeeBasisPoints: 100 },
           newerTransferFee: { epoch: 0n, maximumFee: 100n, transferFeeBasisPoints: 100 }
@@ -1513,7 +1515,7 @@ describe('WalletAccountReadOnlySolana', () => {
       mockMintWithExtensions([
         {
           __kind: 'InterestBearingConfig',
-          rateAuthority: address(SYSTEM_PROGRAM),
+          rateAuthority: SYSTEM_PROGRAM_ADDRESS,
           initializationTimestamp: 0n,
           preUpdateAverageRate: 0,
           lastUpdateTimestamp: 0n,
@@ -1532,7 +1534,7 @@ describe('WalletAccountReadOnlySolana', () => {
         createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { state: AccountState2022.Frozen, extensions: [] })
       ))
 
-      await expect(quote()).rejects.toThrow(new FrozenTokenAccountError(`The token account of '${RECIPIENT}' is frozen.`))
+      await expect(quote()).rejects.toThrow(new FrozenTokenAccountError(`The token account of '${RECIPIENT_ADDRESS}' is frozen.`))
     })
 
     it('should attach the memo before the transfer to a recipient account requiring a memo', async () => {
@@ -1565,7 +1567,7 @@ describe('WalletAccountReadOnlySolana', () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(TOKEN_PROGRAM_ADDRESS, { decimals: 6 })]))
       mockRpc.getAccountInfo.mockReturnValue(mockSend(createTokenAccount(0, TOKEN_PROGRAM_ADDRESS, { state: AccountState2022.Frozen })))
 
-      await expect(quote(CLASSIC_MINT)).rejects.toThrow(new FrozenTokenAccountError(`The token account of '${RECIPIENT}' is frozen.`))
+      await expect(quote(CLASSIC_MINT)).rejects.toThrow(new FrozenTokenAccountError(`The token account of '${RECIPIENT_ADDRESS}' is frozen.`))
     })
   })
 
@@ -1581,8 +1583,8 @@ describe('WalletAccountReadOnlySolana', () => {
       mockRpc.getLatestBlockhash.mockReturnValue({
         send: jest.fn().mockResolvedValue({
           value: {
-            blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-            lastValidBlockHeight: 100000n
+            blockhash: MOCK_BLOCKHASH,
+            lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
           }
         })
       })
@@ -1987,7 +1989,6 @@ describe('WalletAccountReadOnlySolana', () => {
   })
 
   describe('quoteTransfer of a Token-2022 mint', () => {
-    const RECIPIENT = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
     const CURRENT_EPOCH = 500n
 
     function transferFeeConfig ({ older = { epoch: 0n, maximumFee: 0n, transferFeeBasisPoints: 0 }, newer }) {
@@ -2014,13 +2015,13 @@ describe('WalletAccountReadOnlySolana', () => {
     }
 
     function quote (amount = 1000000n) {
-      return readOnlyAccount.quoteTransfer({ token: TOKEN_2022_MINT_ADDRESS, recipient: RECIPIENT, amount })
+      return readOnlyAccount.quoteTransfer({ token: TOKEN_2022_MINT_ADDRESS, recipient: RECIPIENT_ADDRESS, amount })
     }
 
     beforeEach(() => {
       mockRpc.getLatestBlockhash.mockReturnValue(mockSend({
-        blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-        lastValidBlockHeight: 100000n
+        blockhash: MOCK_BLOCKHASH,
+        lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
       }))
       mockRpc.getFeeForMessage.mockReturnValue(mockSend(5000n))
       mockRpc.getMinimumBalanceForRentExemption.mockImplementation(size => ({
@@ -2062,7 +2063,7 @@ describe('WalletAccountReadOnlySolana', () => {
     })
 
     it('should quote the rent of the transfer hook account extension when creating the recipient account of a mint with an unset transfer hook', async () => {
-      mockMint([{ __kind: 'TransferHook', authority: address(TEST_ADDRESS), programId: address('11111111111111111111111111111111') }])
+      mockMint([{ __kind: 'TransferHook', authority: address(TEST_ADDRESS), programId: SYSTEM_PROGRAM_ADDRESS }])
       mockRecipientAccount(false)
 
       const result = await quote()
@@ -2147,7 +2148,7 @@ describe('WalletAccountReadOnlySolana', () => {
     })
 
     it('should reject a transfer once the mint authority sets a hook program after an earlier quote', async () => {
-      const unsetHook = { __kind: 'TransferHook', authority: address(TEST_ADDRESS), programId: address('11111111111111111111111111111111') }
+      const unsetHook = { __kind: 'TransferHook', authority: address(TEST_ADDRESS), programId: SYSTEM_PROGRAM_ADDRESS }
       mockMint([unsetHook])
       mockRecipientAccount(true)
 
@@ -2177,7 +2178,7 @@ describe('WalletAccountReadOnlySolana', () => {
               numReadonlyUnsignedAccounts: 1
             },
             instructions: [],
-            recentBlockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T'
+            recentBlockhash: MOCK_BLOCKHASH
           },
           signatures: [MOCK_TX_SIGNATURE]
         },
