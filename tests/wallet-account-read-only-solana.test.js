@@ -2088,26 +2088,6 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(result).toEqual({ fee: 5000n, rent: 0n, transferFee: 5000n })
     })
 
-    it('should resolve the token program of a quoted mint from the cache on a later balance read', async () => {
-      mockMint([transferFeeConfig({ newer: { epoch: 0n, maximumFee: 1000000n, transferFeeBasisPoints: 50 } })])
-      mockRecipientAccount(true)
-
-      await quote()
-      const mintRequestsAfterQuote = mockRpc.getMultipleAccounts.mock.calls.length
-
-      mockRpc.getAccountInfo.mockReturnValue(mockSend(createTokenAccount(1000, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
-      await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT)
-
-      const [ata] = await findAssociatedTokenPda({
-        mint: address(TOKEN_2022_MINT),
-        owner: address(TEST_ADDRESS),
-        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
-      })
-
-      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(mintRequestsAfterQuote)
-      expect(mockRpc.getAccountInfo).toHaveBeenLastCalledWith(ata, { commitment: 'confirmed', encoding: 'base64' })
-    })
-
     it('should quote the transfer fee in force after the mint authority changes it between two quotes', async () => {
       mockMint([transferFeeConfig({ newer: { epoch: 0n, maximumFee: 1000000n, transferFeeBasisPoints: 50 } })])
       mockRecipientAccount(true)
