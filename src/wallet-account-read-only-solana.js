@@ -106,6 +106,8 @@ import { createNoopSigner } from '@solana/signers'
  */
 
 /**
+ * A native SOL transfer.
+ *
  * @typedef {Object} SimpleSolanaTransaction
  * @property {string} to - The recipient's Solana address.
  * @property {number | bigint} value - The amount of SOL to send in lamports (1 SOL = 1,000,000,000 lamports).
@@ -120,6 +122,8 @@ import { createNoopSigner } from '@solana/signers'
  */
 
 /**
+ * The configuration of a Solana wallet.
+ *
  * @typedef {Object} SolanaWalletConfig
  * @property {string | SolanaRpc | (string | SolanaRpc)[]} [provider] - The Solana RPC url or an already-built Solana RPC client. It's also possible to provide an array of these instead. In such case, connection errors will cause the wallet to automatically fallback on the next provider in the list. An already-built client is reused as-is, which lets a manager share a single client across all the accounts it creates.
  * @property {string | string[]} [rpcUrl] - Deprecated alias for `provider`. If both are set, `provider` takes precedence.
