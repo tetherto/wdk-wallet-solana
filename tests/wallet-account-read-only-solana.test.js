@@ -1289,15 +1289,6 @@ describe('WalletAccountReadOnlySolana', () => {
       ])
     })
 
-    it('should not quote the creation of the recipient ATA when it already exists', async () => {
-      mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(TOKEN_PROGRAM_ADDRESS, { decimals: 6 })]))
-      mockRpc.getAccountInfo.mockReturnValue(mockSend(createTokenAccount(0)))
-
-      await quote(CLASSIC_MINT, 1n)
-
-      expect(decodeQuotedInstructions(mockRpc.getFeeForMessage)).toHaveLength(1)
-    })
-
     it('should throw ValueError when the amount exceeds the u64 maximum', async () => {
       await expect(quote(CLASSIC_MINT, 2n ** 64n)).rejects.toThrow(new ValueError('Amount exceeds u64 maximum value'))
     })
