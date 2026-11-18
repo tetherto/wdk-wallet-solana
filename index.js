@@ -31,9 +31,12 @@
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransferQuoteDetails} SolanaTransferQuoteDetails */
 /** @typedef {import('./src/wallet-account-read-only-solana.js').MintAccount} MintAccount */
 /** @typedef {import('./src/wallet-account-read-only-solana.js').TokenProgramAddress} TokenProgramAddress */
+/** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaRpc} SolanaRpc */
+/** @typedef {import('./src/wallet-account-read-only-solana.js').Commitment} Commitment */
 
 /** @typedef {import('./src/wallet-account-solana.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./src/wallet-account-solana.js').SolanaWalletConfig} SolanaWalletConfig */
+/** @typedef {import('./src/wallet-account-solana.js').SignerOptions} SignerOptions */
 
 export { default } from './src/wallet-manager-solana.js'
 
@@ -50,10 +53,15 @@ export {
 
 export {
   AssertionError,
+  DisposalError,
+  InvalidSignerError,
   MaximumFeeExceededError,
   NoSuchElementError,
   ProviderRequiredError,
   TimeoutError,
+  UnsupportedOperationError,
   ValueError,
   WdkError
 } from '@tetherto/wdk-wallet'
+
+export { ISigner, IWalletAccount, IWalletAccountReadOnly } from '@tetherto/wdk-wallet'

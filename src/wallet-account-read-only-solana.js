@@ -33,7 +33,7 @@ import {
   isTransactionMessageWithDurableNonceLifetime
 } from '@solana/transaction-messages'
 import { getTransactionDecoder, getTransactionMessageSize, getTransactionMessageSizeLimit } from '@solana/transactions'
-import { getBase64Decoder, getBase64Encoder } from '@solana/codecs'
+import { getBase64Decoder, getBase64Encoder, getUtf8Encoder } from '@solana/codecs'
 import { getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system'
 import { getAddMemoInstruction, LEGACY_MEMO_PROGRAM_ADDRESS_V3 } from '@solana-program/memo'
 import {
@@ -501,7 +501,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
-    const messageBytes = Buffer.from(message, 'utf8')
+    const messageBytes = getUtf8Encoder().encode(message)
     const signatureBytes = Buffer.from(signature, 'hex')
 
     const addr = await this.getAddress()

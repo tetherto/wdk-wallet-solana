@@ -1,7 +1,8 @@
 {
   "name": "@tetherto/wdk-wallet-solana",
-  "version": "1.0.0-beta.16",
-  "description": "A simple package to manage BIP-32 wallets for the solana blockchain.",
+  "version": "1.0.0-beta.21",
+  "description": "Solana wallet module for WDK (Wallet Development Kit) by Tether.",
+  "homepage": "https://docs.wdk.tether.io/sdk/wallet-modules/wallet-solana/",
   "keywords": [
     "wdk",
     "wallet",
@@ -43,8 +44,8 @@
     "@solana/transaction-messages": "8.3.0",
     "@solana/transactions": "8.3.0",
     "@tetherto/wdk-failover-provider": "1.0.0-beta.2",
-    "@tetherto/wdk-wallet": "1.0.0-beta.19",
-    "bare-node-runtime": "^1.4.0",
+    "@tetherto/wdk-wallet": "1.0.0-beta.25",
+    "bare-node-runtime": "^1.5.3",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
     "sodium-universal": "5.0.1"
@@ -64,6 +65,11 @@
     },
     "./package": {
       "default": "./package.json"
+    },
+    "./signers": {
+      "types": "./types/src/signers/index.d.ts",
+      "bare": "./src/signers/bare.js",
+      "default": "./src/signers/index.js"
     }
   },
   "publishConfig": {
