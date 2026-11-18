@@ -835,7 +835,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
       ['configured for confidential transfers', (authority) => [{ __kind: 'ConfidentialTransferMint', authority, autoApproveNewAccounts: true, auditorElgamalPubkey: null }],
         mint => new ConfidentialTransferNotSupportedError(`Token '${mint}' is configured for confidential transfers, which are not supported.`)],
       ['freezing new accounts by default', () => [{ __kind: 'DefaultAccountState', state: AccountState.Frozen }],
-        mint => new FrozenTokenAccountError(`Token '${mint}' freezes by default the accounts it creates, so '${ACCOUNT_1.address}' could not receive it.`)]
+        mint => new FrozenTokenAccountError(`Token '${mint}' freezes by default the accounts it creates, so '${TEST_RECIPIENT_ADDRESS}' could not receive it.`)]
     ])('should reject the transfer of a Token-2022 token %s without sending a transaction', async (_, extensionsFor, errorFor) => {
       const authority = await generateKeyPairSigner()
       const hookProgram = await generateKeyPairSigner()
@@ -845,7 +845,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
       const balanceBefore = await account.getBalance()
 
-      const TRANSFER = { token: token.mint, recipient: ACCOUNT_1.address, amount: 100 }
+      const TRANSFER = { token: token.mint, recipient: TEST_RECIPIENT_ADDRESS, amount: 100 }
 
       await expect(account.quoteTransfer(TRANSFER)).rejects.toThrow(errorFor(token.mint))
       await expect(account.transfer(TRANSFER)).rejects.toThrow(errorFor(token.mint))
@@ -915,7 +915,7 @@ describe('@tetherto/wdk-wallet-solana', () => {
     test('should reject the transfer of a Token-2022 token to a frozen token account without sending a transaction', async () => {
       const token = await deployTestToken2022(rpc, sendAndConfirmTransaction)
       await sendToken2022To(token, ACCOUNT_0.address, INITIAL_TOKEN_BALANCE)
-      const recipientAta = await createToken2022Account(token, ACCOUNT_1.address)
+      const recipientAta = await createToken2022Account(token, TEST_RECIPIENT_ADDRESS)
 
       await sendInstructions(sendAndConfirmTransaction, rpc, token.mintAuthority, [
         getFreezeAccountInstruction({ account: recipientAta, mint: token.mint, owner: token.mintAuthority })
@@ -925,9 +925,9 @@ describe('@tetherto/wdk-wallet-solana', () => {
 
       const balanceBefore = await account.getBalance()
 
-      const TRANSFER = { token: token.mint, recipient: ACCOUNT_1.address, amount: 100 }
+      const TRANSFER = { token: token.mint, recipient: TEST_RECIPIENT_ADDRESS, amount: 100 }
 
-      await expect(account.transfer(TRANSFER)).rejects.toThrow(new FrozenTokenAccountError(`The token account of '${ACCOUNT_1.address}' is frozen.`))
+      await expect(account.transfer(TRANSFER)).rejects.toThrow(new FrozenTokenAccountError(`The token account of '${TEST_RECIPIENT_ADDRESS}' is frozen.`))
 
       expect(await account.getBalance()).toBe(balanceBefore)
       expect(await account.getTokenBalance(token.mint)).toBe(INITIAL_TOKEN_BALANCE)
