@@ -353,7 +353,7 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(4, classicAta, { commitment: 'confirmed', encoding: 'base64' })
     })
 
-    it('should throw NoSuchElementError once a cached mint is closed', async () => {
+    it('should return 0n once a cached mint is closed', async () => {
       mockRpc.getMultipleAccounts
         .mockReturnValueOnce(mockSend([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)]))
         .mockReturnValueOnce(mockSend([null]))
@@ -361,16 +361,17 @@ describe('WalletAccountReadOnlySolana', () => {
 
       await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
 
-      await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)).rejects.toThrow(new NoSuchElementError(
-        `No mint account found for '${MOCK_TOKEN_2022_MINT}'.`
-      ))
+      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_2022_MINT)
+
+      expect(balance).toBe(0n)
+      expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(2)
     })
 
-    it('should throw NoSuchElementError when the mint does not exist', async () => {
+    it('should throw ValueError when the mint does not exist', async () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([null]))
 
-      await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(new NoSuchElementError(
-        `No mint account found for '${MOCK_TOKEN_MINT}'.`
+      await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(new ValueError(
+        `'${MOCK_TOKEN_MINT}' is not a mint account.`
       ))
     })
 
@@ -412,7 +413,7 @@ describe('WalletAccountReadOnlySolana', () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount('11111111111111111111111111111111')]))
 
       await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(new ValueError(
-        `'${MOCK_TOKEN_MINT}' is not owned by a supported token program.`
+        `'${MOCK_TOKEN_MINT}' is not a mint account.`
       ))
     })
 
@@ -692,7 +693,7 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(4)
     })
 
-    it('should throw NoSuchElementError once a cached mint is closed', async () => {
+    it('should return 0n once a cached mint is closed', async () => {
       mockMintsThenAtas([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)], [null])
       mockRpc.getMultipleAccounts
         .mockReturnValueOnce(mockSend([null]))
@@ -700,9 +701,9 @@ describe('WalletAccountReadOnlySolana', () => {
 
       await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
 
-      await expect(readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])).rejects.toThrow(new NoSuchElementError(
-        `No mint account found for '${MOCK_TOKEN_MINT_2}'.`
-      ))
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
+
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_2]: 0n })
     })
 
     it('should handle empty token addresses array', async () => {
@@ -720,11 +721,21 @@ describe('WalletAccountReadOnlySolana', () => {
       )
     })
 
-    it('should throw NoSuchElementError when one of the mints does not exist', async () => {
-      mockRpc.getMultipleAccounts.mockReturnValueOnce(mockSend([createMintAccount(), null]))
+    it('should return 0n for a mint that does not exist next to the balances of the others', async () => {
+      mockMintsThenAtas([createMintAccount(), null], [createTokenAccount(1000000)])
 
-      await expect(readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2]))
-        .rejects.toThrow(new NoSuchElementError(`No mint account found for '${MOCK_TOKEN_MINT_2}'.`))
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
+
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_1]: 1000000n, [MOCK_TOKEN_MINT_2]: 0n })
+      expect(mockRpc.getMultipleAccounts.mock.calls[1][0]).toHaveLength(1)
+    })
+
+    it('should return 0n for an address that is not a mint next to the balances of the others', async () => {
+      mockMintsThenAtas([createMintAccount(), createTokenAccount(0)], [createTokenAccount(1000000)])
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
+
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_1]: 1000000n, [MOCK_TOKEN_MINT_2]: 0n })
     })
 
     it('should handle RPC error from getMultipleAccounts', async () => {

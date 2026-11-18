@@ -143,6 +143,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * @protected
      * @param {string} mintAddress - The mint's address (base58-encoded public key).
      * @returns {Promise<TokenProgramAddress>} The address of the owning token program.
+     * @throws {ValueError} If the address is not a mint account.
      */
     protected _resolveTokenProgram(mintAddress: string): Promise<TokenProgramAddress>;
     /**
@@ -151,29 +152,29 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      *
      * @protected
      * @param {string[]} mintAddresses - The mints' addresses (base58-encoded public keys).
-     * @returns {Promise<Record<string, TokenProgramAddress>>} A mapping of mint addresses to the addresses of their owning token programs.
+     * @returns {Promise<Record<string, TokenProgramAddress | undefined>>} A mapping of mint addresses to the addresses of their owning token programs, or to undefined for an address that holds no mint.
      */
-    protected _resolveTokenPrograms(mintAddresses: string[]): Promise<Record<string, TokenProgramAddress>>;
+    protected _resolveTokenPrograms(mintAddresses: string[]): Promise<Record<string, TokenProgramAddress | undefined>>;
     /**
      * Fetches the mint account at the given address from the chain.
      *
      * @protected
      * @param {string} mintAddress - The mint's address (base58-encoded public key).
      * @returns {Promise<MintAccount>} The mint account.
+     * @throws {NoSuchElementError} If the address holds no mint of a supported token program.
      */
     protected _fetchMintAccount(mintAddress: string): Promise<MintAccount>;
     /**
      * Fetches the mint accounts at the given addresses from the chain, batching them within
-     * the `getMultipleAccounts` limit, and caches their token program.
+     * the `getMultipleAccounts` limit, and caches their token program. An address that holds no
+     * mint of a supported token program is dropped from the cache.
      *
      * @protected
      * @param {string[]} mintAddresses - The mints' addresses (base58-encoded public keys).
-     * @returns {Promise<Record<string, MintAccount>>} A mapping of mint addresses to their mint accounts.
+     * @returns {Promise<Record<string, MintAccount | null>>} A mapping of mint addresses to their mint accounts, or to null for an address that holds no mint of a supported token program.
      * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
-     * @throws {NoSuchElementError} If no account exists at one of the given addresses.
-     * @throws {ValueError} If one of the accounts is not a mint owned by a supported token program.
      */
-    protected _fetchMintAccounts(mintAddresses: string[]): Promise<Record<string, MintAccount>>;
+    protected _fetchMaybeMintAccounts(mintAddresses: string[]): Promise<Record<string, MintAccount | null>>;
     /**
      * Returns the rent-exempt deposit for a new associated token account of a mint.
      *

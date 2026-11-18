@@ -265,13 +265,13 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       return amount ?? 0n
     }
 
-    const { tokenProgram: currentTokenProgram } = await this._fetchMintAccount(tokenAddress)
+    const { [tokenAddress]: mintAccount } = await this._fetchMaybeMintAccounts([tokenAddress])
 
-    if (currentTokenProgram === tokenProgram) {
+    if (mintAccount === null || mintAccount.tokenProgram === tokenProgram) {
       return 0n
     }
 
-    const currentAmount = await this._fetchTokenAmount(ownerAddress, tokenAddress, currentTokenProgram)
+    const currentAmount = await this._fetchTokenAmount(ownerAddress, tokenAddress, mintAccount.tokenProgram)
 
     return currentAmount ?? 0n
   }
@@ -301,16 +301,18 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     const uniqueTokenAddresses = [...new Set(tokenAddresses)]
     const cachedTokenAddresses = uniqueTokenAddresses.filter(tokenAddress => this._tokenProgramCache.has(tokenAddress))
     const tokenPrograms = await this._resolveTokenPrograms(uniqueTokenAddresses)
+    const mintTokenAddresses = uniqueTokenAddresses.filter(tokenAddress => tokenPrograms[tokenAddress] !== undefined)
 
-    const amounts = await this._fetchTokenAmounts(ownerAddress, uniqueTokenAddresses, tokenPrograms)
+    const amounts = await this._fetchTokenAmounts(ownerAddress, mintTokenAddresses, tokenPrograms)
 
     const unheldCachedTokenAddresses = cachedTokenAddresses.filter(tokenAddress => amounts[tokenAddress] === null)
 
     if (unheldCachedTokenAddresses.length > 0) {
-      const mintAccounts = await this._fetchMintAccounts(unheldCachedTokenAddresses)
+      const mintAccounts = await this._fetchMaybeMintAccounts(unheldCachedTokenAddresses)
 
       const movedTokenAddresses = unheldCachedTokenAddresses
-        .filter(tokenAddress => mintAccounts[tokenAddress].tokenProgram !== tokenPrograms[tokenAddress])
+        .filter(tokenAddress => mintAccounts[tokenAddress] !== null &&
+          mintAccounts[tokenAddress].tokenProgram !== tokenPrograms[tokenAddress])
 
       if (movedTokenAddresses.length > 0) {
         const currentTokenPrograms = Object.fromEntries(
@@ -554,11 +556,17 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @protected
    * @param {string} mintAddress - The mint's address (base58-encoded public key).
    * @returns {Promise<TokenProgramAddress>} The address of the owning token program.
+   * @throws {ValueError} If the address is not a mint account.
    */
   async _resolveTokenProgram (mintAddress) {
     const tokenPrograms = await this._resolveTokenPrograms([mintAddress])
+    const tokenProgram = tokenPrograms[mintAddress]
 
-    return tokenPrograms[mintAddress]
+    if (tokenProgram === undefined) {
+      throw new ValueError(`'${mintAddress}' is not a mint account.`)
+    }
+
+    return tokenProgram
   }
 
   /**
@@ -567,14 +575,14 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    *
    * @protected
    * @param {string[]} mintAddresses - The mints' addresses (base58-encoded public keys).
-   * @returns {Promise<Record<string, TokenProgramAddress>>} A mapping of mint addresses to the addresses of their owning token programs.
+   * @returns {Promise<Record<string, TokenProgramAddress | undefined>>} A mapping of mint addresses to the addresses of their owning token programs, or to undefined for an address that holds no mint.
    */
   async _resolveTokenPrograms (mintAddresses) {
     const uniqueMintAddresses = [...new Set(mintAddresses)]
     const missingMintAddresses = uniqueMintAddresses.filter(mintAddress => !this._tokenProgramCache.has(mintAddress))
 
     if (missingMintAddresses.length > 0) {
-      await this._fetchMintAccounts(missingMintAddresses)
+      await this._fetchMaybeMintAccounts(missingMintAddresses)
     }
 
     const tokenPrograms = {}
@@ -591,25 +599,29 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @protected
    * @param {string} mintAddress - The mint's address (base58-encoded public key).
    * @returns {Promise<MintAccount>} The mint account.
+   * @throws {NoSuchElementError} If the address holds no mint of a supported token program.
    */
   async _fetchMintAccount (mintAddress) {
-    const mintAccounts = await this._fetchMintAccounts([mintAddress])
+    const { [mintAddress]: mintAccount } = await this._fetchMaybeMintAccounts([mintAddress])
 
-    return mintAccounts[mintAddress]
+    if (mintAccount === null) {
+      throw new NoSuchElementError(`No mint account found for '${mintAddress}'.`)
+    }
+
+    return mintAccount
   }
 
   /**
    * Fetches the mint accounts at the given addresses from the chain, batching them within
-   * the `getMultipleAccounts` limit, and caches their token program.
+   * the `getMultipleAccounts` limit, and caches their token program. An address that holds no
+   * mint of a supported token program is dropped from the cache.
    *
    * @protected
    * @param {string[]} mintAddresses - The mints' addresses (base58-encoded public keys).
-   * @returns {Promise<Record<string, MintAccount>>} A mapping of mint addresses to their mint accounts.
+   * @returns {Promise<Record<string, MintAccount | null>>} A mapping of mint addresses to their mint accounts, or to null for an address that holds no mint of a supported token program.
    * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
-   * @throws {NoSuchElementError} If no account exists at one of the given addresses.
-   * @throws {ValueError} If one of the accounts is not a mint owned by a supported token program.
    */
-  async _fetchMintAccounts (mintAddresses) {
+  async _fetchMaybeMintAccounts (mintAddresses) {
     if (!this._rpc) {
       throw new ProviderRequiredError('The wallet must be connected to a provider to resolve token programs.')
     }
@@ -631,32 +643,27 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
         const mintAddress = batchMintAddresses[i]
         const account = accounts[i]
 
-        if (!account) {
-          throw new NoSuchElementError(`No mint account found for '${mintAddress}'.`)
-        }
-
-        const tokenProgram = account.owner
+        const tokenProgram = account?.owner
 
         if (tokenProgram !== TOKEN_PROGRAM_ADDRESS && tokenProgram !== TOKEN_2022_PROGRAM_ADDRESS) {
-          throw new ValueError(`'${mintAddress}' is not owned by a supported token program.`)
+          this._tokenProgramCache.delete(mintAddress)
+          mintAccounts[mintAddress] = null
+          continue
         }
-
-        let mint
 
         try {
-          mint = getMint2022Decoder().decode(getBase64Encoder().encode(account.data[0]))
+          const { decimals, extensions } = getMint2022Decoder().decode(getBase64Encoder().encode(account.data[0]))
+
+          this._tokenProgramCache.set(mintAddress, tokenProgram)
+
+          mintAccounts[mintAddress] = {
+            tokenProgram,
+            decimals,
+            extensions: extensions.__option === 'Some' ? extensions.value : []
+          }
         } catch {
-          throw new ValueError(`'${mintAddress}' is not a mint account.`)
-        }
-
-        const { decimals, extensions } = mint
-
-        this._tokenProgramCache.set(mintAddress, tokenProgram)
-
-        mintAccounts[mintAddress] = {
-          tokenProgram,
-          decimals,
-          extensions: extensions.__option === 'Some' ? extensions.value : []
+          this._tokenProgramCache.delete(mintAddress)
+          mintAccounts[mintAddress] = null
         }
       }
     }
