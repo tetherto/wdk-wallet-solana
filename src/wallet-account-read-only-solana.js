@@ -213,15 +213,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     this._rpc = WalletAccountReadOnlySolana._buildRpc(config)
 
-    /**
-     * The token program owning each mint already fetched by this instance, keyed by mint
-     * address. A Token-2022 mint can be closed and its address initialized again, so an entry
-     * is only trusted while the account's token account under it holds a balance; a balance read
-     * that finds none, or an empty one, fetches the mint again.
-     *
-     * @private
-     * @type {Map<string, TokenProgramAddress>}
-     */
+    /** @private */
     this._tokenProgramCache = new Map()
   }
 

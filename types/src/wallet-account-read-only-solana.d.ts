@@ -40,15 +40,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * @type {SolanaRpc | undefined}
      */
     protected _rpc: SolanaRpc | undefined;
-    /**
-     * The token program owning each mint already fetched by this instance, keyed by mint
-     * address. A Token-2022 mint can be closed and its address initialized again, so an entry
-     * is only trusted while the account's token account under it holds a balance; a balance read
-     * that finds none, or an empty one, fetches the mint again.
-     *
-     * @private
-     * @type {Map<string, TokenProgramAddress>}
-     */
+    /** @private */
     private _tokenProgramCache;
     /**
      * Returns the account's native SOL balance.
