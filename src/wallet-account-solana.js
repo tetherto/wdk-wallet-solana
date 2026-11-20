@@ -414,7 +414,8 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
   /**
    * Transfers a token to another address. Only SPL tokens are supported; to send native SOL, use
-   * {@link sendTransaction} with a `{ to, value }` transaction.
+   * {@link sendTransaction} with a `{ to, value }` transaction. A Token-2022 recipient account
+   * enabling the memo transfer extension rejects a transfer that carries no memo.
    *
    * @param {TransferOptions} options - The transfer's options.
    * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
@@ -432,7 +433,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     const { token, recipient, amount } = options
 
-    const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount, solanaOptions)
+    const { transactionMessage } = await this._buildSPLTransferTransactionMessage(token, recipient, amount, solanaOptions)
     const fee = await this._getTransactionFee(transactionMessage)
     if (this._config.transferMaxFee !== undefined && fee > this._config.transferMaxFee) {
       throw new MaximumFeeExceededError('Exceeded maximum fee cost for transfer operation.')
