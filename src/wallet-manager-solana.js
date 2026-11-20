@@ -222,8 +222,10 @@ export default class WalletManagerSolana extends WalletManager {
   }
 
   /**
-   * Disposes all wallet accounts, and the default signer if the manager built it from a seed.
-   * A signer supplied by the caller, as the default or via {@link addSigner}, is never disposed.
+   * Disposes the wallet accounts, erasing their private keys from memory, and the default signer if the manager
+   * created it from a seed. Signers you supplied, as the default or via {@link addSigner}, are never disposed, so an
+   * account created directly on one with getAccount(signerName) keeps its key. The seed you passed in is never wiped
+   * (a seed phrase string stays in memory until it is garbage collected).
    * Calling it again has no effect.
    */
   dispose () {
