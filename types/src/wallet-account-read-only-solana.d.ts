@@ -143,17 +143,18 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * @protected
      * @param {string} mintAddress - The mint's address (base58-encoded public key).
      * @returns {Promise<MintAccount>} The mint account.
-     * @throws {NoSuchElementError} If the address holds no mint of a supported token program.
+     * @throws {NoSuchElementError} If the address holds no mint of a supported token program, or a mint that cannot be decoded.
      */
     protected _fetchMintAccount(mintAddress: string): Promise<MintAccount>;
     /**
      * Fetches the mint accounts at the given addresses from the chain, batching them within
      * the `getMultipleAccounts` limit, and caches their token program. An address that holds no
-     * mint of a supported token program is dropped from the cache.
+     * mint of a supported token program is dropped from the cache. A mint the decoder cannot
+     * decode keeps its token program cached, so that its balances can still be read.
      *
      * @protected
      * @param {string[]} mintAddresses - The mints' addresses (base58-encoded public keys).
-     * @returns {Promise<Record<string, MintAccount | null>>} A mapping of mint addresses to their mint accounts, or to null for an address that holds no mint of a supported token program.
+     * @returns {Promise<Record<string, MintAccount | null>>} A mapping of mint addresses to their mint accounts, or to null for an address that holds no mint of a supported token program or a mint that cannot be decoded.
      * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
      */
     protected _fetchMaybeMintAccounts(mintAddresses: string[]): Promise<Record<string, MintAccount | null>>;
@@ -262,6 +263,8 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     private _fetchTokenAmount;
     /** @private */
     private _fetchTokenAmounts;
+    /** @private */
+    private _decodeTokenAccount;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet").TransferOptions;

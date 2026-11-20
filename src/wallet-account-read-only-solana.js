@@ -40,6 +40,9 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
   findAssociatedTokenPda,
   getCreateAssociatedTokenIdempotentInstruction,
+  getMintSize,
+  getMultisigSize,
+  getTokenDecoder,
   getTokenSize,
   getTransferCheckedInstruction,
   TOKEN_PROGRAM_ADDRESS
@@ -48,7 +51,6 @@ import {
   AccountState,
   fetchMaybeToken,
   getMintDecoder as getMint2022Decoder,
-  getTokenDecoder as getToken2022Decoder,
   getTokenSize as getToken2022Size,
   TOKEN_2022_PROGRAM_ADDRESS
 } from '@solana-program/token-2022'
@@ -577,7 +579,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @protected
    * @param {string} mintAddress - The mint's address (base58-encoded public key).
    * @returns {Promise<MintAccount>} The mint account.
-   * @throws {NoSuchElementError} If the address holds no mint of a supported token program.
+   * @throws {NoSuchElementError} If the address holds no mint of a supported token program, or a mint that cannot be decoded.
    */
   async _fetchMintAccount (mintAddress) {
     const { [mintAddress]: mintAccount } = await this._fetchMaybeMintAccounts([mintAddress])
@@ -592,11 +594,12 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
   /**
    * Fetches the mint accounts at the given addresses from the chain, batching them within
    * the `getMultipleAccounts` limit, and caches their token program. An address that holds no
-   * mint of a supported token program is dropped from the cache.
+   * mint of a supported token program is dropped from the cache. A mint the decoder cannot
+   * decode keeps its token program cached, so that its balances can still be read.
    *
    * @protected
    * @param {string[]} mintAddresses - The mints' addresses (base58-encoded public keys).
-   * @returns {Promise<Record<string, MintAccount | null>>} A mapping of mint addresses to their mint accounts, or to null for an address that holds no mint of a supported token program.
+   * @returns {Promise<Record<string, MintAccount | null>>} A mapping of mint addresses to their mint accounts, or to null for an address that holds no mint of a supported token program or a mint that cannot be decoded.
    * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async _fetchMaybeMintAccounts (mintAddresses) {
@@ -622,17 +625,23 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
         const account = accounts[i]
 
         const tokenProgram = account?.owner
+        const data = account ? getBase64Encoder().encode(account.data[0]) : new Uint8Array()
 
-        if (tokenProgram !== TOKEN_PROGRAM_ADDRESS && tokenProgram !== TOKEN_2022_PROGRAM_ADDRESS) {
+        const isOwnedByTokenProgram = tokenProgram === TOKEN_PROGRAM_ADDRESS || tokenProgram === TOKEN_2022_PROGRAM_ADDRESS
+        const isBareMint = data.length === getMintSize()
+        const hasAccountType = data.length > getTokenSize() && data.length !== getMultisigSize()
+        const isExtendedMint = hasAccountType && data[getTokenSize()] === 1
+
+        if (!isOwnedByTokenProgram || (!isBareMint && !isExtendedMint)) {
           this._tokenProgramCache.delete(mintAddress)
           mintAccounts[mintAddress] = null
           continue
         }
 
-        try {
-          const { decimals, extensions } = getMint2022Decoder().decode(getBase64Encoder().encode(account.data[0]))
+        this._tokenProgramCache.set(mintAddress, tokenProgram)
 
-          this._tokenProgramCache.set(mintAddress, tokenProgram)
+        try {
+          const { decimals, extensions } = getMint2022Decoder().decode(data)
 
           mintAccounts[mintAddress] = {
             tokenProgram,
@@ -640,7 +649,6 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
             extensions: extensions.__option === 'Some' ? extensions.value : []
           }
         } catch {
-          this._tokenProgramCache.delete(mintAddress)
           mintAccounts[mintAddress] = null
         }
       }
@@ -969,9 +977,11 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       tokenProgram
     })
 
-    const tokenAccount = await fetchMaybeToken(this._rpc, ata, { commitment: this._commitment })
+    const { value: account } = await this._rpc
+      .getAccountInfo(ata, { commitment: this._commitment, encoding: 'base64' })
+      .send()
 
-    return tokenAccount.exists ? tokenAccount.data.amount : null
+    return account?.owner === tokenProgram ? this._decodeTokenAccount(account).amount : null
   }
 
   /** @private */
@@ -1002,18 +1012,20 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       for (let i = 0; i < batchTokenAddresses.length; i++) {
         const account = accounts[i]
 
-        if (!account) {
+        if (account?.owner !== tokenPrograms[batchTokenAddresses[i]]) {
           amounts[batchTokenAddresses[i]] = null
           continue
         }
 
-        const data = getBase64Encoder().encode(account.data[0])
-        const { amount } = getToken2022Decoder().decode(data)
-
-        amounts[batchTokenAddresses[i]] = amount
+        amounts[batchTokenAddresses[i]] = this._decodeTokenAccount(account).amount
       }
     }
 
     return amounts
+  }
+
+  /** @private */
+  _decodeTokenAccount (account) {
+    return getTokenDecoder().decode(getBase64Encoder().encode(account.data[0]))
   }
 }

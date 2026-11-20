@@ -61,6 +61,7 @@ const MOCK_LAST_VALID_BLOCK_HEIGHT = 100000n
 
 const ACCOUNT_TYPE_MINT = 1
 const ACCOUNT_TYPE_TOKEN = 2
+const UNKNOWN_EXTENSION_TYPE = 200
 
 /**
  * Appends a Token-2022 extension suffix to a base layout: the base padded to 165 bytes,
@@ -91,6 +92,15 @@ function createMintAccount (tokenProgram = TOKEN_PROGRAM_ADDRESS, { size = 82, a
   return { data: [buffer.toString('base64'), 'base64'], owner: tokenProgram, lamports: 1461600n }
 }
 
+/** Creates a mock Token-2022 mint account carrying one extension of a type the decoder does not know. */
+function createUndecodableMintAccount () {
+  const buffer = Buffer.alloc(170)
+  buffer.writeUInt8(ACCOUNT_TYPE_MINT, 165)
+  buffer.writeUInt16LE(UNKNOWN_EXTENSION_TYPE, 166)
+
+  return { data: [buffer.toString('base64'), 'base64'], owner: TOKEN_2022_PROGRAM_ADDRESS, lamports: 2074080n }
+}
+
 /** Creates a mock token account holding the given amount (offset 64, little-endian u64). */
 function createTokenAccount (amount, tokenProgram = TOKEN_PROGRAM_ADDRESS, { state = 1, extensions } = {}) {
   let buffer = Buffer.alloc(165)
@@ -102,6 +112,22 @@ function createTokenAccount (amount, tokenProgram = TOKEN_PROGRAM_ADDRESS, { sta
   }
 
   return { data: [buffer.toString('base64'), 'base64'], owner: tokenProgram, lamports: 2039280n }
+}
+
+/** Creates a mock Token-2022 token account holding the given amount and one extension of a type the decoder does not know. */
+function createUndecodableTokenAccount (amount) {
+  const buffer = Buffer.alloc(170)
+  buffer.writeBigUInt64LE(BigInt(amount), 64)
+  buffer.writeUInt8(1, 108)
+  buffer.writeUInt8(ACCOUNT_TYPE_TOKEN, 165)
+  buffer.writeUInt16LE(UNKNOWN_EXTENSION_TYPE, 166)
+
+  return { data: [buffer.toString('base64'), 'base64'], owner: TOKEN_2022_PROGRAM_ADDRESS, lamports: 2074080n }
+}
+
+/** Creates a mock account owned by the system program with no data, as a pre-funded ATA address holds. */
+function createPrefundedAccount () {
+  return { data: ['', 'base64'], owner: SYSTEM_PROGRAM_ADDRESS, lamports: 1000000n }
 }
 
 /** Returns the rent-exempt deposit for an account of the given size, as the runtime computes it. */
@@ -264,6 +290,39 @@ describe('WalletAccountReadOnlySolana', () => {
 
       expect(balance).toBe(2500000n)
       expect(mockRpc.getAccountInfo).toHaveBeenCalledWith(ata, { commitment: 'confirmed', encoding: 'base64' })
+    })
+
+    it('should return the balance of a mint carrying an extension the decoder does not know', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createUndecodableMintAccount()]))
+      mockRpc.getAccountInfo.mockReturnValueOnce(mockSend(createTokenAccount(2500000, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
+
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
+
+      const [ata] = await findAssociatedTokenPda({
+        mint: address(TOKEN_2022_MINT_ADDRESS),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
+      })
+
+      expect(balance).toBe(2500000n)
+      expect(mockRpc.getAccountInfo).toHaveBeenCalledWith(ata, { commitment: 'confirmed', encoding: 'base64' })
+    })
+
+    it('should return the amount of a token account carrying an extension the decoder does not know', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)]))
+      mockRpc.getAccountInfo.mockReturnValueOnce(mockSend(createUndecodableTokenAccount(2500000)))
+
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
+
+      expect(balance).toBe(2500000n)
+    })
+
+    it('should return zero when the ATA address holds a pre-funded system account', async () => {
+      mockRpc.getAccountInfo.mockReturnValueOnce(mockSend(createPrefundedAccount()))
+
+      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
+
+      expect(balance).toBe(0n)
     })
 
     it('should return zero when ATA does not exist', async () => {
@@ -626,6 +685,46 @@ describe('WalletAccountReadOnlySolana', () => {
 
       expect(balances[MOCK_TOKEN_MINT_1]).toBe(0n)
       expect(balances[MOCK_TOKEN_MINT_2]).toBe(0n)
+    })
+
+    it('should return the balance of a mint carrying an extension the decoder does not know', async () => {
+      mockMintsThenAtas(
+        [createMintAccount(), createUndecodableMintAccount()],
+        [createTokenAccount(1000000), createTokenAccount(7000000, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })]
+      )
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
+
+      const [token2022Ata] = await findAssociatedTokenPda({
+        mint: address(MOCK_TOKEN_MINT_2),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
+      })
+
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_1]: 1000000n, [MOCK_TOKEN_MINT_2]: 7000000n })
+      expect(mockRpc.getMultipleAccounts.mock.calls[1][0][1]).toEqual(token2022Ata)
+    })
+
+    it('should return every balance when one token account carries an extension the decoder does not know', async () => {
+      mockMintsThenAtas(
+        [createMintAccount(), createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)],
+        [createTokenAccount(1000000), createUndecodableTokenAccount(7000000)]
+      )
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
+
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_1]: 1000000n, [MOCK_TOKEN_MINT_2]: 7000000n })
+    })
+
+    it('should return every balance when one ATA address holds a pre-funded system account', async () => {
+      mockMintsThenAtas(
+        [createMintAccount(), createMintAccount()],
+        [createTokenAccount(1000000), createPrefundedAccount()]
+      )
+
+      const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_1, MOCK_TOKEN_MINT_2])
+
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_1]: 1000000n, [MOCK_TOKEN_MINT_2]: 0n })
     })
 
     it('should handle mix of existing and non-existing ATAs', async () => {
