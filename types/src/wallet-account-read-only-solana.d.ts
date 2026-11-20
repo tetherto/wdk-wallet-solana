@@ -129,16 +129,6 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      */
     verify(message: string, signature: string): Promise<boolean>;
     /**
-     * Resolves the token program owning a mint: either the classic SPL Token Program or
-     * the Token Extensions Program (Token-2022).
-     *
-     * @protected
-     * @param {string} mintAddress - The mint's address (base58-encoded public key).
-     * @returns {Promise<TokenProgramAddress>} The address of the owning token program.
-     * @throws {ValueError} If the address is not a mint account.
-     */
-    protected _resolveTokenProgram(mintAddress: string): Promise<TokenProgramAddress>;
-    /**
      * Resolves the token program owning each of the given mints, from the cache when known,
      * fetching the other mints in as few RPC calls as the `getMultipleAccounts` limit allows.
      *

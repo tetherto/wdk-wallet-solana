@@ -429,12 +429,13 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(2, ata, { commitment: 'confirmed', encoding: 'base64' })
     })
 
-    it('should throw ValueError when the mint does not exist', async () => {
+    it('should return 0n when the mint does not exist', async () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([null]))
 
-      await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(new ValueError(
-        `'${MOCK_TOKEN_MINT}' is not a mint account.`
-      ))
+      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
+
+      expect(balance).toBe(0n)
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled()
     })
 
     it('should read the Token-2022 ATA of a Token-2022 mint without extensions', async () => {
@@ -453,30 +454,33 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(mockRpc.getAccountInfo).toHaveBeenCalledWith(ata, { commitment: 'confirmed', encoding: 'base64' })
     })
 
-    it('should throw ValueError when the address is not a mint', async () => {
+    it('should return 0n when the address is not a mint', async () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createTokenAccount(0)]))
 
-      await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(new ValueError(
-        `'${MOCK_TOKEN_MINT}' is not a mint account.`
-      ))
+      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
+
+      expect(balance).toBe(0n)
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled()
     })
 
-    it('should throw ValueError when the address is a Token-2022 token account', async () => {
+    it('should return 0n when the address is a Token-2022 token account', async () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([
         createMintAccount(TOKEN_2022_PROGRAM_ADDRESS, { size: 278, accountType: ACCOUNT_TYPE_TOKEN })
       ]))
 
-      await expect(readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)).rejects.toThrow(new ValueError(
-        `'${TOKEN_2022_MINT_ADDRESS}' is not a mint account.`
-      ))
+      const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
+
+      expect(balance).toBe(0n)
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled()
     })
 
-    it('should throw ValueError when the address is owned by neither token program', async () => {
+    it('should return 0n when the address is owned by neither token program', async () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(SYSTEM_PROGRAM_ADDRESS)]))
 
-      await expect(readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)).rejects.toThrow(new ValueError(
-        `'${MOCK_TOKEN_MINT}' is not a mint account.`
-      ))
+      const balance = await readOnlyAccount.getTokenBalance(MOCK_TOKEN_MINT)
+
+      expect(balance).toBe(0n)
+      expect(mockRpc.getAccountInfo).not.toHaveBeenCalled()
     })
 
     it('should throw error when not connected to provider', async () => {

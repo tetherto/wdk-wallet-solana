@@ -251,7 +251,11 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     const ownerAddress = await this.getAddress()
     const isCached = this._tokenProgramCache.has(tokenAddress)
-    const tokenProgram = await this._resolveTokenProgram(tokenAddress)
+    const { [tokenAddress]: tokenProgram } = await this._resolveTokenPrograms([tokenAddress])
+
+    if (tokenProgram === null) {
+      return 0n
+    }
 
     const amount = await this._fetchTokenAmount(ownerAddress, tokenAddress, tokenProgram)
 
@@ -542,26 +546,6 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     }
 
     return undefined
-  }
-
-  /**
-   * Resolves the token program owning a mint: either the classic SPL Token Program or
-   * the Token Extensions Program (Token-2022).
-   *
-   * @protected
-   * @param {string} mintAddress - The mint's address (base58-encoded public key).
-   * @returns {Promise<TokenProgramAddress>} The address of the owning token program.
-   * @throws {ValueError} If the address is not a mint account.
-   */
-  async _resolveTokenProgram (mintAddress) {
-    const tokenPrograms = await this._resolveTokenPrograms([mintAddress])
-    const tokenProgram = tokenPrograms[mintAddress]
-
-    if (tokenProgram === null) {
-      throw new ValueError(`'${mintAddress}' is not a mint account.`)
-    }
-
-    return tokenProgram
   }
 
   /**
