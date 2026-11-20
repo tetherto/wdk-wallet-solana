@@ -1326,6 +1326,16 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(transfer.data).toEqual(getTransferCheckedInstructionDataEncoder().encode({ amount: 1000000n, decimals: 6 }))
     })
 
+    it('should fetch the mint account once per quote', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue(mockSend([createMintAccount(TOKEN_PROGRAM_ADDRESS, { decimals: 6 })]))
+      mockRpc.getAccountInfo.mockReturnValue(mockSend(null))
+
+      await quote(CLASSIC_MINT, 1000000n)
+
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(1)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledWith([address(CLASSIC_MINT)], { commitment: 'confirmed', encoding: 'base64' })
+    })
+
     it('should quote the transfer against the token extensions program for a Token-2022 mint', async () => {
       mockRpc.getMultipleAccounts.mockReturnValue(mockSend([
         createMintAccount(TOKEN_2022_PROGRAM_ADDRESS, { size: 278, accountType: ACCOUNT_TYPE_MINT, decimals: 9 })

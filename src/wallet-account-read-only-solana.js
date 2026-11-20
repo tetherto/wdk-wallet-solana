@@ -383,11 +383,10 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     }
 
     const { token, recipient, amount } = options
-    const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount, solanaOptions)
+    const { transactionMessage, mintAccount } = await this._buildSPLTransferTransactionMessage(token, recipient, amount, solanaOptions)
+    const { tokenProgram, extensions: mintExtensions } = mintAccount
 
     const fee = await this._getTransactionFee(transactionMessage)
-
-    const { tokenProgram, extensions: mintExtensions } = await this._fetchMintAccount(token)
 
     const createsRecipientAccount = transactionMessage.instructions
       .some(instruction => instruction.programAddress === ASSOCIATED_TOKEN_PROGRAM_ADDRESS)
@@ -711,7 +710,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
    * @param {string} recipient - The recipient's wallet address (base58-encoded public key).
    * @param {number | bigint} amount - The amount to transfer in token's base units (must be ≤ 2^64-1).
    * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
-   * @returns {Promise<TransactionMessage>} The constructed transaction message.
+   * @returns {Promise<{ transactionMessage: TransactionMessage, mintAccount: MintAccount }>} The constructed transaction message, and the mint account it was built from.
    * @throws {ValueError} If the amount exceeds the representable range, if the memo is not a string, or if the memo makes the transaction exceed the maximum transaction size.
    * @throws {NonTransferableTokenError} If the mint is non-transferable.
    * @throws {TransferHookNotSupportedError} If the mint carries a transfer hook with a hook program set.
@@ -738,7 +737,8 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
     const tokenMint = address(token)
     const recipientPublicKey = address(recipient)
 
-    const { tokenProgram, decimals, extensions: mintExtensions } = await this._fetchMintAccount(token)
+    const mintAccount = await this._fetchMintAccount(token)
+    const { tokenProgram, decimals, extensions: mintExtensions } = mintAccount
 
     for (const extension of mintExtensions) {
       const rejection = REJECTED_MINT_EXTENSIONS[extension.__kind]
@@ -821,7 +821,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       throw new ValueError(`The transfer transaction is ${size} bytes, over the ${sizeLimit} bytes limit. Shorten the memo.`)
     }
 
-    return transactionMessage
+    return { transactionMessage, mintAccount }
   }
 
   /**

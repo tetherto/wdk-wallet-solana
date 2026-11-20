@@ -186,14 +186,17 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
      * @param {string} recipient - The recipient's wallet address (base58-encoded public key).
      * @param {number | bigint} amount - The amount to transfer in token's base units (must be ≤ 2^64-1).
      * @param {SolanaTransferOptions} [solanaOptions] - The transfer's Solana-specific options.
-     * @returns {Promise<TransactionMessage>} The constructed transaction message.
+     * @returns {Promise<{ transactionMessage: TransactionMessage, mintAccount: MintAccount }>} The constructed transaction message, and the mint account it was built from.
      * @throws {ValueError} If the amount exceeds the representable range, if the memo is not a string, or if the memo makes the transaction exceed the maximum transaction size.
      * @throws {NonTransferableTokenError} If the mint is non-transferable.
      * @throws {TransferHookNotSupportedError} If the mint carries a transfer hook with a hook program set.
      * @throws {ConfidentialTransferNotSupportedError} If the mint is configured for confidential transfers.
      * @throws {FrozenTokenAccountError} If the recipient has no token account yet and the mint freezes by default the accounts it creates, or if the recipient's token account is frozen.
      */
-    protected _buildSPLTransferTransactionMessage(token: string, recipient: string, amount: number | bigint, solanaOptions?: SolanaTransferOptions): Promise<TransactionMessage>;
+    protected _buildSPLTransferTransactionMessage(token: string, recipient: string, amount: number | bigint, solanaOptions?: SolanaTransferOptions): Promise<{
+        transactionMessage: TransactionMessage;
+        mintAccount: MintAccount;
+    }>;
     /**
      * Builds a transaction message for native SOL transfer.
      * Creates a transfer instruction for sending SOL.

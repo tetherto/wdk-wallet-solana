@@ -433,7 +433,7 @@ export default class WalletAccountSolana extends WalletAccountReadOnlySolana {
 
     const { token, recipient, amount } = options
 
-    const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount, solanaOptions)
+    const { transactionMessage } = await this._buildSPLTransferTransactionMessage(token, recipient, amount, solanaOptions)
     const fee = await this._getTransactionFee(transactionMessage)
     if (this._config.transferMaxFee !== undefined && fee > this._config.transferMaxFee) {
       throw new MaximumFeeExceededError('Exceeded maximum fee cost for transfer operation.')
