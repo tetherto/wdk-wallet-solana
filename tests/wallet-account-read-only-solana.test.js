@@ -346,14 +346,9 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(mockRpc.getAccountInfo).toHaveBeenLastCalledWith(classicAta, { commitment: 'confirmed', encoding: 'base64' })
     })
 
-    it('should read the classic ATA once a cached Token-2022 mint is re-created under the classic program while its Token-2022 ATA is empty', async () => {
-      mockRpc.getMultipleAccounts
-        .mockReturnValueOnce(mockSend([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)]))
-        .mockReturnValueOnce(mockSend([createMintAccount(TOKEN_PROGRAM_ADDRESS)]))
-      mockRpc.getAccountInfo
-        .mockReturnValueOnce(mockSend(createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
-        .mockReturnValueOnce(mockSend(createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
-        .mockReturnValueOnce(mockSend(createTokenAccount(500)))
+    it('should not fetch a cached mint again when its token account exists with a zero balance', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValueOnce(mockSend([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)]))
+      mockRpc.getAccountInfo.mockReturnValue(mockSend(createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })))
 
       await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
       const balance = await readOnlyAccount.getTokenBalance(TOKEN_2022_MINT_ADDRESS)
@@ -363,20 +358,11 @@ describe('WalletAccountReadOnlySolana', () => {
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
-      const [classicAta] = await findAssociatedTokenPda({
-        mint: address(TOKEN_2022_MINT_ADDRESS),
-        owner: address(TEST_ADDRESS),
-        tokenProgram: TOKEN_PROGRAM_ADDRESS
-      })
 
-      expect(balance).toBe(500n)
-      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(2)
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(TOKEN_2022_MINT_ADDRESS)], { commitment: 'confirmed', encoding: 'base64' })
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [address(TOKEN_2022_MINT_ADDRESS)], { commitment: 'confirmed', encoding: 'base64' })
-      expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(3)
-      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(1, token2022Ata, { commitment: 'confirmed', encoding: 'base64' })
+      expect(balance).toBe(0n)
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(1)
+      expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(2)
       expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(2, token2022Ata, { commitment: 'confirmed', encoding: 'base64' })
-      expect(mockRpc.getAccountInfo).toHaveBeenNthCalledWith(3, classicAta, { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should read the classic ATA directly once a re-created mint has been fetched again', async () => {
@@ -728,13 +714,10 @@ describe('WalletAccountReadOnlySolana', () => {
       expect(mockRpc.getMultipleAccounts.mock.calls[4][0]).toEqual([classicAta])
     })
 
-    it('should read the classic ATA of a cached Token-2022 mint re-created under the classic program while its Token-2022 ATA is empty', async () => {
+    it('should not fetch a cached mint again when its token account exists with a zero balance', async () => {
       const emptyToken2022Account = createTokenAccount(0, TOKEN_2022_PROGRAM_ADDRESS, { extensions: [] })
       mockMintsThenAtas([createMintAccount(TOKEN_2022_PROGRAM_ADDRESS)], [emptyToken2022Account])
-      mockRpc.getMultipleAccounts
-        .mockReturnValueOnce(mockSend([emptyToken2022Account]))
-        .mockReturnValueOnce(mockSend([createMintAccount(TOKEN_PROGRAM_ADDRESS)]))
-        .mockReturnValueOnce(mockSend([createTokenAccount(500)]))
+      mockRpc.getMultipleAccounts.mockReturnValueOnce(mockSend([emptyToken2022Account]))
 
       await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
       const balances = await readOnlyAccount.getTokenBalances([MOCK_TOKEN_MINT_2])
@@ -744,19 +727,10 @@ describe('WalletAccountReadOnlySolana', () => {
         owner: address(TEST_ADDRESS),
         tokenProgram: TOKEN_2022_PROGRAM_ADDRESS
       })
-      const [classicAta] = await findAssociatedTokenPda({
-        mint: address(MOCK_TOKEN_MINT_2),
-        owner: address(TEST_ADDRESS),
-        tokenProgram: TOKEN_PROGRAM_ADDRESS
-      })
 
-      expect(balances).toEqual({ [MOCK_TOKEN_MINT_2]: 500n })
-      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(5)
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(1, [address(MOCK_TOKEN_MINT_2)], { commitment: 'confirmed', encoding: 'base64' })
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(2, [token2022Ata], { commitment: 'confirmed', encoding: 'base64' })
+      expect(balances).toEqual({ [MOCK_TOKEN_MINT_2]: 0n })
+      expect(mockRpc.getMultipleAccounts).toHaveBeenCalledTimes(3)
       expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(3, [token2022Ata], { commitment: 'confirmed', encoding: 'base64' })
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(4, [address(MOCK_TOKEN_MINT_2)], { commitment: 'confirmed', encoding: 'base64' })
-      expect(mockRpc.getMultipleAccounts).toHaveBeenNthCalledWith(5, [classicAta], { commitment: 'confirmed', encoding: 'base64' })
     })
 
     it('should read the classic ATA directly once a re-created mint has been fetched again', async () => {

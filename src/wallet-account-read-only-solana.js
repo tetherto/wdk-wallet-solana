@@ -259,7 +259,7 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     const amount = await this._fetchTokenAmount(ownerAddress, tokenAddress, tokenProgram)
 
-    if (!isCached || (amount !== null && amount !== 0n)) {
+    if (!isCached || amount !== null) {
       return amount ?? 0n
     }
 
@@ -303,13 +303,13 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
 
     const amounts = await this._fetchTokenAmounts(ownerAddress, mintTokenAddresses, tokenPrograms)
 
-    const unheldCachedTokenAddresses = cachedTokenAddresses
-      .filter(tokenAddress => amounts[tokenAddress] === null || amounts[tokenAddress] === 0n)
+    const accountlessCachedTokenAddresses = cachedTokenAddresses
+      .filter(tokenAddress => amounts[tokenAddress] === null)
 
-    if (unheldCachedTokenAddresses.length > 0) {
-      const mintAccounts = await this._fetchMaybeMintAccounts(unheldCachedTokenAddresses)
+    if (accountlessCachedTokenAddresses.length > 0) {
+      const mintAccounts = await this._fetchMaybeMintAccounts(accountlessCachedTokenAddresses)
 
-      const movedTokenAddresses = unheldCachedTokenAddresses
+      const movedTokenAddresses = accountlessCachedTokenAddresses
         .filter(tokenAddress => mintAccounts[tokenAddress] !== null &&
           mintAccounts[tokenAddress].tokenProgram !== tokenPrograms[tokenAddress])
 
