@@ -3,7 +3,7 @@
  *
  * @interface
  */
-export class ISignerSolana extends ISigner {
+export interface ISignerSolana extends ISigner {
     /**
      * Derive a child signer using a relative path (e.g., "0'/0'").
      *

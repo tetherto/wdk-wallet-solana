@@ -28,6 +28,9 @@
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransactionReceipt} SolanaTransactionReceipt */
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransactionDetails} SolanaTransactionDetails */
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransferOptions} SolanaTransferOptions */
+/** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaTransferQuoteDetails} SolanaTransferQuoteDetails */
+/** @typedef {import('./src/wallet-account-read-only-solana.js').MintAccount} MintAccount */
+/** @typedef {import('./src/wallet-account-read-only-solana.js').TokenProgramAddress} TokenProgramAddress */
 /** @typedef {import('./src/wallet-account-read-only-solana.js').SolanaRpc} SolanaRpc */
 /** @typedef {import('./src/wallet-account-read-only-solana.js').Commitment} Commitment */
 
@@ -40,6 +43,13 @@ export { default } from './src/wallet-manager-solana.js'
 export { default as WalletAccountReadOnlySolana } from './src/wallet-account-read-only-solana.js'
 
 export { default as WalletAccountSolana } from './src/wallet-account-solana.js'
+
+export {
+  ConfidentialTransferNotSupportedError,
+  FrozenTokenAccountError,
+  NonTransferableTokenError,
+  TransferHookNotSupportedError
+} from './src/errors.js'
 
 export {
   AssertionError,

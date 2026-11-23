@@ -25,6 +25,7 @@ import {
 } from '@jest/globals'
 import {
   appendTransactionMessageInstruction,
+  appendTransactionMessageInstructions,
   createTransactionMessage,
   getCompiledTransactionMessageDecoder,
   setTransactionMessageFeePayer,
@@ -32,14 +33,19 @@ import {
 } from '@solana/transaction-messages'
 import {
   createKeyPairSignerFromPrivateKeyBytes,
+  createNoopSigner,
+  generateKeyPairSigner,
   setTransactionMessageFeePayerSigner,
   signTransactionMessageWithSigners
 } from '@solana/signers'
+import { address, getPublicKeyFromAddress } from '@solana/addresses'
+import { verifySignature } from '@solana/keys'
 import { getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { getBase58Decoder, getBase64Decoder, getBase64Encoder } from '@solana/codecs'
-import { MEMO_PROGRAM_ADDRESS, getAddMemoInstruction } from '@solana-program/memo'
+import { LEGACY_MEMO_PROGRAM_ADDRESS_V3, getAddMemoInstruction } from '@solana-program/memo'
 import { SYSTEM_PROGRAM_ADDRESS, getTransferSolInstruction } from '@solana-program/system'
 import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
+import { getExtensionEncoder, TOKEN_2022_PROGRAM_ADDRESS } from '@solana-program/token-2022'
 import { DisposalError } from '@tetherto/wdk-wallet'
 import * as bip39 from 'bip39'
 
@@ -47,6 +53,7 @@ import WalletManagerSolana from '../src/wallet-manager-solana.js'
 import WalletAccountSolana from '../src/wallet-account-solana.js'
 import WalletAccountReadOnlySolana from '../src/wallet-account-read-only-solana.js'
 import SeedSignerSolana from '../src/signers/seed-signer-solana.js'
+import { NonTransferableTokenError } from '../src/errors.js'
 
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
@@ -114,6 +121,47 @@ const FOREIGN_FEE_PAYER_ADDRESS = 'DifferentAddress11111111111111111111111'
 
 const USDT_MINT_ADDRESS = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 
+const TOKEN_2022_MINT_ADDRESS = '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo'
+
+/** Creates a mock SPL mint account with the given decimals, as returned by the RPC. */
+function createMintAccount (decimals = 6) {
+  const buffer = Buffer.alloc(82)
+  buffer.writeUInt8(decimals, 44)
+
+  return {
+    data: [buffer.toString('base64'), 'base64'],
+    owner: TOKEN_PROGRAM_ADDRESS,
+    lamports: 1461600n
+  }
+}
+
+/**
+ * Creates a mock Token-2022 mint account with the given decimals and extensions: the base mint
+ * padded to 165 bytes, the mint account type, then one TLV entry per extension.
+ */
+function createMint2022Account (decimals = 6, extensions = []) {
+  const base = Buffer.alloc(166)
+  base.writeUInt8(decimals, 44)
+  base.writeUInt8(1, 165)
+
+  const entries = extensions.map(extension => Buffer.from(getExtensionEncoder().encode(extension)))
+
+  return {
+    data: [Buffer.concat([base, ...entries]).toString('base64'), 'base64'],
+    owner: TOKEN_2022_PROGRAM_ADDRESS,
+    lamports: 1461600n
+  }
+}
+
+/** Creates a mock, empty classic token account, as returned by the RPC. */
+function createTokenAccount () {
+  return {
+    data: [Buffer.alloc(165).toString('base64'), 'base64'],
+    owner: TOKEN_PROGRAM_ADDRESS,
+    lamports: 2039280n
+  }
+}
+
 // Builds and signs, with the Solana SDK only, the native transfer the account builds for `tx`
 // against the mocked RPC's blockhash.
 async function buildSignedTransaction (account, tx) {
@@ -126,7 +174,7 @@ async function buildSignedTransaction (account, tx) {
     lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
   }, transactionMessage)
   transactionMessage = appendTransactionMessageInstruction(getTransferSolInstruction({
-    source: { address: signer.address },
+    source: signer,
     destination: tx.to,
     amount: tx.value
   }), transactionMessage)
@@ -1001,6 +1049,86 @@ describe('WalletAccountSolana', () => {
   })
 
   describe('signTransaction', () => {
+    function mockBlockhashRpc () {
+      return {
+        getFeeForMessage: jest.fn(),
+        getLatestBlockhash: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({
+            value: {
+              blockhash: MOCK_BLOCKHASH,
+              lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
+            }
+          })
+        })
+      }
+    }
+
+    it('should sign a message carrying a placeholder signer for the account address with the account key', async () => {
+      const originalRpc = account._rpc
+      account._rpc = mockBlockhashRpc()
+
+      try {
+        const transactionMessage = appendTransactionMessageInstructions([
+          getTransferSolInstruction({
+            source: createNoopSigner(address(ACCOUNT_0.address)),
+            destination: address(RECIPIENT_ADDRESS),
+            amount: 1000n
+          })
+        ], createTransactionMessage({ version: 0 }))
+
+        const signedTx = await account.signTransaction(transactionMessage)
+
+        const publicKey = await getPublicKeyFromAddress(address(ACCOUNT_0.address))
+        const isValid = await verifySignature(publicKey, signedTx.signatures[ACCOUNT_0.address], signedTx.messageBytes)
+
+        expect(Object.keys(signedTx.signatures)).toEqual([ACCOUNT_0.address])
+        expect(isValid).toBe(true)
+      } finally {
+        account._rpc = originalRpc
+      }
+    })
+
+    it('should sign a message carrying placeholder signers for the account address in several instructions', async () => {
+      const originalRpc = account._rpc
+      account._rpc = mockBlockhashRpc()
+
+      try {
+        const transactionMessage = appendTransactionMessageInstructions([
+          getTransferSolInstruction({ source: createNoopSigner(address(ACCOUNT_0.address)), destination: address(RECIPIENT_ADDRESS), amount: 1000n }),
+          getTransferSolInstruction({ source: createNoopSigner(address(ACCOUNT_0.address)), destination: address(RECIPIENT_ADDRESS), amount: 2000n })
+        ], createTransactionMessage({ version: 0 }))
+
+        const signedTx = await account.signTransaction(transactionMessage)
+
+        const publicKey = await getPublicKeyFromAddress(address(ACCOUNT_0.address))
+        const isValid = await verifySignature(publicKey, signedTx.signatures[ACCOUNT_0.address], signedTx.messageBytes)
+
+        expect(Object.keys(signedTx.signatures)).toEqual([ACCOUNT_0.address])
+        expect(isValid).toBe(true)
+      } finally {
+        account._rpc = originalRpc
+      }
+    })
+
+    it('should reject a message carrying two distinct signers for another address', async () => {
+      const otherSigner = await generateKeyPairSigner()
+
+      const originalRpc = account._rpc
+      account._rpc = mockBlockhashRpc()
+
+      try {
+        const transactionMessage = appendTransactionMessageInstructions([
+          getTransferSolInstruction({ source: otherSigner, destination: address(RECIPIENT_ADDRESS), amount: 1n }),
+          getTransferSolInstruction({ source: createNoopSigner(otherSigner.address), destination: address(RECIPIENT_ADDRESS), amount: 2n })
+        ], createTransactionMessage({ version: 0 }))
+
+        await expect(account.signTransaction(transactionMessage))
+          .rejects.toThrow(`Multiple distinct signers were identified for address \`${otherSigner.address}\``)
+      } finally {
+        account._rpc = originalRpc
+      }
+    })
+
     it('should sign a transaction and return the signed transaction', async () => {
       const mockRpc = {
         getFeeForMessage: jest.fn(),
@@ -1149,7 +1277,7 @@ describe('WalletAccountSolana', () => {
         blockhash: MOCK_BLOCKHASH,
         lastValidBlockHeight: 1000000n
       }, transactionMessage)
-      transactionMessage = appendTransactionMessageInstruction(getAddMemoInstruction({ memo: 'co-signed', signers: [coSigner] }), transactionMessage)
+      transactionMessage = appendTransactionMessageInstruction(getAddMemoInstruction({ memo: 'co-signed', signers: [coSigner] }, { programAddress: LEGACY_MEMO_PROGRAM_ADDRESS_V3 }), transactionMessage)
 
       const signedTx = await account.signTransaction(transactionMessage)
 
@@ -1183,6 +1311,9 @@ describe('WalletAccountSolana', () => {
         getFeeForMessage: jest.fn(),
         sendTransaction: jest.fn(),
         getSignatureStatuses: jest.fn(),
+        getMultipleAccounts: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: [createMintAccount()] })
+        }),
         getLatestBlockhash: jest.fn().mockReturnValue({
           send: jest.fn().mockResolvedValue({
             value: {
@@ -1251,12 +1382,9 @@ describe('WalletAccountSolana', () => {
       })
 
       it('should accept valid amounts', async () => {
-        const mintData = new Uint8Array(165)
-        mintData[44] = 6
-
         mockRpc.getAccountInfo.mockReturnValue({
           send: jest.fn().mockResolvedValue({
-            value: { data: mintData }
+            value: createTokenAccount()
           })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
@@ -1299,12 +1427,9 @@ describe('WalletAccountSolana', () => {
         })
         const limitedAccount = await limitedWallet.getAccount(0)
 
-        const mintData = new Uint8Array(165)
-        mintData[44] = 6
-
         mockRpc.getAccountInfo.mockReturnValue({
           send: jest.fn().mockResolvedValue({
-            value: { data: mintData }
+            value: createTokenAccount()
           })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
@@ -1330,12 +1455,9 @@ describe('WalletAccountSolana', () => {
         })
         const limitedAccount = await limitedWallet.getAccount(0)
 
-        const mintData = new Uint8Array(165)
-        mintData[44] = 6
-
         mockRpc.getAccountInfo.mockReturnValue({
           send: jest.fn().mockResolvedValue({
-            value: { data: mintData }
+            value: createTokenAccount()
           })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
@@ -1363,10 +1485,9 @@ describe('WalletAccountSolana', () => {
 
     describe('SPL Token Transfer', () => {
       it('should build and send SPL token transfer', async () => {
-        const mintData = new Uint8Array(165)
         mockRpc.getAccountInfo.mockReturnValue({
           send: jest.fn().mockResolvedValue({
-            value: { data: mintData }
+            value: createTokenAccount()
           })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
@@ -1396,10 +1517,9 @@ describe('WalletAccountSolana', () => {
         // 'wdk memo' encoded as UTF-8.
         const EXPECTED_MEMO_DATA = new Uint8Array([119, 100, 107, 32, 109, 101, 109, 111])
 
-        const mintData = new Uint8Array(165)
         mockRpc.getAccountInfo.mockReturnValue({
           send: jest.fn().mockResolvedValue({
-            value: { data: mintData }
+            value: createTokenAccount()
           })
         })
         mockRpc.getFeeForMessage.mockReturnValue({
@@ -1429,11 +1549,83 @@ describe('WalletAccountSolana', () => {
           (instruction) => compiledMessage.staticAccounts[instruction.programAddressIndex]
         )
 
-        expect(programs).toEqual([MEMO_PROGRAM_ADDRESS, TOKEN_PROGRAM_ADDRESS])
+        expect(programs).toEqual([LEGACY_MEMO_PROGRAM_ADDRESS_V3, TOKEN_PROGRAM_ADDRESS])
         expect(compiledMessage.instructions[0].data).toEqual(EXPECTED_MEMO_DATA)
         expect(result.hash).toBe(MOCK_SIGNATURE)
         expect(result.fee).toBe(BigInt(MOCK_FEE))
       })
+    })
+  })
+
+  describe('transfer of a Token-2022 token', () => {
+    let mockRpc
+    let originalRpc
+
+    beforeEach(() => {
+      originalRpc = account._rpc
+
+      mockRpc = {
+        getAccountInfo: jest.fn(),
+        getFeeForMessage: jest.fn(),
+        sendTransaction: jest.fn(),
+        getMultipleAccounts: jest.fn(),
+        getLatestBlockhash: jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({
+            value: {
+              blockhash: MOCK_BLOCKHASH,
+              lastValidBlockHeight: MOCK_LAST_VALID_BLOCK_HEIGHT
+            }
+          })
+        })
+      }
+
+      account._rpc = mockRpc
+    })
+
+    afterEach(() => {
+      account._rpc = originalRpc
+    })
+
+    it('should send a transfer against the token extensions program', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ value: [createMint2022Account(6)] })
+      })
+      mockRpc.getAccountInfo.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: { data: [Buffer.alloc(165).toString('base64'), 'base64'], owner: TOKEN_2022_PROGRAM_ADDRESS }
+        })
+      })
+      mockRpc.getFeeForMessage.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ value: MOCK_FEE })
+      })
+      mockRpc.sendTransaction.mockReturnValue({
+        send: jest.fn().mockResolvedValue(MOCK_SIGNATURE)
+      })
+
+      const result = await account.transfer({ token: TOKEN_2022_MINT_ADDRESS, recipient: SYSTEM_PROGRAM_ADDRESS, amount: 1000000n })
+
+      const [wireTransaction] = mockRpc.sendTransaction.mock.calls[0]
+      const transaction = getTransactionDecoder()
+        .decode(getBase64Encoder().encode(wireTransaction))
+      const compiledMessage = getCompiledTransactionMessageDecoder()
+        .decode(transaction.messageBytes)
+      const programs = compiledMessage.instructions.map(
+        (instruction) => compiledMessage.staticAccounts[instruction.programAddressIndex]
+      )
+
+      expect(programs).toEqual([TOKEN_2022_PROGRAM_ADDRESS])
+      expect(result).toEqual({ hash: MOCK_SIGNATURE, fee: BigInt(MOCK_FEE) })
+    })
+
+    it('should reject a non-transferable token without sending a transaction', async () => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ value: [createMint2022Account(6, [{ __kind: 'NonTransferable' }])] })
+      })
+
+      await expect(account.transfer({ token: TOKEN_2022_MINT_ADDRESS, recipient: SYSTEM_PROGRAM_ADDRESS, amount: 1000000n }))
+        .rejects.toThrow(new NonTransferableTokenError(`Token '${TOKEN_2022_MINT_ADDRESS}' is non-transferable.`))
+
+      expect(mockRpc.sendTransaction).not.toHaveBeenCalled()
     })
   })
 

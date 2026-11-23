@@ -16,8 +16,12 @@ export type SimpleSolanaTransaction = import("./src/wallet-account-read-only-sol
 export type SolanaTransactionReceipt = import("./src/wallet-account-read-only-solana.js").SolanaTransactionReceipt;
 export type SolanaTransactionDetails = import("./src/wallet-account-read-only-solana.js").SolanaTransactionDetails;
 export type SolanaTransferOptions = import("./src/wallet-account-read-only-solana.js").SolanaTransferOptions;
+export type SolanaTransferQuoteDetails = import("./src/wallet-account-read-only-solana.js").SolanaTransferQuoteDetails;
+export type MintAccount = import("./src/wallet-account-read-only-solana.js").MintAccount;
+export type TokenProgramAddress = import("./src/wallet-account-read-only-solana.js").TokenProgramAddress;
 export type SolanaRpc = import("./src/wallet-account-read-only-solana.js").SolanaRpc;
 export type Commitment = import("./src/wallet-account-read-only-solana.js").Commitment;
 export type SolanaTransaction = import("./src/wallet-account-solana.js").SolanaTransaction;
 export type SolanaWalletConfig = import("./src/wallet-account-solana.js").SolanaWalletConfig;
 export type SignerOptions = import("./src/wallet-account-solana.js").SignerOptions;
+export { ConfidentialTransferNotSupportedError, FrozenTokenAccountError, NonTransferableTokenError, TransferHookNotSupportedError } from "./src/errors.js";
