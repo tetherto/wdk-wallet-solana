@@ -165,7 +165,9 @@ const REQUIRED_ACCOUNT_EXTENSIONS = {
 /**
  * The mint extensions a transfer is refused for, each mapped to the error it raises.
  * An entry returns `null` when the extension is present but harmless in its current
- * configuration, such as a transfer hook with no hook program set.
+ * configuration, such as a transfer hook with no hook program set. Token-2022 stores an
+ * unset hook program as the all-zero address, which is `SYSTEM_PROGRAM_ADDRESS`, so the
+ * transfer hook entry compares against it.
  */
 const REJECTED_MINT_EXTENSIONS = {
   NonTransferable: token =>
