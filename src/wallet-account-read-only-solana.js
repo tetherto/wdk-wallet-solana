@@ -265,13 +265,14 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       return amount ?? 0n
     }
 
-    const { [tokenAddress]: mintAccount } = await this._fetchMaybeMintAccounts([tokenAddress])
+    await this._fetchMaybeMintAccounts([tokenAddress])
+    const currentTokenProgram = this._tokenProgramCache.get(tokenAddress)
 
-    if (mintAccount === null || mintAccount.tokenProgram === tokenProgram) {
+    if (currentTokenProgram === undefined || currentTokenProgram === tokenProgram) {
       return 0n
     }
 
-    const currentAmount = await this._fetchTokenAmount(ownerAddress, tokenAddress, mintAccount.tokenProgram)
+    const currentAmount = await this._fetchTokenAmount(ownerAddress, tokenAddress, currentTokenProgram)
 
     return currentAmount ?? 0n
   }
@@ -309,15 +310,15 @@ export default class WalletAccountReadOnlySolana extends WalletAccountReadOnly {
       .filter(tokenAddress => amounts[tokenAddress] === null)
 
     if (accountlessCachedTokenAddresses.length > 0) {
-      const mintAccounts = await this._fetchMaybeMintAccounts(accountlessCachedTokenAddresses)
+      await this._fetchMaybeMintAccounts(accountlessCachedTokenAddresses)
 
       const movedTokenAddresses = accountlessCachedTokenAddresses
-        .filter(tokenAddress => mintAccounts[tokenAddress] !== null &&
-          mintAccounts[tokenAddress].tokenProgram !== tokenPrograms[tokenAddress])
+        .filter(tokenAddress => this._tokenProgramCache.has(tokenAddress) &&
+          this._tokenProgramCache.get(tokenAddress) !== tokenPrograms[tokenAddress])
 
       if (movedTokenAddresses.length > 0) {
         const currentTokenPrograms = Object.fromEntries(
-          movedTokenAddresses.map(tokenAddress => [tokenAddress, mintAccounts[tokenAddress].tokenProgram])
+          movedTokenAddresses.map(tokenAddress => [tokenAddress, this._tokenProgramCache.get(tokenAddress)])
         )
 
         Object.assign(amounts, await this._fetchTokenAmounts(ownerAddress, movedTokenAddresses, currentTokenPrograms))
